@@ -2,8 +2,11 @@ import SwiftUI
 
 /// One game's page: the game itself, whether it runs, and your progress. Technical settings stay behind "Erweitert".
 struct GameDetailPage: View {
-    let game: PreviewGame
+    let game: LibraryGame
     let heroNamespace: Namespace.ID
+    let heroID: String
+    /// Offered for games added from a local .exe.
+    var onRemove: (() -> Void)?
 
     @State private var details: SteamStoreDetails?
     @State private var loadFailed = false
@@ -44,7 +47,7 @@ struct GameDetailPage: View {
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85).delay(0.18)) { hasAppeared = true }
         }
-        .task(id: game.id) { await load() }
+        .task(id: game.id) { if !game.isLocal { await load() } }
         .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game) }
         .sheet(item: $enlargedScreenshot) { shot in
             ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
@@ -84,7 +87,7 @@ struct GameDetailPage: View {
                 GameCover(game: game, cornerRadius: 12)
                     .saturation(game.isUnsupported ? 0 : 1)
                     .frame(width: 300)
-                    .matchedGeometryEffect(id: game.id, in: heroNamespace)
+                    .matchedGeometryEffect(id: heroID, in: heroNamespace)
                     .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                 VStack(alignment: .leading, spacing: 12) {
                     Text(game.title)
@@ -129,12 +132,23 @@ struct GameDetailPage: View {
                 }
             }
             Menu {
-                Button("Im Steam-Shop öffnen") {
-                    openURL(URL(string: "https://store.steampowered.com/app/\(game.id)")!)
+                if game.isLocal {
+                    if let path = game.executablePath {
+                        Button("Im Finder zeigen") {
+                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                        }
+                    }
+                } else {
+                    Button("Im Steam-Shop öffnen") {
+                        openURL(URL(string: "https://store.steampowered.com/app/\(game.id)")!)
+                    }
+                    if game.isInstalled { Button("Spielordner im Finder zeigen") {} }
                 }
-                if game.isInstalled { Button("Spielordner im Finder zeigen") {} }
                 Divider()
                 Button("Erweitert …") { showsAdvanced = true }.disabled(game.isUnsupported)
+                if let onRemove {
+                    Button("Aus Overcross entfernen", role: .destructive, action: onRemove)
+                }
             } label: {
                 Image(systemName: "ellipsis")
             }
@@ -147,7 +161,11 @@ struct GameDetailPage: View {
 
     // MARK: Main column
 
-    private var about: some View {
+    @ViewBuilder private var about: some View {
+        if !game.isLocal { steamAbout }
+    }
+
+    private var steamAbout: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Über das Spiel").font(.title3.weight(.semibold))
             if let details {
@@ -190,12 +208,20 @@ struct GameDetailPage: View {
 
     private var yourGame: some View {
         InfoCard(title: "Dein Spiel") {
-            Text(game.compatibility.explanation).font(.callout).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Divider()
+            // The status pill already says whether it runs; only the reason why not adds something.
+            if game.isUnsupported {
+                Text(game.compatibility.explanation).font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Divider()
+            }
             InfoRow("Spielzeit", game.playtime ?? "Noch nicht gespielt")
             if let lastPlayed = game.lastPlayed { InfoRow("Zuletzt gespielt", lastPlayed) }
-            InfoRow("Installiert", game.isInstalled ? "Ja" : "Nein")
+            if let path = game.executablePath {
+                InfoRow("Datei", URL(fileURLWithPath: path).lastPathComponent)
+                if !game.isInstalled { InfoRow("Status", "Datei nicht gefunden") }
+            } else {
+                InfoRow("Installiert", game.isInstalled ? "Ja" : "Nein")
+            }
             if let details {
                 InfoRow("Spielstände", details.hasCloudSaves ? "In der Steam Cloud" : "Auf diesem Mac")
             }
@@ -284,7 +310,7 @@ private struct RunningIndicator: View {
 }
 
 private struct StatusPill: View {
-    let compatibility: PreviewGame.Compatibility
+    let compatibility: LibraryGame.Compatibility
 
     var body: some View {
         Label(compatibility.headline, systemImage: compatibility.symbol)
@@ -395,11 +421,11 @@ private struct ScreenshotViewer: View {
 
 /// The technical choices for one game, out of the way of the normal page.
 private struct AdvancedSettingsSheet: View {
-    let game: PreviewGame
+    let game: LibraryGame
     @State private var backend: String
     @Environment(\.dismiss) private var dismiss
 
-    init(game: PreviewGame) {
+    init(game: LibraryGame) {
         self.game = game
         _backend = State(initialValue: game.backend)
     }
@@ -407,7 +433,7 @@ private struct AdvancedSettingsSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Erweiterte Einstellungen").font(.title3.weight(.semibold))
-            Text("Nur ändern, wenn das Spiel nicht richtig startet. Getestete Spiele funktionieren mit den Standardwerten.")
+            Text("Nur ändern, wenn das Spiel nicht richtig startet.")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
                 Picker("Grafik", selection: $backend) {

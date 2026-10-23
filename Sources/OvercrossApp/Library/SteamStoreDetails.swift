@@ -19,6 +19,7 @@ struct SteamStoreDetails: Decodable {
     let categories: [Item]?
     let screenshots: [Screenshot]?
     let backgroundRaw: URL?
+    let headerImage: URL?
     let achievements: Achievements?
     let controllerSupport: String?
 

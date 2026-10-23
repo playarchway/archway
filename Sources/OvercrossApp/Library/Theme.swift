@@ -12,28 +12,29 @@ extension Animation {
 
 /// The library backdrop: the focused game's artwork, heavily blurred, cross-fading as focus moves.
 struct AmbientBackground: View {
-    let game: PreviewGame
+    let game: LibraryGame?
 
     var body: some View {
         ZStack {
             Color.black
             // An overlay on a flexible color keeps the oversized artwork from widening the layout.
             Color.clear.overlay {
-                AsyncImage(url: game.headerURL) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        game.tint
-                    }
+                if let game {
+                    GameCover(game: game, cornerRadius: 0, contentMode: .fill)
+                        .scaleEffect(1.5)
+                        .blur(radius: 80)
+                        .saturation(1.3)
+                        .opacity(0.55)
                 }
-                .scaleEffect(1.5)
-                .blur(radius: 80)
-                .saturation(1.3)
-                .opacity(0.55)
             }
             .clipped()
-            .id(game.id)
+            .id(game?.id)
             .transition(.opacity)
+
+            if game == nil {
+                RadialGradient(colors: [Color.overcrossAccent.opacity(0.16), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: 900)
+            }
 
             // Keep the shelves legible: darken towards the bottom and the edges.
             LinearGradient(stops: [.init(color: .black.opacity(0.1), location: 0),
@@ -42,7 +43,7 @@ struct AmbientBackground: View {
                            startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [.clear, .black.opacity(0.55)], center: .top, startRadius: 200, endRadius: 1400)
         }
-        .animation(.easeInOut(duration: 0.9), value: game.id)
+        .animation(.easeInOut(duration: 0.9), value: game?.id)
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }

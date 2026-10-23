@@ -8,11 +8,11 @@ enum SteamCatalogError: Error, Equatable {
     var message: String {
         switch self {
         case .notSignedIn:
-            "Die Steam-Verknüpfung ist abgelaufen. Verknüpfe Steam erneut."
+            String(localized: "The Steam link has expired. Link Steam again.")
         case .network:
-            "Steam ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut."
+            String(localized: "Steam can’t be reached right now. Check your internet connection and try again.")
         case .unexpectedResponse:
-            "Steam hat unerwartet geantwortet. Versuche es später erneut."
+            String(localized: "Steam sent an unexpected response. Try again later.")
         }
     }
 }

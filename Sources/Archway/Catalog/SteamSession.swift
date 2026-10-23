@@ -1,8 +1,8 @@
 import Foundation
 import WebKit
 
-/// The Steam web session from signing in on Steam's own login page inside Overcross.
-/// Overcross never sees the password; it only asks Steam's store for the session's Web API token.
+/// The Steam web session from signing in on Steam's own login page inside Archway.
+/// Archway never sees the password; it only asks Steam's store for the session's Web API token.
 @MainActor
 enum SteamSession {
     static let loginURL = URL(string: "https://store.steampowered.com/login/?redir=&redir_ssl=1")!
@@ -59,7 +59,7 @@ enum SteamSession {
         return subject
     }
 
-    /// Removes the Steam session from Overcross' web storage.
+    /// Removes the Steam session from Archway's web storage.
     static func signOut() async {
         let records = await dataStore.dataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes())
         let steamRecords = records.filter { $0.displayName.contains("steam") }

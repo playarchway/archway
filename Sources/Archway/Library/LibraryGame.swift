@@ -10,10 +10,10 @@ struct LibraryGame: Identifiable, Hashable {
 
         var label: String {
             switch self {
-            case .tested: "Getestet"
-            case .experimental: "Experimentell"
-            case .untested: "Ungetestet"
-            case .unsupported: "Nicht unterstützt"
+            case .tested: String(localized: "Tested")
+            case .experimental: String(localized: "Experimental")
+            case .untested: String(localized: "Untested")
+            case .unsupported: String(localized: "Not Supported")
             }
         }
 
@@ -37,19 +37,19 @@ struct LibraryGame: Identifiable, Hashable {
 
         var headline: String {
             switch self {
-            case .tested: "Läuft auf deinem Mac"
-            case .experimental: "Startet, noch nicht ganz getestet"
-            case .untested: "Noch nicht ausprobiert"
-            case .unsupported: "Läuft nicht auf dem Mac"
+            case .tested: String(localized: "Runs on Your Mac")
+            case .experimental: String(localized: "Starts, Not Fully Tested")
+            case .untested: String(localized: "Not Tried Yet")
+            case .unsupported: String(localized: "Doesn’t Run on Mac")
             }
         }
 
         var explanation: String {
             switch self {
-            case .tested: "Spielen, Speichern und Laden funktionieren auf diesem Mac."
-            case .experimental: "Das Spiel startet. Ob alles funktioniert, ist noch nicht geprüft."
-            case .untested: "Du kannst es ausprobieren. Overcross wählt passende Einstellungen."
-            case .unsupported(let reason): "Der Anti-Cheat-Schutz \(reason) funktioniert mit Overcross nicht."
+            case .tested: String(localized: "Playing, saving, and loading work on this Mac.")
+            case .experimental: String(localized: "The game starts. Whether everything works hasn’t been checked yet.")
+            case .untested: String(localized: "You can try it. Archway picks suitable settings.")
+            case .unsupported(let reason): String(localized: "The anti-cheat \(reason) doesn’t work with Archway.")
             }
         }
     }
@@ -77,17 +77,17 @@ struct LibraryGame: Identifiable, Hashable {
 
     var playtime: String? {
         guard playtimeMinutes > 0 else { return nil }
-        if playtimeMinutes < 60 { return "\(playtimeMinutes) Min." }
+        if playtimeMinutes < 60 { return String(localized: "\(playtimeMinutes) min") }
         let hours = Double(playtimeMinutes) / 60
-        return hours < 10 ? String(format: "%.1f Std.", hours).replacingOccurrences(of: ".", with: ",", range: nil)
-                          : "\(Int(hours.rounded())) Std."
+        let formatted = hours.formatted(.number.precision(.fractionLength(hours < 10 ? 1 : 0)))
+        return String(localized: "\(formatted) h")
     }
 
     var lastPlayed: String? {
         guard let lastPlayedAt else { return nil }
         let calendar = Calendar.current
-        if calendar.isDateInToday(lastPlayedAt) { return "Heute" }
-        if calendar.isDateInYesterday(lastPlayedAt) { return "Gestern" }
+        if calendar.isDateInToday(lastPlayedAt) { return String(localized: "Today") }
+        if calendar.isDateInYesterday(lastPlayedAt) { return String(localized: "Yesterday") }
         return lastPlayedAt.formatted(.dateTime.day().month(.abbreviated).year())
     }
 

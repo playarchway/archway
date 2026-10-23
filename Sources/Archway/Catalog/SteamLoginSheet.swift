@@ -10,9 +10,9 @@ struct SteamLoginSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Label("Bei Steam anmelden", systemImage: "lock.fill").font(.headline)
+                Label("Sign In to Steam", systemImage: "lock.fill").font(.headline)
                 Spacer()
-                Button("Abbrechen") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             .padding(12)
             Divider()

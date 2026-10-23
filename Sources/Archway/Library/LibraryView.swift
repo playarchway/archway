@@ -22,10 +22,10 @@ struct LibraryView: View {
     private var shelves: [(title: String, games: [LibraryGame], isLarge: Bool)] {
         let byRecency = filtered.filter { $0.lastPlayedAt != nil }.sorted { $0.lastPlayedAt! > $1.lastPlayedAt! }
         return [
-            ("Weiterspielen", byRecency.filter { $0.isInstalled && !$0.isLocal }
+            (String(localized: "Continue Playing"), byRecency.filter { $0.isInstalled && !$0.isLocal }
                 + filtered.filter { $0.isInstalled && !$0.isLocal && $0.lastPlayedAt == nil }, true),
-            ("Zuletzt gespielt", Array(byRecency.filter { !$0.isInstalled }.prefix(12)), false),
-            ("Eigene Spiele", filtered.filter(\.isLocal), false),
+            (String(localized: "Recently Played"), Array(byRecency.filter { !$0.isInstalled }.prefix(12)), false),
+            (String(localized: "Your Own Games"), filtered.filter(\.isLocal), false),
         ].filter { !$0.games.isEmpty }
     }
 
@@ -43,7 +43,8 @@ struct LibraryView: View {
             }
         }
         .background { AmbientBackground(game: openGame ?? focusedGame) }
-        .navigationTitle(openGame?.title ?? "Bibliothek")
+        // The game page and the empty start page carry their own large headings.
+        .navigationTitle(openGame == nil && !store.games.isEmpty ? String(localized: "Library") : "")
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         .onChange(of: search) {
@@ -75,19 +76,16 @@ struct LibraryView: View {
 
     private var subtitle: String {
         guard openGame == nil else { return "" }
-        if store.phase == .loading { return "Wird aktualisiert …" }
-        switch store.games.count {
-        case 0: return ""
-        case 1: return "1 Spiel"
-        case let count: return "\(count) Spiele"
-        }
+        if store.phase == .loading { return String(localized: "Updating…") }
+        let count = store.games.count
+        return count == 0 ? "" : String(localized: "\(count) games")
     }
 
     private func finishSteamLink() async {
         isLinking = true
         defer { isLinking = false }
         await store.refresh()
-        linkError = store.phase == .ready ? nil : "Steam hat die Verknüpfung nicht bestätigt. Versuche es erneut."
+        linkError = store.phase == .ready ? nil : String(localized: "Steam didn’t confirm the link. Try again.")
     }
 
     private func open(_ game: LibraryGame, heroID: String) {
@@ -109,20 +107,20 @@ struct LibraryView: View {
             SourcePickerView(isLinking: isLinking, linkError: linkError,
                              onLinkSteam: { showsSteamLogin = true }, onAddGame: { showsImporter = true })
         case (.loading, true):
-            ProgressView("Deine Steam-Bibliothek wird geladen …")
+            ProgressView("Loading your Steam library…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case (.failed(let error), true):
             ContentUnavailableView {
-                Label("Bibliothek nicht verfügbar", systemImage: "exclamationmark.triangle")
+                Label("Library Unavailable", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(error.message)
             } actions: {
-                Button("Erneut versuchen") { Task { await store.refresh() } }
-                Button("Steam verknüpfen …") { showsSteamLogin = true }
+                Button("Try Again") { Task { await store.refresh() } }
+                Button("Link Steam…") { showsSteamLogin = true }
             }
         case (.ready, true):
-            ContentUnavailableView("Keine Spiele", systemImage: "gamecontroller",
-                                   description: Text("In diesem Steam-Konto sind noch keine Spiele."))
+            ContentUnavailableView("No Games", systemImage: "gamecontroller",
+                                   description: Text("This Steam account has no games yet."))
         default:
             library
         }
@@ -143,10 +141,10 @@ struct LibraryView: View {
                 // The grid only adds something when the shelves do not already show every game.
                 if !search.isEmpty || Set(shelves.flatMap { $0.games.map(\.id) }).count < filtered.count {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(search.isEmpty ? "Alle Spiele" : "Suchergebnisse")
+                        Text(search.isEmpty ? "All Games" : "Search Results")
                             .font(.title3.weight(.semibold))
                         if filtered.isEmpty {
-                            Text("Kein Spiel passt zu „\(search)“.").foregroundStyle(.secondary)
+                            Text("No game matches “\(search)”.").foregroundStyle(.secondary)
                         }
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16, alignment: .top)], spacing: 22) {
                             ForEach(filtered) { game in
@@ -177,16 +175,16 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(error.message)
                 if let lastUpdated = store.lastUpdated {
-                    Text("Angezeigt wird der Stand vom \(lastUpdated.formatted(date: .abbreviated, time: .shortened)).")
+                    Text("Showing the library as of \(lastUpdated.formatted(date: .abbreviated, time: .shortened)).")
                         .foregroundStyle(.secondary)
                 }
             }
             .font(.callout)
             Spacer()
             if error == .notSignedIn {
-                Button("Erneut verknüpfen") { showsSteamLogin = true }
+                Button("Link Again") { showsSteamLogin = true }
             } else {
-                Button("Erneut versuchen") { Task { await store.refresh() } }
+                Button("Try Again") { Task { await store.refresh() } }
             }
         }
         .padding(14)
@@ -199,9 +197,9 @@ struct LibraryView: View {
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
             if openGame != nil {
-                Button(action: close) { Label("Bibliothek", systemImage: "chevron.left") }
+                Button(action: close) { Label("Library", systemImage: "chevron.left") }
                     .keyboardShortcut(.cancelAction)
-                    .help("Zurück zur Bibliothek")
+                    .help("Back to Library")
             }
         }
         ToolbarItem(placement: .primaryAction) {
@@ -210,33 +208,33 @@ struct LibraryView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             if openGame == nil && !store.games.isEmpty {
                 Menu {
-                    Button("Windows-Spiel hinzufügen …") { showsImporter = true }
-                    if !store.hasAccount { Button("Steam verknüpfen …") { showsSteamLogin = true } }
+                    Button("Add Windows Game…") { showsImporter = true }
+                    if !store.hasAccount { Button("Link Steam…") { showsSteamLogin = true } }
                     Divider()
-                    Button("GOG (bald verfügbar)") {}.disabled(true)
-                    Button("Epic Games (bald verfügbar)") {}.disabled(true)
-                    Button("itch.io (bald verfügbar)") {}.disabled(true)
+                    Button("GOG (Coming Soon)") {}.disabled(true)
+                    Button("Epic Games (Coming Soon)") {}.disabled(true)
+                    Button("itch.io (Coming Soon)") {}.disabled(true)
                 } label: {
-                    Label("Spiele hinzufügen", systemImage: "plus")
+                    Label("Add Games", systemImage: "plus")
                 }
-                .help("Spiele hinzufügen")
+                .help("Add Games")
             }
             if store.hasAccount && openGame == nil {
                 Button { Task { await store.refresh() } } label: {
-                    Label("Aktualisieren", systemImage: "arrow.clockwise")
+                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .disabled(store.phase == .loading)
-                .help("Bibliothek von Steam neu laden")
+                .help("Reload Library from Steam")
                 Menu {
-                    Button("Anderes Steam-Konto verknüpfen …") {
+                    Button("Link Another Steam Account…") {
                         Task {
                             await store.signOut()
                             showsSteamLogin = true
                         }
                     }
-                    Button("Steam-Verknüpfung aufheben", role: .destructive) { Task { await store.signOut() } }
+                    Button("Unlink Steam", role: .destructive) { Task { await store.signOut() } }
                 } label: {
-                    Label("Steam-Konto", systemImage: "person.crop.circle")
+                    Label("Steam Account", systemImage: "person.crop.circle")
                 }
             }
         }
@@ -267,10 +265,10 @@ private struct Shelf<Tile: View>: View {
                     HStack(spacing: 8) {
                         Button { page(-1) } label: { Image(systemName: "chevron.left") }
                             .disabled(leadingIndex == 0)
-                            .help("Zurück")
+                            .help("Back")
                         Button { page(1) } label: { Image(systemName: "chevron.right") }
                             .disabled(leadingIndex + visibleCount >= games.count)
-                            .help("Weiter")
+                            .help("Next")
                     }
                     .buttonStyle(CircleIconButtonStyle(size: 30))
                     .transition(.opacity)
@@ -343,7 +341,7 @@ private struct ShelfTile: View {
                 Text(game.title).font(.callout.weight(.medium)).lineLimit(1)
                 HStack(spacing: 10) {
                     CompatibilityBadge(compatibility: game.compatibility)
-                    if game.isInstalled { Label("Installiert", systemImage: "internaldrive").font(.caption) }
+                    if game.isInstalled { Label("Installed", systemImage: "internaldrive").font(.caption) }
                 }
                 .foregroundStyle(.secondary)
             }
@@ -368,7 +366,7 @@ private struct LibrarySearchField: View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(isFocused ? Color.overcrossAccent : .white.opacity(0.7))
-            TextField("Bibliothek durchsuchen", text: $text)
+            TextField("Search Library", text: $text)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
                 .onExitCommand { text = ""; isFocused = false }
@@ -376,7 +374,7 @@ private struct LibrarySearchField: View {
                 Button { text = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.6))
-                    .help("Suche leeren")
+                    .help("Clear Search")
             }
         }
         .padding(.horizontal, 11)
@@ -387,7 +385,7 @@ private struct LibrarySearchField: View {
         }
         .animation(.snappy(duration: 0.18), value: isFocused)
         .background {
-            Button("Suchen") { isFocused = true }
+            Button("Search") { isFocused = true }
                 .keyboardShortcut("f", modifiers: .command)
                 .hidden()
         }
@@ -401,16 +399,16 @@ extension ShelfTile {
                 switch activity {
                 case .running:
                     Image(systemName: "circle.fill").font(.system(size: 7)).foregroundStyle(.green).symbolEffect(.pulse)
-                    Text("Läuft")
+                    Text("Running")
                 case .starting:
                     ProgressView().controlSize(.mini)
-                    Text("Startet …")
+                    Text("Starting…")
                 case .stopping:
                     ProgressView().controlSize(.mini)
-                    Text("Wird beendet …")
+                    Text("Quitting…")
                 case .installing:
                     ProgressView().controlSize(.mini)
-                    Text("Wird installiert …")
+                    Text("Installing…")
                 }
             }
             .font(.caption.weight(.semibold))

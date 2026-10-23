@@ -22,10 +22,10 @@ struct SourcePickerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 36) {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Deine Bibliothek ist noch leer.", systemImage: "square.stack")
+                Label("Your library is still empty.", systemImage: "square.stack")
                     .font(.title3)
                     .foregroundStyle(.secondary)
-                Text("Spiele hinzufügen")
+                Text("Add Games")
                     .font(.system(size: 40, weight: .bold))
             }
 
@@ -50,11 +50,11 @@ struct SourcePickerView: View {
                     .font(.system(size: 30, weight: .light))
                     .foregroundStyle(Color.overcrossAccent)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Windows-Spiel hinzufügen").font(.headline)
-                    Text("Eine .exe von deinem Mac").foregroundStyle(.secondary)
+                    Text("Add Windows Game").font(.headline)
+                    Text("An .exe from your Mac").foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Datei auswählen …", action: onAddGame)
+                Button("Choose File…", action: onAddGame)
                     .controlSize(.large)
             }
             .padding(20)
@@ -93,7 +93,7 @@ private struct SourceTile: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 HStack(spacing: 6) {
                     if isBusy { ProgressView().controlSize(.mini) }
-                    Text(source.isAvailable ? "Verknüpfen" : "Bald verfügbar")
+                    Text(source.isAvailable ? "Link" : "Coming Soon")
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(source.isAvailable ? .black : .white.opacity(0.8))

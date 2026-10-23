@@ -55,7 +55,7 @@ struct GameDetailPage: View {
             let image = await ArtworkLoader.shared.backdrop(for: game)
             withAnimation(.easeOut(duration: 0.7)) { backdrop = image }
         }
-        .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game, logURL: runner.logURL(for: game)) }
+        .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game) }
         .sheet(item: $enlargedScreenshot) { shot in
             ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
         }
@@ -116,7 +116,10 @@ struct GameDetailPage: View {
                         .font(.system(size: 36, weight: .bold))
                         .lineLimit(2)
                     if let byline { Text(byline).font(.title3).foregroundStyle(.secondary) }
-                    StatusPill(compatibility: game.compatibility)
+                    HStack(spacing: 8) {
+                        StatusPill(compatibility: game.compatibility)
+                        if runner.runtime(for: game) == .archwayAlpha { AlphaBadge(text: "Archway Wine · Alpha") }
+                    }
                     actions.padding(.top, 6)
                 }
                 .opacity(hasAppeared ? 1 : 0)
@@ -182,7 +185,7 @@ struct GameDetailPage: View {
                         } else {
                             Image(systemName: "arrow.down.circle.fill")
                         }
-                        Text(activity == .installing ? "Wird in Steam installiert …" : "Über Steam installieren")
+                        Text(activity == .installing ? "Installing in Steam…" : "Install via Steam")
                     }
                 }
                 .buttonStyle(HeroActionButtonStyle(isBusy: activity == .installing))
@@ -199,21 +202,21 @@ struct GameDetailPage: View {
             }
             Menu {
                 if game.isLocal {
-                    Button("Im Finder zeigen") { runner.showFolder(game) }
+                    Button("Show in Finder") { runner.showFolder(game) }
                 } else {
-                    Button("Im Steam-Shop öffnen") {
+                    Button("Open in Steam Store") {
                         openURL(URL(string: "https://store.steampowered.com/app/\(game.id)")!)
                     }
-                    if game.isInstalled { Button("Spielordner im Finder zeigen") { runner.showFolder(game) } }
+                    if game.isInstalled { Button("Show Game Folder in Finder") { runner.showFolder(game) } }
                 }
                 Divider()
                 if case .running = runner.activity(for: game) {
-                    Button("Spiel beenden") { runner.stop(game) }
+                    Button("Quit Game") { runner.stop(game) }
                     Divider()
                 }
-                Button("Erweitert …") { showsAdvanced = true }.disabled(game.isUnsupported)
+                Button("Advanced…") { showsAdvanced = true }.disabled(game.isUnsupported)
                 if let onRemove {
-                    Button("Aus Overcross entfernen", role: .destructive, action: onRemove)
+                    Button("Remove from Archway", role: .destructive, action: onRemove)
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -222,7 +225,7 @@ struct GameDetailPage: View {
             .buttonStyle(CircleIconButtonStyle())
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("Weitere Aktionen")
+            .help("More Actions")
         }
     }
 
@@ -234,7 +237,7 @@ struct GameDetailPage: View {
 
     private var steamAbout: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Über das Spiel").font(.title3.weight(.semibold))
+            Text("About the Game").font(.title3.weight(.semibold))
             if let details {
                 Text(details.summary)
                     .font(.body)
@@ -242,8 +245,8 @@ struct GameDetailPage: View {
                     .frame(maxWidth: 640, alignment: .leading)
             } else if loadFailed {
                 HStack {
-                    Text("Die Spielinformationen konnten nicht von Steam geladen werden.").foregroundStyle(.secondary)
-                    Button("Erneut laden") { Task { await load() } }.buttonStyle(.link)
+                    Text("The game information couldn’t be loaded from Steam.").foregroundStyle(.secondary)
+                    Button("Reload") { Task { await load() } }.buttonStyle(.link)
                 }
             } else {
                 ProgressView().controlSize(.small)
@@ -274,45 +277,45 @@ struct GameDetailPage: View {
     // MARK: Side column
 
     private var yourGame: some View {
-        InfoCard(title: "Dein Spiel") {
+        InfoCard(title: "Your Game") {
             // The status pill already says whether it runs; only the reason why not adds something.
             if game.isUnsupported {
                 Text(game.compatibility.explanation).font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Divider()
             }
-            InfoRow("Spielzeit", game.playtime ?? "Noch nicht gespielt")
-            if let lastPlayed = game.lastPlayed { InfoRow("Zuletzt gespielt", lastPlayed) }
+            InfoRow("Playtime", game.playtime ?? String(localized: "Not played yet"))
+            if let lastPlayed = game.lastPlayed { InfoRow("Recently Played", lastPlayed) }
             if let path = game.executablePath {
-                InfoRow("Datei", URL(fileURLWithPath: path).lastPathComponent)
-                if !game.isInstalled { InfoRow("Status", "Datei nicht gefunden") }
+                InfoRow("File", URL(fileURLWithPath: path).lastPathComponent)
+                if !game.isInstalled { InfoRow("Status", String(localized: "File Not Found")) }
             } else {
-                InfoRow("Installiert", game.isInstalled ? "Ja" : "Nein")
+                InfoRow("Installed", game.isInstalled ? String(localized: "Yes") : String(localized: "No"))
             }
             if let details {
-                InfoRow("Spielstände", details.hasCloudSaves ? "In der Steam Cloud" : "Auf diesem Mac")
+                InfoRow("Saves", details.hasCloudSaves ? String(localized: "In Steam Cloud") : String(localized: "On This Mac"))
             }
         }
     }
 
     @ViewBuilder private var facts: some View {
         if let details {
-            InfoCard(title: "Infos") {
-                if let developer = details.developers?.joined(separator: ", ") { InfoRow("Entwickler", developer) }
+            InfoCard(title: "Details") {
+                if let developer = details.developers?.joined(separator: ", ") { InfoRow("Developer", developer) }
                 if let publisher = details.publishers?.joined(separator: ", "), publisher != details.developers?.joined(separator: ", ") {
                     InfoRow("Publisher", publisher)
                 }
-                if let date = details.releaseDate?.date { InfoRow("Erschienen", date) }
+                if let date = details.releaseDate?.date { InfoRow("Released", date) }
                 if let genres = details.genres?.map(\.description).joined(separator: ", ") { InfoRow("Genre", genres) }
-                if let total = details.achievements?.total { InfoRow("Errungenschaften", "\(total)") }
-                if details.controllerSupport == "full" { InfoRow("Controller", "Volle Unterstützung") }
+                if let total = details.achievements?.total { InfoRow("Achievements", "\(total)") }
+                if details.controllerSupport == "full" { InfoRow("Controller", String(localized: "Full Support")) }
             }
         }
     }
 
     @ViewBuilder private var features: some View {
         if let features = details?.features, !features.isEmpty {
-            InfoCard(title: "Funktionen") {
+            InfoCard(title: "Features") {
                 FlowLayout(spacing: 6) {
                     ForEach(features, id: \.self) { feature in
                         Text(feature)
@@ -322,7 +325,7 @@ struct GameDetailPage: View {
                     }
                 }
                 if features.contains(where: { $0.contains("Online") }) {
-                    Text("Online-Mehrspieler ist mit Overcross noch nicht getestet.")
+                    Text("Online multiplayer hasn’t been tested with Archway yet.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -340,9 +343,9 @@ private struct PlayButton: View {
 
     private var title: String {
         switch activity {
-        case .starting: "Startet …"
-        case .stopping: "Wird beendet …"
-        default: "Spielen"
+        case .starting: String(localized: "Starting…")
+        case .stopping: String(localized: "Quitting…")
+        default: String(localized: "Play")
         }
     }
 
@@ -467,7 +470,7 @@ private struct RunningIndicator: View {
                 .foregroundStyle(.green)
                 .symbolEffect(.pulse)
             TimelineView(.periodic(from: since, by: 1)) { context in
-                Text("Läuft seit \(Duration.seconds(context.date.timeIntervalSince(since)).formatted(.time(pattern: .minuteSecond)))")
+                Text("Running for \(Duration.seconds(context.date.timeIntervalSince(since)).formatted(.time(pattern: .minuteSecond)))")
                     .monospacedDigit()
             }
         }
@@ -492,7 +495,7 @@ private struct StatusPill: View {
 }
 
 private struct InfoCard<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -507,10 +510,10 @@ private struct InfoCard<Content: View>: View {
 }
 
 private struct InfoRow: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
 
-    init(_ label: String, _ value: String) {
+    init(_ label: LocalizedStringKey, _ value: String) {
         self.label = label
         self.value = value
     }
@@ -578,11 +581,11 @@ private struct ScreenshotViewer: View {
             HStack {
                 Button { current = screenshots[index - 1] } label: { Image(systemName: "chevron.left") }
                     .disabled(index == 0)
-                Text("\(index + 1) von \(screenshots.count)").foregroundStyle(.secondary).frame(width: 90)
+                Text("\(index + 1) of \(screenshots.count)").foregroundStyle(.secondary).frame(width: 90)
                 Button { current = screenshots[index + 1] } label: { Image(systemName: "chevron.right") }
                     .disabled(index >= screenshots.count - 1)
                 Spacer()
-                Button("Schließen") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
             }
         }
         .padding(16)
@@ -590,47 +593,89 @@ private struct ScreenshotViewer: View {
 }
 
 /// The technical choices for one game, out of the way of the normal page.
+/// A small amber capsule for features that are still in early testing.
+struct AlphaBadge: View {
+    var text: LocalizedStringKey = "Alpha"
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.overcrossAccent)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Color.overcrossAccent.opacity(0.15), in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.overcrossAccent.opacity(0.35)))
+    }
+}
+
 private struct AdvancedSettingsSheet: View {
     let game: LibraryGame
-    let logURL: URL?
     @State private var backend: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(GameRunner.self) private var runner
 
-    init(game: LibraryGame, logURL: URL?) {
+    init(game: LibraryGame) {
         self.game = game
-        self.logURL = logURL
         _backend = State(initialValue: game.backend)
     }
 
+    private var logURL: URL? { runner.logURL(for: game) }
+
+    private var runtime: Binding<GameRunner.Runtime> {
+        Binding { runner.runtime(for: game) } set: { runner.setRuntime($0, for: game) }
+    }
+
+    private var isAlphaAvailable: Bool { runner.isAlphaAvailable(for: game) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Erweiterte Einstellungen").font(.title3.weight(.semibold))
-            Text("Nur ändern, wenn das Spiel nicht richtig startet.")
+            Text("Advanced Settings").font(.title3.weight(.semibold))
+            Text("Only change these if the game doesn’t start properly.")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
-                Picker("Grafik", selection: $backend) {
+                Picker("Graphics", selection: $backend) {
                     ForEach(["D3DMetal", "DXVK", "WineD3D"], id: \.self) { Text($0) }
                 }
-                LabeledContent("Windows-Umgebung", value: "Steam (Wine 11.17)")
-                LabeledContent("Letzter Start") {
-                    Button("Protokoll exportieren …", action: exportLog).disabled(logURL == nil)
+                Section {
+                    Picker("Windows Environment", selection: runtime) {
+                        Text("Default · Wine 11.17 with Steam").tag(GameRunner.Runtime.standard)
+                        HStack(spacing: 6) {
+                            Text("Archway · Wine 11.20")
+                            AlphaBadge()
+                        }
+                        .tag(GameRunner.Runtime.archwayAlpha)
+                        .disabled(!isAlphaAvailable)
+                    }
+                    .pickerStyle(.radioGroup)
+                    .disabled(runner.activity(for: game) != nil)
+                } footer: {
+                    Text(isAlphaAvailable
+                         ? "Archway’s own Wine version, still in early testing. Starts the game directly without Steam and keeps separate saves."
+                         : "Archway’s own Wine version isn’t available for this game yet.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                LabeledContent("Last Launch") {
+                    Button("Export Log…", action: exportLog).disabled(logURL == nil)
                 }
             }
             .formStyle(.grouped)
             HStack {
-                Button("Standard wiederherstellen") { backend = game.backend }
+                Button("Restore Defaults") {
+                    backend = game.backend
+                    if runner.activity(for: game) == nil { runner.setRuntime(.standard, for: game) }
+                }
                 Spacer()
-                Button("Fertig") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
-        .frame(width: 460)
+        .frame(width: 480)
     }
 
     private func exportLog() {
         guard let logURL else { return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Overcross \(game.title).log"
+        panel.nameFieldStringValue = "Archway \(game.title).log"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         try? FileManager.default.removeItem(at: destination)
         try? FileManager.default.copyItem(at: logURL, to: destination)

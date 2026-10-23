@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension Color {
-    /// Overcross' accent: a warm amber that stays clear of the green and red compatibility states.
+    /// Archway's accent: a warm amber that stays clear of the green and red compatibility states.
     static let overcrossAccent = Color(red: 1.0, green: 0.72, blue: 0.26)
 }
 

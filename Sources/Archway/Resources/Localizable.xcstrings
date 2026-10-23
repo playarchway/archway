@@ -1,0 +1,1245 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ h": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Std."
+          }
+        }
+      }
+    },
+    "%lld games": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Spiel"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Spiele"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld game"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld games"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min."
+          }
+        }
+      }
+    },
+    "%lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld"
+          }
+        }
+      }
+    },
+    "About the Game": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über das Spiel"
+          }
+        }
+      }
+    },
+    "Achievements": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Errungenschaften"
+          }
+        }
+      }
+    },
+    "Add Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Windows Game": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Spiel hinzufügen"
+          }
+        }
+      }
+    },
+    "Add Windows Game…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Spiel hinzufügen …"
+          }
+        }
+      }
+    },
+    "Advanced Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweiterte Einstellungen"
+          }
+        }
+      }
+    },
+    "Advanced…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweitert …"
+          }
+        }
+      }
+    },
+    "All Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Spiele"
+          }
+        }
+      }
+    },
+    "Alpha": {},
+    "An .exe from your Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine .exe von deinem Mac"
+          }
+        }
+      }
+    },
+    "App Icon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Symbol"
+          }
+        }
+      }
+    },
+    "Archway": {},
+    "Archway Wine · Alpha": {},
+    "Archway isn’t set up on this Mac yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway ist auf diesem Mac noch nicht eingerichtet."
+          }
+        }
+      }
+    },
+    "Archway · Wine 11.20": {},
+    "Archway’s Windows environment isn’t set up yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Windows-Umgebung von Archway ist noch nicht eingerichtet."
+          }
+        }
+      }
+    },
+    "Archway’s own Wine version isn’t available for this game yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archways eigene Wine-Version gibt es für dieses Spiel noch nicht."
+          }
+        }
+      }
+    },
+    "Archway’s own Wine version, still in early testing. Starts the game directly without Steam and keeps separate saves.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archways eigene Wine-Version, noch in früher Testphase. Startet das Spiel direkt ohne Steam und hat eigene Spielstände."
+          }
+        }
+      }
+    },
+    "Back": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        }
+      }
+    },
+    "Back to Library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zur Bibliothek"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        }
+      }
+    },
+    "Choose File…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei auswählen …"
+          }
+        }
+      }
+    },
+    "Clear Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche leeren"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        }
+      }
+    },
+    "Coming Soon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bald verfügbar"
+          }
+        }
+      }
+    },
+    "Continue Playing": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiterspielen"
+          }
+        }
+      }
+    },
+    "Controller": {},
+    "Default · Wine 11.17 with Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard · Wine 11.17 mit Steam"
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infos"
+          }
+        }
+      }
+    },
+    "Developer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwickler"
+          }
+        }
+      }
+    },
+    "Doesn’t Run on Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft nicht auf dem Mac"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        }
+      }
+    },
+    "Epic Games (Coming Soon)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Epic Games (bald verfügbar)"
+          }
+        }
+      }
+    },
+    "Experimental": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimentell"
+          }
+        }
+      }
+    },
+    "Export Log…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokoll exportieren …"
+          }
+        }
+      }
+    },
+    "Features": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funktionen"
+          }
+        }
+      }
+    },
+    "File": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei"
+          }
+        }
+      }
+    },
+    "File Not Found": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei nicht gefunden"
+          }
+        }
+      }
+    },
+    "Full Support": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volle Unterstützung"
+          }
+        }
+      }
+    },
+    "GOG (Coming Soon)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GOG (bald verfügbar)"
+          }
+        }
+      }
+    },
+    "Gateway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tor zur anderen Welt"
+          }
+        }
+      }
+    },
+    "Genre": {},
+    "Glowing Arch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leuchtender Bogen"
+          }
+        }
+      }
+    },
+    "Graphics": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafik"
+          }
+        }
+      }
+    },
+    "In Steam Cloud": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Steam Cloud"
+          }
+        }
+      }
+    },
+    "Install via Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über Steam installieren"
+          }
+        }
+      }
+    },
+    "Installed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiert"
+          }
+        }
+      }
+    },
+    "Installing in Steam…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in Steam installiert …"
+          }
+        }
+      }
+    },
+    "Installing…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird installiert …"
+          }
+        }
+      }
+    },
+    "Last Launch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzter Start"
+          }
+        }
+      }
+    },
+    "Library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek"
+          }
+        }
+      }
+    },
+    "Library Unavailable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek nicht verfügbar"
+          }
+        }
+      }
+    },
+    "Link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verknüpfen"
+          }
+        }
+      }
+    },
+    "Link Again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut verknüpfen"
+          }
+        }
+      }
+    },
+    "Link Another Steam Account…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anderes Steam-Konto verknüpfen …"
+          }
+        }
+      }
+    },
+    "Link Steam…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam verknüpfen …"
+          }
+        }
+      }
+    },
+    "Loading your Steam library…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Steam-Bibliothek wird geladen …"
+          }
+        }
+      }
+    },
+    "More Actions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Aktionen"
+          }
+        }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        }
+      }
+    },
+    "No": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nein"
+          }
+        }
+      }
+    },
+    "No Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Spiele"
+          }
+        }
+      }
+    },
+    "No game matches “%@”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Spiel passt zu „%@“."
+          }
+        }
+      }
+    },
+    "Not Supported": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht unterstützt"
+          }
+        }
+      }
+    },
+    "Not Tried Yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht ausprobiert"
+          }
+        }
+      }
+    },
+    "Not played yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht gespielt"
+          }
+        }
+      }
+    },
+    "On This Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Mac"
+          }
+        }
+      }
+    },
+    "Online multiplayer hasn’t been tested with Archway yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online-Mehrspieler ist mit Archway noch nicht getestet."
+          }
+        }
+      }
+    },
+    "Only change these if the game doesn’t start properly.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur ändern, wenn das Spiel nicht richtig startet."
+          }
+        }
+      }
+    },
+    "Open in Steam Store": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Steam-Shop öffnen"
+          }
+        }
+      }
+    },
+    "Play": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielen"
+          }
+        }
+      }
+    },
+    "Playing, saving, and loading work on this Mac.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielen, Speichern und Laden funktionieren auf diesem Mac."
+          }
+        }
+      }
+    },
+    "Playtime": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielzeit"
+          }
+        }
+      }
+    },
+    "Publisher": {},
+    "Quit Game": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiel beenden"
+          }
+        }
+      }
+    },
+    "Quitting…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird beendet …"
+          }
+        }
+      }
+    },
+    "Recently Played": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt gespielt"
+          }
+        }
+      }
+    },
+    "Refresh": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisieren"
+          }
+        }
+      }
+    },
+    "Released": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erschienen"
+          }
+        }
+      }
+    },
+    "Reload": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut laden"
+          }
+        }
+      }
+    },
+    "Reload Library from Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek von Steam neu laden"
+          }
+        }
+      }
+    },
+    "Remove from Archway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Archway entfernen"
+          }
+        }
+      }
+    },
+    "Restore Defaults": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard wiederherstellen"
+          }
+        }
+      }
+    },
+    "Running": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft"
+          }
+        }
+      }
+    },
+    "Running for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft seit %@"
+          }
+        }
+      }
+    },
+    "Runs on Your Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft auf deinem Mac"
+          }
+        }
+      }
+    },
+    "Saves": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielstände"
+          }
+        }
+      }
+    },
+    "Screenshots": {},
+    "Search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen"
+          }
+        }
+      }
+    },
+    "Search Library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek durchsuchen"
+          }
+        }
+      }
+    },
+    "Search Results": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchergebnisse"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        }
+      }
+    },
+    "Show Game Folder in Finder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielordner im Finder zeigen"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Finder zeigen"
+          }
+        }
+      }
+    },
+    "Showing the library as of %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angezeigt wird der Stand vom %@."
+          }
+        }
+      }
+    },
+    "Sign In to Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Steam anmelden"
+          }
+        }
+      }
+    },
+    "Starting…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startet …"
+          }
+        }
+      }
+    },
+    "Starts, Not Fully Tested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startet, noch nicht ganz getestet"
+          }
+        }
+      }
+    },
+    "Status": {},
+    "Steam Account": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam-Konto"
+          }
+        }
+      }
+    },
+    "Steam can’t be reached right now. Check your internet connection and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam ist gerade nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut."
+          }
+        }
+      }
+    },
+    "Steam didn’t confirm the link. Try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam hat die Verknüpfung nicht bestätigt. Versuche es erneut."
+          }
+        }
+      }
+    },
+    "Steam sent an unexpected response. Try again later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam hat unerwartet geantwortet. Versuche es später erneut."
+          }
+        }
+      }
+    },
+    "Tested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getestet"
+          }
+        }
+      }
+    },
+    "That didn’t work: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das hat nicht geklappt: %@"
+          }
+        }
+      }
+    },
+    "The Steam link has expired. Link Steam again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Steam-Verknüpfung ist abgelaufen. Verknüpfe Steam erneut."
+          }
+        }
+      }
+    },
+    "The anti-cheat %@ doesn’t work with Archway.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Anti-Cheat-Schutz %@ funktioniert mit Archway nicht."
+          }
+        }
+      }
+    },
+    "The game didn’t start. You’ll find the log under “Advanced”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel ist nicht gestartet. Unter „Erweitert“ findest du das Protokoll."
+          }
+        }
+      }
+    },
+    "The game information couldn’t be loaded from Steam.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Spielinformationen konnten nicht von Steam geladen werden."
+          }
+        }
+      }
+    },
+    "The game isn’t installed in the Archway runtime.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel ist in der Archway-Runtime nicht installiert."
+          }
+        }
+      }
+    },
+    "The game starts. Whether everything works hasn’t been checked yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel startet. Ob alles funktioniert, ist noch nicht geprüft."
+          }
+        }
+      }
+    },
+    "This Steam account has no games yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesem Steam-Konto sind noch keine Spiele."
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        }
+      }
+    },
+    "Unlink Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam-Verknüpfung aufheben"
+          }
+        }
+      }
+    },
+    "Untested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungetestet"
+          }
+        }
+      }
+    },
+    "Updating…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird aktualisiert …"
+          }
+        }
+      }
+    },
+    "Windows Environment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Umgebung"
+          }
+        }
+      }
+    },
+    "Windows Steam isn’t installed in Archway yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Steam ist in Archway noch nicht installiert."
+          }
+        }
+      }
+    },
+    "Yes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestern"
+          }
+        }
+      }
+    },
+    "You can try it. Archway picks suitable settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst es ausprobieren. Archway wählt passende Einstellungen."
+          }
+        }
+      }
+    },
+    "Your Game": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Spiel"
+          }
+        }
+      }
+    },
+    "Your Own Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Spiele"
+          }
+        }
+      }
+    },
+    "Your library is still empty.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Bibliothek ist noch leer."
+          }
+        }
+      }
+    },
+    "itch.io (Coming Soon)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "itch.io (bald verfügbar)"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

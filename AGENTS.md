@@ -14,8 +14,13 @@ Tell sessions apart by prefix instead:
 | Prefix (under `~/Library/Application Support/Overcross/`) | Owner and purpose |
 |---|---|
 | `bottles/steam-5228920` | Overcross CLI default data directory: the user's Windows Steam, on Whisky's CrossOver-based Wine 11.17 with D3DMetal (`runtime-overlays/winecx-gptk-4.7.3`) for Brick by Brick. Start and stop it only through `overcross`. |
-| `upstream-1120-probe` | Codex thread "D3DMetal auf Upstream-Wine 11.20". Feasibility test: clone of the Steam bottle on our own upstream Wine 11.20 build (Codex's cross-process GDI fix plus a D3DMetal `macdrv_functions` compatibility table) with GPTK 4.0 beta 3 staged. |
+| `archway-alpha` | Archway app's alpha runtime (formerly Codex's `upstream-1120-probe`): a clone of the Steam bottle on our own Wine 11.20 build (`~/dev/overcross-wine`, cross-process GDI fix, D3DMetal table, native-GS ntdll patch) with GPTK 4.0 beta 3 staged. Games selected for "Archway · Wine 11.20" start here directly, without Steam. |
 
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope): summary` in English, with types such as `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, and `build`. The scope is optional (for example `feat(d3dmetal): …`, `fix(steam): …`). Do not add agent or model attribution trailers.
+
+## App (Archway)
+
+- Build and run the macOS app as a bundle: `scripts/build-app.sh`, then `open .build/Archway.app`. Quit the running instance first (`pkill -x Archway`). The bare SwiftPM binary has no localizations and a different defaults/WebKit storage location.
+- UI text is written in English in code. Every new user-facing string needs a German translation in `Sources/Archway/Resources/Localizable.xcstrings`. Strings that are not literals passed to SwiftUI views must use `String(localized:)`.

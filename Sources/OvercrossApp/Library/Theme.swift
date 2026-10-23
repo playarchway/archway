@@ -89,6 +89,7 @@ struct AmbientBackground: View {
 final class ArtworkLoader {
     static let shared = ArtworkLoader()
     private var images: [Int: NSImage] = [:]
+    private var backdrops: [Int: NSImage] = [:]
 
     func header(for game: LibraryGame) async -> NSImage? {
         if let cached = images[game.id] { return cached }
@@ -100,6 +101,20 @@ final class ArtworkLoader {
         if let image { images[game.id] = image }
         return image
     }
+
+    /// The wide store background for a game's page, falling back to its header.
+    func backdrop(for game: LibraryGame) async -> NSImage? {
+        if let cached = backdrops[game.id] { return cached }
+        var image: NSImage?
+        if !game.isLocal, let url = try? await SteamStoreClient.shared.details(for: game.id).backgroundRaw {
+            image = await load(url)
+        }
+        if image == nil { image = await header(for: game) }
+        if let image { backdrops[game.id] = image }
+        return image
+    }
+
+    func cachedBackdrop(for game: LibraryGame) -> NSImage? { backdrops[game.id] }
 
     private func load(_ url: URL) async -> NSImage? {
         guard let (data, response) = try? await URLSession.shared.data(from: url),

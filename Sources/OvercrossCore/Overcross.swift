@@ -360,7 +360,7 @@ public struct Orchestrator {
                              log: paths.logs.appendingPathComponent("\(label).log"), label: label)
     }
 
-    private func windowsRequest(_ windowsExecutable: URL, arguments: [String], label: String,
+    func windowsRequest(_ windowsExecutable: URL, arguments: [String], label: String,
                                 environment: [String: String]) throws -> LaunchRequest {
         let base = try request(arguments: [windowsExecutable.path] + arguments, label: label, environment: environment)
         return LaunchRequest(executable: base.executable, arguments: base.arguments,
@@ -474,10 +474,9 @@ public struct Orchestrator {
         guard graphicsAPI == nil || appID == Self.firstAppID else {
             throw OvercrossError.invalidPath("--graphics-api is currently supported only for Brick by Brick (5228920).")
         }
-        if configuration.selectedGraphicsBackend == .d3dmetal {
-            guard appID == Self.firstAppID else {
-                throw OvercrossError.invalidPath("D3DMetal is configured only for Brick by Brick (5228920).")
-            }
+        // Brick by Brick ships its own DXVK DLLs, so only its game profile must be prepared; other games
+        // use the runtime's staged D3DMetal builtins directly.
+        if configuration.selectedGraphicsBackend == .d3dmetal, appID == Self.firstAppID {
             try GameGraphicsSidecars(paths: paths).requireD3DMetalReady()
         }
         let steam = try requiredSteam()
@@ -555,6 +554,12 @@ public enum ProcessRunner {
     }
 
     public static func sendGUIRequest(_ request: LaunchRequest) throws {
+        _ = try startGUIProcess(request)
+    }
+
+    /// Starts the request and returns its process, for callers that follow its lifetime.
+    @discardableResult
+    public static func startGUIProcess(_ request: LaunchRequest) throws -> Process {
         let fd = try openLog(request.log)
         let output = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         let process = Process()
@@ -565,6 +570,7 @@ public enum ProcessRunner {
         process.standardOutput = output
         process.standardError = output
         try process.run()
+        return process
     }
 
     private static func openLog(_ url: URL) throws -> Int32 {

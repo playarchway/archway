@@ -9,12 +9,14 @@ struct GameDetailPage: View {
     var onRemove: (() -> Void)?
 
     @State private var details: SteamStoreDetails?
+    /// Shown once fully loaded, so the page never swaps from a smaller header to the real artwork.
+    @State private var backdrop: NSImage?
     @State private var loadFailed = false
-    @State private var runningSince: Date?
     @State private var hasAppeared = false
     @State private var showsAdvanced = false
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
+    @Environment(GameRunner.self) private var runner
 
     var body: some View {
         ScrollView {
@@ -48,7 +50,12 @@ struct GameDetailPage: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85).delay(0.18)) { hasAppeared = true }
         }
         .task(id: game.id) { if !game.isLocal { await load() } }
-        .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game) }
+        .task(id: game.id) {
+            if let cached = ArtworkLoader.shared.cachedBackdrop(for: game) { backdrop = cached; return }
+            let image = await ArtworkLoader.shared.backdrop(for: game)
+            withAnimation(.easeOut(duration: 0.7)) { backdrop = image }
+        }
+        .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game, logURL: runner.logURL(for: game)) }
         .sheet(item: $enlargedScreenshot) { shot in
             ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
         }
@@ -63,24 +70,39 @@ struct GameDetailPage: View {
 
     private var hero: some View {
         ZStack(alignment: .bottomLeading) {
-            AsyncImage(url: details?.backgroundRaw ?? game.headerURL) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    game.tint
+            ZStack {
+                HeroPlaceholder(tint: game.tint)
+                if let backdrop {
+                    Image(nsImage: backdrop).resizable().scaledToFill()
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 1.04)), removal: .identity))
                 }
             }
             .scaleEffect(hasAppeared ? 1 : 1.08)
+            // Launching pushes slowly into the artwork; once the game runs it settles slightly enlarged.
+            .scaleEffect(launchStage.artworkScale)
+            .animation(launchStage == .launching ? .easeInOut(duration: 8) : .smooth(duration: 1.2), value: launchStage)
             .opacity(hasAppeared ? 1 : 0)
-            .frame(height: 420)
+            .frame(height: 580)
             .frame(maxWidth: .infinity)
             .clipped()
             .saturation(game.isUnsupported ? 0 : 1)
             .overlay {
-                LinearGradient(stops: [.init(color: .black.opacity(0.15), location: 0),
-                                       .init(color: .black.opacity(0.35), location: 0.45),
-                                       .init(color: .black, location: 1)],
+                LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.35)], startPoint: .top, endPoint: .bottom)
+            }
+            // Fade the artwork out over its lower half so it melts into the page instead of ending at an edge.
+            .mask {
+                LinearGradient(stops: [.init(color: .black, location: 0),
+                                       .init(color: .black, location: 0.3),
+                                       .init(color: .black.opacity(0.8), location: 0.5),
+                                       .init(color: .black.opacity(0.45), location: 0.7),
+                                       .init(color: .black.opacity(0.15), location: 0.87),
+                                       .init(color: .clear, location: 1)],
                                startPoint: .top, endPoint: .bottom)
+            }
+            .overlay {
+                if launchStage == .launching {
+                    LaunchGlow().transition(.opacity.animation(.easeInOut(duration: 0.6)))
+                }
             }
 
             HStack(alignment: .bottom, spacing: 28) {
@@ -108,6 +130,26 @@ struct GameDetailPage: View {
         }
     }
 
+    private enum LaunchStage: Equatable {
+        case idle, launching, running
+
+        var artworkScale: CGFloat {
+            switch self {
+            case .idle: 1
+            case .launching: 1.14
+            case .running: 1.06
+            }
+        }
+    }
+
+    private var launchStage: LaunchStage {
+        switch runner.activity(for: game) {
+        case .starting?: .launching
+        case .running?: .running
+        default: .idle
+        }
+    }
+
     private var byline: String? {
         guard let details else { return nil }
         let year = details.releaseDate?.date.split(separator: " ").last.map(String.init)
@@ -115,36 +157,60 @@ struct GameDetailPage: View {
     }
 
     @ViewBuilder private var actions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            actionButtons
+            if let error = runner.errors[game.id] {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: runner.activity(for: game))
+    }
+
+    @ViewBuilder private var actionButtons: some View {
         HStack(spacing: 10) {
+            let activity = runner.activity(for: game)
             if game.isUnsupported {
                 EmptyView()
             } else if !game.isInstalled {
-                Button { } label: {
-                    Label("Über Steam installieren", systemImage: "arrow.down.circle").frame(minWidth: 180)
+                Button { runner.install(game) } label: {
+                    HStack(spacing: 10) {
+                        if activity == .installing {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.down.circle.fill")
+                        }
+                        Text(activity == .installing ? "Wird in Steam installiert …" : "Über Steam installieren")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
+                .buttonStyle(HeroActionButtonStyle(isBusy: activity == .installing))
+                .disabled(activity == .installing)
             } else {
-                PlayButton(runningSince: $runningSince)
-                if let runningSince {
-                    RunningIndicator(since: runningSince)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
+                // While the game runs, the button turns into a status; quit from the game itself.
+                if case .running(let since) = activity {
+                    RunningIndicator(since: since)
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
+                } else {
+                    PlayButton(activity: activity) { runner.play(game) }
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
                 }
             }
             Menu {
                 if game.isLocal {
-                    if let path = game.executablePath {
-                        Button("Im Finder zeigen") {
-                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                        }
-                    }
+                    Button("Im Finder zeigen") { runner.showFolder(game) }
                 } else {
                     Button("Im Steam-Shop öffnen") {
                         openURL(URL(string: "https://store.steampowered.com/app/\(game.id)")!)
                     }
-                    if game.isInstalled { Button("Spielordner im Finder zeigen") {} }
+                    if game.isInstalled { Button("Spielordner im Finder zeigen") { runner.showFolder(game) } }
                 }
                 Divider()
+                if case .running = runner.activity(for: game) {
+                    Button("Spiel beenden") { runner.stop(game) }
+                    Divider()
+                }
                 Button("Erweitert …") { showsAdvanced = true }.disabled(game.isUnsupported)
                 if let onRemove {
                     Button("Aus Overcross entfernen", role: .destructive, action: onRemove)
@@ -153,9 +219,10 @@ struct GameDetailPage: View {
                 Image(systemName: "ellipsis")
             }
             .menuStyle(.button)
+            .buttonStyle(CircleIconButtonStyle())
             .menuIndicator(.hidden)
-            .controlSize(.extraLarge)
             .fixedSize()
+            .help("Weitere Aktionen")
         }
     }
 
@@ -266,46 +333,149 @@ struct GameDetailPage: View {
 // MARK: - Building blocks
 
 private struct PlayButton: View {
-    @Binding var runningSince: Date?
+    let activity: GameRunner.Activity?
+    let action: () -> Void
+
+    private var isBusy: Bool { activity == .starting || activity == .stopping }
+
+    private var title: String {
+        switch activity {
+        case .starting: "Startet …"
+        case .stopping: "Wird beendet …"
+        default: "Spielen"
+        }
+    }
 
     var body: some View {
-        let isRunning = runningSince != nil
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                runningSince = isRunning ? nil : .now
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if isBusy {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "play.fill")
+                }
+                Text(title).contentTransition(.interpolate)
             }
-        } label: {
-            Label {
-                Text(isRunning ? "Beenden" : "Spielen").contentTransition(.interpolate)
-            } icon: {
-                Image(systemName: isRunning ? "stop.fill" : "play.fill").contentTransition(.symbolEffect(.replace))
-            }
-            .font(.title3.weight(.semibold))
-            .frame(minWidth: 130)
+            .frame(minWidth: 150)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(isRunning ? Color(white: 0.28) : .overcrossAccent)
-        .foregroundStyle(isRunning ? .white : .black)
-        .controlSize(.extraLarge)
+        .buttonStyle(HeroActionButtonStyle(isBusy: isBusy))
+        .disabled(isBusy)
     }
 }
 
-/// A live "running for" counter with a gently pulsing dot.
+/// The page's main action: a large amber capsule that brightens on hover and presses in on click.
+struct HeroActionButtonStyle: ButtonStyle {
+    static let height: CGFloat = 48
+    var isBusy = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        HoverableCapsule(configuration: configuration, isBusy: isBusy)
+    }
+
+    private struct HoverableCapsule: View {
+        let configuration: Configuration
+        let isBusy: Bool
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.title3.weight(.bold))
+                .foregroundStyle(isBusy ? Color.white : Color.black)
+                .padding(.horizontal, 26)
+                .frame(height: HeroActionButtonStyle.height)
+                .background {
+                    Capsule().fill(isBusy ? Color.white.opacity(0.16) : Color.overcrossAccent)
+                        .overlay(Capsule().fill(.white.opacity(isHovered && !isBusy ? 0.15 : 0)))
+                }
+                .shadow(color: Color.overcrossAccent.opacity(isBusy ? 0 : (isHovered ? 0.55 : 0.35)),
+                        radius: isHovered ? 18 : 12, y: 4)
+                .scaleEffect(configuration.isPressed ? 0.97 : (isHovered ? 1.02 : 1))
+                .animation(.snappy(duration: 0.18), value: isHovered)
+                .animation(.snappy(duration: 0.12), value: configuration.isPressed)
+                .onHover { isHovered = $0 }
+        }
+    }
+}
+
+/// The game's color, slowly breathing while its artwork loads.
+private struct HeroPlaceholder: View {
+    let tint: Color
+
+    var body: some View {
+        PhaseAnimator([false, true]) { bright in
+            RadialGradient(colors: [tint.opacity(bright ? 0.75 : 0.45), tint.opacity(0.15), .black],
+                           center: UnitPoint(x: 0.6, y: 0.3), startRadius: 0, endRadius: bright ? 900 : 700)
+        } animation: { _ in
+            .easeInOut(duration: 1.6)
+        }
+    }
+}
+
+/// An amber glow that breathes behind the play button while the game starts.
+private struct LaunchGlow: View {
+    var body: some View {
+        PhaseAnimator([0.4, 0.8]) { intensity in
+            RadialGradient(colors: [Color.overcrossAccent.opacity(0.4), Color.overcrossAccent.opacity(0.12), .clear],
+                           center: UnitPoint(x: 0.35, y: 0.85), startRadius: 0, endRadius: 700)
+                .opacity(intensity)
+        } animation: { _ in
+            .easeInOut(duration: 2)
+        }
+        .blendMode(.plusLighter)
+        .allowsHitTesting(false)
+    }
+}
+
+/// A round, secondary action beside the main button; the whole circle is clickable.
+struct CircleIconButtonStyle: ButtonStyle {
+    var size: CGFloat = HeroActionButtonStyle.height
+
+    func makeBody(configuration: Configuration) -> some View {
+        HoverableCircle(configuration: configuration, size: size)
+    }
+
+    private struct HoverableCircle: View {
+        let configuration: Configuration
+        let size: CGFloat
+        @State private var isHovered = false
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: size * 0.4, weight: .bold))
+                .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.35))
+                .frame(width: size, height: size)
+                .background(.white.opacity(isHovered ? 0.22 : 0.14), in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.18)))
+                .contentShape(Circle())
+                .scaleEffect(configuration.isPressed ? 0.94 : 1)
+                .animation(.snappy(duration: 0.15), value: isHovered)
+                .animation(.snappy(duration: 0.12), value: configuration.isPressed)
+                .onHover { isHovered = $0 }
+        }
+    }
+}
+
+/// Takes the play button's place while the game runs: a live "running for" counter with a pulsing dot.
 private struct RunningIndicator: View {
     let since: Date
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 9) {
             Image(systemName: "circle.fill")
-                .font(.system(size: 8))
+                .font(.system(size: 9))
                 .foregroundStyle(.green)
                 .symbolEffect(.pulse)
             TimelineView(.periodic(from: since, by: 1)) { context in
                 Text("Läuft seit \(Duration.seconds(context.date.timeIntervalSince(since)).formatted(.time(pattern: .minuteSecond)))")
                     .monospacedDigit()
             }
-            .foregroundStyle(.secondary)
         }
+        .font(.title3.weight(.semibold))
+        .padding(.horizontal, 22)
+        .frame(minWidth: 150, minHeight: HeroActionButtonStyle.height)
+        .background(Color.green.opacity(0.18), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.green.opacity(0.35)))
     }
 }
 
@@ -422,11 +592,13 @@ private struct ScreenshotViewer: View {
 /// The technical choices for one game, out of the way of the normal page.
 private struct AdvancedSettingsSheet: View {
     let game: LibraryGame
+    let logURL: URL?
     @State private var backend: String
     @Environment(\.dismiss) private var dismiss
 
-    init(game: LibraryGame) {
+    init(game: LibraryGame, logURL: URL?) {
         self.game = game
+        self.logURL = logURL
         _backend = State(initialValue: game.backend)
     }
 
@@ -441,7 +613,7 @@ private struct AdvancedSettingsSheet: View {
                 }
                 LabeledContent("Windows-Umgebung", value: "Steam (Wine 11.17)")
                 LabeledContent("Letzter Start") {
-                    Button("Protokoll exportieren …") {}.disabled(!game.isInstalled)
+                    Button("Protokoll exportieren …", action: exportLog).disabled(logURL == nil)
                 }
             }
             .formStyle(.grouped)
@@ -453,5 +625,14 @@ private struct AdvancedSettingsSheet: View {
         }
         .padding(20)
         .frame(width: 460)
+    }
+
+    private func exportLog() {
+        guard let logURL else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Overcross \(game.title).log"
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        try? FileManager.default.removeItem(at: destination)
+        try? FileManager.default.copyItem(at: logURL, to: destination)
     }
 }

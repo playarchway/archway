@@ -72,6 +72,14 @@ final class LibraryStore {
         phase = .needsAccount
     }
 
+    /// Re-reads which Steam games are installed in the bottle, for example while Steam is installing one.
+    func refreshInstalled() {
+        let installed = installedAppIDs()
+        for index in steamGames.indices {
+            steamGames[index].isInstalled = installed.contains(steamGames[index].id)
+        }
+    }
+
     // MARK: Merging
 
     private func apply(_ owned: [SteamWebAPI.OwnedGame], fetchedAt: Date) {

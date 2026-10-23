@@ -26,31 +26,14 @@ open-steam, install-game, and launch-game install the steamwebhelper shim that k
 window from rendering black; --without-webhelper-shim restores Valve's helper for diagnosis.
 """
 
-/// Removes app-local DXVK files from Brick by Brick and sets its builtin D3D overrides,
-/// so the staged D3DMetal runtime serves only the game. Idempotent.
-private func prepareD3DMetalGame(_ orchestrator: Orchestrator, _ paths: AppPaths) throws {
-    let sidecars = try GameGraphicsSidecars(paths: paths)
-    if (try? sidecars.requireD3DMetalReady()) != nil { return }
-    if let backend = try sidecars.installedBackend(), backend != .d3dmetal { try sidecars.restore() }
-    if try sidecars.installedBackend() == nil { try sidecars.suspendForD3DMetal() }
-    print("Preparing Brick by Brick for D3DMetal (game-only builtin Direct3D overrides).")
-    for request in try orchestrator.d3dMetalGameOverrides() {
-        try ProcessRunner.runSetup(request, timeout: 60)
-    }
-    // A running wineserver writes user.reg about every 30 seconds.
-    let deadline = Date().addingTimeInterval(45)
-    while (try? sidecars.requireD3DMetalReady()) == nil && Date() < deadline { usleep(500_000) }
-}
-
 /// Returns whether Steam must start with the shim's launch arguments.
 private func applyWebHelperShim(_ orchestrator: Orchestrator, enabled: Bool = true) throws -> Bool {
-    let shim = try orchestrator.steamWebHelperShim(shim: SteamWebHelperShim.bundledShim())
     guard enabled else {
-        try shim.remove()
+        try orchestrator.removeSteamShim()
         print("Steam webhelper shim: removed; Valve's helper restored. Steam's window is expected to stay black.")
         return false
     }
-    guard try shim.install() else {
+    guard try orchestrator.prepareSteam() else {
         print("Steam webhelper shim: Steam has not downloaded its webhelper yet. Let this first start finish updating, then run close-steam and open-steam again.")
         return false
     }
@@ -306,8 +289,10 @@ private func run() throws {
         try requireNoExtras(arguments)
         let appID = try rawID.map(Orchestrator.appID) ?? Orchestrator.firstAppID
         let orchestrator = Orchestrator(paths: paths, configuration: try requiredConfiguration(store))
-        if command == "launch-game", orchestrator.configuration.selectedGraphicsBackend == .d3dmetal {
-            try prepareD3DMetalGame(orchestrator, paths)
+        if command == "launch-game", appID == Orchestrator.firstAppID,
+           orchestrator.configuration.selectedGraphicsBackend == .d3dmetal {
+            print("Preparing Brick by Brick for D3DMetal (game-only builtin Direct3D overrides).")
+            try orchestrator.prepareD3DMetalGame()
         }
         let shimActive = try applyWebHelperShim(orchestrator)
         let request = try command == "install-game"

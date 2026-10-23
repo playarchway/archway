@@ -60,6 +60,13 @@ struct LibraryView: View {
         }
         // Also picks up a Steam session that already exists, for example from an earlier sign-in.
         .task { await store.refresh() }
+        // OVERCROSS_PREVIEW_GAME=<app id> opens that game's page once the library has loaded, for design screenshots.
+        .onChange(of: store.games.count, initial: true) {
+            guard openGame == nil, let id = ProcessInfo.processInfo.environment["OVERCROSS_PREVIEW_GAME"].flatMap(Int.init),
+                  let game = store.games.first(where: { $0.id == id }) else { return }
+            openHeroID = "preview-\(id)"
+            openGame = game
+        }
         // Let the backdrop run under the title bar so the window reads as one surface.
         .toolbarBackground(.hidden, for: .windowToolbar)
         .tint(.overcrossAccent)
@@ -127,17 +134,9 @@ struct LibraryView: View {
                 if case .failed(let error) = store.phase { staleBanner(error) }
 
                 ForEach(shelves, id: \.title) { shelf in
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(shelf.title).font(.title3.weight(.semibold)).padding(.horizontal, 32)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 16) {
-                                ForEach(shelf.games) { game in
-                                    tile(game, width: shelf.isLarge ? 380 : 250, section: shelf.title)
-                                }
-                            }
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 10)
-                        }
+                    let width: CGFloat = shelf.isLarge ? 380 : 250
+                    Shelf(title: shelf.title, games: shelf.games, tileWidth: width) { game in
+                        tile(game, width: width, section: shelf.title)
                     }
                 }
 
@@ -206,7 +205,7 @@ struct LibraryView: View {
             }
         }
         ToolbarItem(placement: .primaryAction) {
-            if !store.games.isEmpty { LibrarySearchField(text: $search) }
+            if openGame == nil && !store.games.isEmpty { LibrarySearchField(text: $search) }
         }
         ToolbarItemGroup(placement: .primaryAction) {
             if openGame == nil && !store.games.isEmpty {
@@ -244,6 +243,65 @@ struct LibraryView: View {
     }
 }
 
+/// A row of games that pages with arrow buttons, like shelves in Mac apps. The row ignores the scroll wheel,
+/// so scrolling over it always moves the page.
+private struct Shelf<Tile: View>: View {
+    let title: String
+    let games: [LibraryGame]
+    let tileWidth: CGFloat
+    @ViewBuilder let tile: (LibraryGame) -> Tile
+
+    @State private var leadingID: Int?
+    @State private var visibleCount = 1
+
+    private let spacing: CGFloat = 16
+    private let margin: CGFloat = 32
+    private var leadingIndex: Int { games.firstIndex { $0.id == leadingID } ?? 0 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title).font(.title3.weight(.semibold))
+                Spacer()
+                if games.count > visibleCount {
+                    HStack(spacing: 8) {
+                        Button { page(-1) } label: { Image(systemName: "chevron.left") }
+                            .disabled(leadingIndex == 0)
+                            .help("Zurück")
+                        Button { page(1) } label: { Image(systemName: "chevron.right") }
+                            .disabled(leadingIndex + visibleCount >= games.count)
+                            .help("Weiter")
+                    }
+                    .buttonStyle(CircleIconButtonStyle(size: 30))
+                    .transition(.opacity)
+                }
+            }
+            .padding(.horizontal, margin)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: spacing) {
+                    ForEach(games) { game in tile(game).id(game.id) }
+                }
+                .scrollTargetLayout()
+                .padding(.vertical, 10)
+            }
+            .contentMargins(.horizontal, margin, for: .scrollContent)
+            .scrollPosition(id: $leadingID, anchor: .leading)
+            .scrollDisabled(true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                visibleCount = max(1, Int((width - 2 * margin + spacing) / (tileWidth + spacing)))
+            }
+        }
+        .animation(.snappy, value: games.count > visibleCount)
+    }
+
+    /// Moves by a full row of games, stopping where the last game is fully visible.
+    private func page(_ direction: Int) {
+        let target = min(max(leadingIndex + direction * visibleCount, 0), max(games.count - visibleCount, 0))
+        withAnimation(.smooth(duration: 0.5)) { leadingID = games[target].id }
+    }
+}
+
 private struct ShelfTile: View {
     let game: LibraryGame
     /// Fixed width on shelves; nil fills the grid column.
@@ -257,12 +315,14 @@ private struct ShelfTile: View {
     @State private var isHovered = false
     @State private var tilt: CGSize = .zero
     @State private var coverSize: CGSize = .zero
+    @Environment(GameRunner.self) private var runner
 
     var body: some View {
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 8) {
                 GameCover(game: game, cornerRadius: 10)
                     .saturation(game.isUnsupported ? 0 : 1)
+                    .overlay(alignment: .topLeading) { activityBadge }
                     .matchedGeometryEffect(id: heroID, in: hero, isSource: !isOpen)
                     .opacity(isOpen ? 0 : 1)
                     .rotation3DEffect(.degrees(Double(tilt.height) * -6), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
@@ -330,6 +390,34 @@ private struct LibrarySearchField: View {
             Button("Suchen") { isFocused = true }
                 .keyboardShortcut("f", modifiers: .command)
                 .hidden()
+        }
+    }
+}
+
+extension ShelfTile {
+    @ViewBuilder fileprivate var activityBadge: some View {
+        if let activity = runner.activity(for: game) {
+            HStack(spacing: 6) {
+                switch activity {
+                case .running:
+                    Image(systemName: "circle.fill").font(.system(size: 7)).foregroundStyle(.green).symbolEffect(.pulse)
+                    Text("Läuft")
+                case .starting:
+                    ProgressView().controlSize(.mini)
+                    Text("Startet …")
+                case .stopping:
+                    ProgressView().controlSize(.mini)
+                    Text("Wird beendet …")
+                case .installing:
+                    ProgressView().controlSize(.mini)
+                    Text("Wird installiert …")
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 9).padding(.vertical, 5)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(8)
+            .transition(.scale(scale: 0.8).combined(with: .opacity))
         }
     }
 }

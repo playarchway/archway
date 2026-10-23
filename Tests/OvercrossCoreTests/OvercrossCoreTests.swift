@@ -674,3 +674,40 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
         #expect(state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.hasPrefix("Z"))
     }
 }
+
+@Test func gameProcessesMatchWindowsCommandLines() {
+    let ps = """
+      101 /Applications/T3 Code.app/Contents/MacOS/T3 Code
+      202 C:\\Program Files (x86)\\Steam\\steamapps\\common\\Brick by Brick Tidy Up the Small Town!\\BrickByBrick.exe -force-d3d11
+      303 BrickByBrick.exe NoDefaultCurrentDirectoryInExePath=1
+      404 C:\\Program Files (x86)\\Steam\\steam.exe -noverifyfiles
+      505 /Users/me/Games/Other.EXE
+    """
+    let found = GameProcesses.parse(psOutput: ps, imageNames: ["brickbybrick.exe", "other.exe"])
+    #expect(found == [.init(pid: 202, imageName: "brickbybrick.exe"),
+                      .init(pid: 303, imageName: "brickbybrick.exe"),
+                      .init(pid: 505, imageName: "other.exe")])
+    #expect(GameProcesses.imageName(inCommandLine: "no executable here") == nil)
+}
+
+@Test func gameExecutablesSkipHelpersAndManifestValuesParse() throws {
+    let directory = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let game = directory.appendingPathComponent("My Game")
+    try FileManager.default.createDirectory(at: game.appendingPathComponent("bin"), withIntermediateDirectories: true)
+    for name in ["Game.exe", "UnityCrashHandler64.exe", "unins000.exe", "bin/Server.exe", "readme.txt"] {
+        try Data().write(to: game.appendingPathComponent(name))
+    }
+    #expect(GameProcesses.executableNames(in: game) == ["game.exe", "server.exe"])
+
+    let manifest = """
+    "AppState"
+    {
+        "appid"\t\t"5228920"
+        "installdir"\t\t"Brick by Brick Tidy Up the Small Town!"
+        "StateFlags"\t\t"4"
+    }
+    """
+    #expect(GameProcesses.value(of: "installdir", inManifest: manifest) == "Brick by Brick Tidy Up the Small Town!")
+    #expect(GameProcesses.value(of: "missing", inManifest: manifest) == nil)
+}

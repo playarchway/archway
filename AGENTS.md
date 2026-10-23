@@ -15,8 +15,6 @@ Tell sessions apart by prefix instead:
 |---|---|
 | `bottles/steam-5228920` | Overcross CLI default data directory: the user's Windows Steam, on Whisky's CrossOver-based Wine 11.17 with D3DMetal (`runtime-overlays/winecx-gptk-4.7.3`) for Brick by Brick. Start and stop it only through `overcross`. |
 | `upstream-1120-probe` | Codex thread "D3DMetal auf Upstream-Wine 11.20". Feasibility test: clone of the Steam bottle on our own upstream Wine 11.20 build (Codex's cross-process GDI fix plus a D3DMetal `macdrv_functions` compatibility table) with GPTK 4.0 beta 3 staged. |
-| `graphics-probe` | Earlier DXVK/graphics experiments; not in active use. |
-| `runtime-probe/bottle` | Wine 11.18 runtime smoke test; `runtime-probe/extracted` holds the previous runtime (`config.before-d3dmetal.json`). |
 
 ## Commits
 

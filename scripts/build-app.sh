@@ -17,8 +17,10 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin/Archway" "$app/Contents/MacOS/Archway"
 cp -R "$bin/Overcross_Archway.bundle" "$app/Contents/Resources/"
-# SwiftUI looks up its strings in the main bundle.
-cp -R "$bin/Overcross_Archway.bundle/Contents/Resources/"*.lproj "$app/Contents/Resources/"
+# SwiftUI looks up its strings in the main bundle. The resource bundle is flat with the native SwiftPM
+# build system and has Contents/Resources with swiftbuild, so take the .lproj folders from wherever they are.
+find "$bin/Overcross_Archway.bundle" -name '*.lproj' -type d -prune -exec cp -R {} "$app/Contents/Resources/" \;
+ls "$app/Contents/Resources/"*.lproj >/dev/null
 
 iconset="$(mktemp -d)/AppIcon.iconset"
 mkdir -p "$iconset"

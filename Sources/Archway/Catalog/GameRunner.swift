@@ -18,7 +18,7 @@ final class GameRunner {
     enum Runtime: String, CaseIterable, Sendable {
         /// CrossOver-based Wine 11.17 with Steam, the tested default.
         case standard
-        /// Archway's own Wine 11.20 build with D3DMetal; starts the game directly, in a bottle of its own.
+        /// Archway's own Wine 11.20 build with D3DMetal, in a bottle with its own Windows Steam.
         case archwayAlpha
     }
 
@@ -180,7 +180,7 @@ final class GameRunner {
     func logURL(for game: LibraryGame) -> URL? {
         let runtime = runtime(for: game)
         guard let paths = try? Self.paths(runtime) else { return nil }
-        let url = paths.logs.appendingPathComponent("\(Self.logLabel(for: game, runtime: runtime)).log")
+        let url = paths.logs.appendingPathComponent("\(Self.logLabel(for: game)).log")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
@@ -271,38 +271,35 @@ final class GameRunner {
         return Orchestrator(paths: paths, configuration: configuration)
     }
 
-    nonisolated private static func logLabel(for game: LibraryGame, runtime: Runtime = .standard) -> String {
-        if game.isLocal { return "local-game-\(-game.id)" }
-        return runtime == .archwayAlpha ? "alpha-game-\(game.id)" : "game-launch-\(game.id)"
+    /// Matches the label of the request that starts the game; each runtime keeps its logs in its own folder.
+    nonisolated private static func logLabel(for game: LibraryGame) -> String {
+        game.isLocal ? "local-game-\(-game.id)" : "game-launch-\(game.id)"
     }
 
     /// Starts the game and returns the image names that identify its processes.
     nonisolated private static func launch(_ game: LibraryGame, runtime: Runtime) throws -> Set<String> {
-        if runtime == .archwayAlpha && !game.isLocal { return try launchAlpha(game) }
-        let orchestrator = try orchestrator()
         if let path = game.executablePath {
             let executable = URL(fileURLWithPath: path)
-            try ProcessRunner.startGUIProcess(orchestrator.localGameLaunch(executable: executable, label: logLabel(for: game)))
+            try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: logLabel(for: game)))
             return [executable.lastPathComponent.lowercased()]
         }
-        if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
-        let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive))
-        guard let folder = orchestrator.steamInstallDirectory(appID: game.id) else { return [] }
-        return GameProcesses.executableNames(in: folder)
-    }
-
-    /// Starts the game's executable directly in the alpha bottle; Steam does not run there yet.
-    nonisolated private static func launchAlpha(_ game: LibraryGame) throws -> Set<String> {
-        let orchestrator = try orchestrator(.archwayAlpha)
-        guard let folder = orchestrator.steamInstallDirectory(appID: game.id),
-              let executable = GameProcesses.mainExecutable(in: folder) else {
+        let orchestrator = try orchestrator(runtime)
+        let folder = orchestrator.steamInstallDirectory(appID: game.id)
+        if runtime == .archwayAlpha && folder.map({ FileManager.default.fileExists(atPath: $0.path) }) != true {
             throw RunnerError.notInAlpha
         }
         if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
-        try ProcessRunner.startGUIProcess(orchestrator.localGameLaunch(executable: executable,
-                                                                       label: logLabel(for: game, runtime: .archwayAlpha)))
-        return GameProcesses.executableNames(in: folder)
+        let shimActive = try prepareSteam(orchestrator, runtime: runtime)
+        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive))
+        return folder.map(GameProcesses.executableNames) ?? []
+    }
+
+    /// The standard runtime needs the webhelper shim to draw Steam's window. Archway's Wine draws Chromium's
+    /// cross-process windows itself, so the alpha bottle keeps Valve's helper. Returns whether the shim is active.
+    nonisolated private static func prepareSteam(_ orchestrator: Orchestrator, runtime: Runtime) throws -> Bool {
+        guard runtime == .archwayAlpha else { return try orchestrator.prepareSteam() }
+        try orchestrator.removeSteamShim()
+        return false
     }
 
     private enum RunnerError: LocalizedError {

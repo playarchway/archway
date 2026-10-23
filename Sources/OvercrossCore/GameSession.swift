@@ -87,17 +87,6 @@ public enum GameProcesses {
         return names.filter { name in !ignoredExecutables.contains { name.contains($0) } }
     }
 
-    /// The executable that starts the game: a top-level .exe, preferring one named like the game folder.
-    public static func mainExecutable(in directory: URL) -> URL? {
-        let folder = directory.lastPathComponent.lowercased().filter(\.isLetter)
-        let candidates = ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.pathExtension.lowercased() == "exe" }
-            .filter { url in !ignoredExecutables.contains { url.lastPathComponent.lowercased().contains($0) } }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-        return candidates.first { folder.hasPrefix($0.deletingPathExtension().lastPathComponent.lowercased().filter(\.isLetter)) }
-            ?? candidates.first
-    }
-
     /// Processes whose command line starts with one of the image names.
     public static func running(imageNames: Set<String>) -> [Running] {
         guard !imageNames.isEmpty else { return [] }

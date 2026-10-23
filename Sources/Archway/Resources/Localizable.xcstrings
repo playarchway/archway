@@ -205,12 +205,12 @@
         }
       }
     },
-    "Archway’s own Wine version, still in early testing. Starts the game directly without Steam and keeps separate saves.": {
+    "Archway’s own Wine version, still in early testing. Starts the game through a separate Steam.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Archways eigene Wine-Version, noch in früher Testphase. Startet das Spiel direkt ohne Steam und hat eigene Spielstände."
+            "value": "Archways eigene Wine-Version, noch in früher Testphase. Startet das Spiel über ein separates Steam."
           }
         }
       }

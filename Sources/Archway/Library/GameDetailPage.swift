@@ -649,7 +649,7 @@ private struct AdvancedSettingsSheet: View {
                     .disabled(runner.activity(for: game) != nil)
                 } footer: {
                     Text(isAlphaAvailable
-                         ? "Archway’s own Wine version, still in early testing. Starts the game directly without Steam and keeps separate saves."
+                         ? "Archway’s own Wine version, still in early testing. Starts the game through a separate Steam."
                          : "Archway’s own Wine version isn’t available for this game yet.")
                         .font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

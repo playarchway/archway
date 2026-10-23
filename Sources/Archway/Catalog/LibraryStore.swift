@@ -29,6 +29,11 @@ final class LibraryStore {
         (steamGames + localGames).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
+    /// Totals from sessions Archway saw end, until Steam reports them. Steam takes a moment after a session,
+    /// and never hears of games that run on the alpha runtime.
+    private var sessionTotals: [Int: (minutes: Int, lastPlayedAt: Date)] = [:]
+    private var sessionRefresh: Task<Void, Never>?
+
     private let paths: AppPaths?
     private var cacheURL: URL? { paths?.dataDirectory.appendingPathComponent("steam-library-cache.json") }
     private var localGamesURL: URL? { paths?.dataDirectory.appendingPathComponent("local-games.json") }
@@ -80,13 +85,39 @@ final class LibraryStore {
         }
     }
 
+    /// Counts a finished session right away, then asks Steam for its own numbers.
+    func recordSession(gameID: Int, from start: Date, to end: Date) {
+        let minutes = Int(end.timeIntervalSince(start) / 60)
+        if let index = steamGames.firstIndex(where: { $0.id == gameID }) {
+            sessionTotals[gameID] = (steamGames[index].playtimeMinutes + minutes, end)
+            applySessionTotals(to: &steamGames[index])
+        } else if let index = localGames.firstIndex(where: { $0.id == gameID }) {
+            localGames[index].playtimeMinutes += minutes
+            localGames[index].lastPlayedAt = end
+        }
+        guard gameID > 0, hasAccount else { return }
+        sessionRefresh?.cancel()
+        sessionRefresh = Task {
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled else { return }
+            await refresh()
+        }
+    }
+
     // MARK: Merging
+
+    /// Steam's totals only grow, so the larger value is the newer one.
+    private func applySessionTotals(to game: inout LibraryGame) {
+        guard let totals = sessionTotals[game.id] else { return }
+        game.playtimeMinutes = max(game.playtimeMinutes, totals.minutes)
+        game.lastPlayedAt = max(game.lastPlayedAt ?? .distantPast, totals.lastPlayedAt)
+    }
 
     private func apply(_ owned: [SteamWebAPI.OwnedGame], fetchedAt: Date) {
         let installed = installedAppIDs()
         steamGames = owned.map { game in
             let profile = Self.profiles[game.appid]
-            return LibraryGame(
+            var entry = LibraryGame(
                 id: game.appid,
                 title: game.name ?? "App \(game.appid)",
                 playtimeMinutes: game.playtimeForever,
@@ -94,6 +125,8 @@ final class LibraryStore {
                 isInstalled: installed.contains(game.appid),
                 compatibility: profile?.compatibility ?? .untested,
                 backend: profile?.backend ?? Self.defaultBackend)
+            applySessionTotals(to: &entry)
+            return entry
         }
         lastUpdated = fetchedAt
     }

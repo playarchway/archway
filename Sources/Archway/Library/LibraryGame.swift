@@ -56,8 +56,8 @@ struct LibraryGame: Identifiable, Hashable {
 
     let id: Int
     let title: String
-    let playtimeMinutes: Int
-    let lastPlayedAt: Date?
+    var playtimeMinutes: Int
+    var lastPlayedAt: Date?
     var isInstalled: Bool
     var compatibility: Compatibility
     var backend: String

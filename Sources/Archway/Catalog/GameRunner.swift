@@ -158,6 +158,7 @@ final class GameRunner {
             switch activity {
             case .starting where isRunning:
                 activities[id] = .running(since: .now)
+                startedAt[id] = .now
             case .starting:
                 if Date().timeIntervalSince(startedAt[id] ?? .now) > Self.startTimeout {
                     finish(id)
@@ -166,7 +167,10 @@ final class GameRunner {
             case .running, .stopping:
                 // A game can restart itself (launchers, updates); only treat two misses in a row as an exit.
                 missedPolls[id] = isRunning ? 0 : (missedPolls[id] ?? 0) + 1
-                if (missedPolls[id] ?? 0) >= 2 { finish(id) }
+                if (missedPolls[id] ?? 0) >= 2 {
+                    if let since = startedAt[id] { store.recordSession(gameID: id, from: since, to: .now) }
+                    finish(id)
+                }
             case .installing:
                 break
             }

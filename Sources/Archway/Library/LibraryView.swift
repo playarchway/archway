@@ -35,7 +35,9 @@ struct LibraryView: View {
                 .opacity(openGame == nil ? 1 : 0)
                 .scaleEffect(openGame == nil ? 1 : 0.97)
 
-            if let game = openGame, let openHeroID {
+            if let opened = openGame, let openHeroID {
+                // Look the game up again so its stats follow the store, for example after a session ends.
+                let game = store.games.first { $0.id == opened.id } ?? opened
                 GameDetailPage(game: game, heroNamespace: hero, heroID: openHeroID,
                                onRemove: game.isLocal ? { close(); store.removeLocalGame(game) } : nil)
                     .transition(.asymmetric(insertion: .opacity, removal: .opacity.animation(.easeOut(duration: 0.2))))
@@ -47,6 +49,10 @@ struct LibraryView: View {
         .navigationTitle(openGame == nil && !store.games.isEmpty ? String(localized: "Library") : "")
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
+        // Steam's playtime may have moved since the library loaded, for example after playing on another device.
+        .onChange(of: openGame?.id) {
+            if let openGame, !openGame.isLocal { Task { await store.refresh() } }
+        }
         .onChange(of: search) {
             if openGame != nil { close() }
         }

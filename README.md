@@ -2,6 +2,8 @@
 
 Overcross is a Swift command-line core for testing **Brick by Brick: Tidy Up the Small Town!** (Steam app `5228920`) in a dedicated Wine bottle on macOS. It does not bundle Wine, Steam, or a game. Its library target is intended for a later native SwiftUI app.
 
+**Verified setup (2026-10-23, macOS 27.0.1, Apple M5 Pro):** Windows Steam and Brick by Brick run in the owned bottle on Whisky's CrossOver-based Wine 11.17 runtime with Apple's D3DMetal (GPTK 4.0 beta 3) for the game and the steamwebhelper shim for Steam's UI. Install, play, save, quit, relaunch, and save reload passed manually. Unity reports `Direct3D 11.0 [level 11.1]` on `AMD Compatibility Mode`, D3DMetal's adapter.
+
 ## Prerequisites and commands
 
 Install or select a freely usable macOS Wine runtime separately, and download the official **Windows** Steam installer yourself. Use absolute local paths. Overcross never requests your Steam credentials; sign in through the Windows Steam window.
@@ -43,21 +45,26 @@ The shim's source is `Shims/steamwebhelper/steamwebhelper_shim.c`. `Shims/steamw
 
 `open-steam --cef-debugging` adds `-cef-enable-debugging` for temporary CEF diagnostics. With it, `--cef-debug-port PORT` adds `-devtools-port PORT` for a chosen port from 1024 through 65535; this hidden override is present in Steam's installed binary but remains unverified until a live listener check. The default debug port is unchanged when no port is supplied. These options are off by default, can be combined with the other launch options, and are never saved to configuration. Check that the chosen port is free and that any listener binds only to localhost before inspecting it. Close Steam after diagnosis so the debugging endpoint is no longer available.
 
-### D3DMetal runtime experiment
+### D3DMetal
 
-`check-d3dmetal --redist-lib '/absolute/path/to/redist/lib'` validates a local Apple Game Porting Toolkit redist. For the 4.0 beta 3 payload it checks the x64 Windows forwarders `d3d11`, `d3d12`, `d3d12core`, and `dxgi`, their matching Unix bridges, `libd3dshared.dylib`, and `D3DMetal.framework`. Apple components are not bundled with Overcross. Only a separately cloned Wine runtime inside the selected data directory's `runtime-overlays/` may be staged:
+D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with CrossOver's Mac driver interface (`macdrv_functions`), which upstream Wine does not provide; the verified runtime is Whisky's CrossOver-based Wine 11.17 (`runtime-overlays/winecx-gptk-4.7.3`). Apple's Game Porting Toolkit is not redistributable, so Overcross never bundles it: download Apple's *Evaluation environment for Windows games* yourself and point Overcross at its `redist/lib`.
 
 ```sh
-overcross stage-d3dmetal --redist-lib '/absolute/path/to/redist/lib' --runtime-root '/absolute/Overcross/data/runtime-overlays/compatible-wine'
-overcross restore-d3dmetal --redist-lib '/absolute/path/to/redist/lib' --runtime-root '/absolute/Overcross/data/runtime-overlays/compatible-wine'
+overcross check-d3dmetal --redist-lib REDIST_LIB
+overcross stage-d3dmetal --redist-lib REDIST_LIB --runtime-root DATA/runtime-overlays/RUNTIME/Wine
+overcross configure --wine DATA/runtime-overlays/RUNTIME/Wine/bin/wine --wineserver DATA/runtime-overlays/RUNTIME/Wine/bin/wineserver --backend d3dmetal --d3dmetal-dir REDIST_LIB
+overcross launch-game
+overcross restore-d3dmetal --redist-lib REDIST_LIB --runtime-root DATA/runtime-overlays/RUNTIME/Wine
 ```
 
-Staging preserves replaced components in `.overcross-d3dmetal-backup` inside that clone and restores only matching files. A provider's `gptkCapable` metadata permits normal staging. `--allow-unverified-runtime` permits an isolated diagnostic overlay without asserting compatibility; normal `configure --backend d3dmetal --wine CLONED_RUNTIME/bin/wine --d3dmetal-dir REDIST_LIB` and launch requests reject unverified or unstaged runtimes. A staged label is not evidence that Apple's modules loaded or a game works. DXVK remains selectable with `--backend dxvk --dxvk-config FILE --vulkan-icd FILE`; D3DMetal selection excludes these variables.
+Only a runtime clone inside the data directory's `runtime-overlays/` can be staged. Staging copies `D3DMetal.framework` and `libd3dshared.dylib` into `lib/external`, replaces the runtime's `d3d11`, `d3d12`, `d3d12core`, and `dxgi` builtins, and keeps the originals in `.overcross-d3dmetal-backup` for `restore-d3dmetal`. Normal staging requires the runtime's `WhiskyWineVersion.plist` (beside `Wine/`) to declare `gptkCapable`; `--allow-unverified-runtime` is for isolated probes only, and such a runtime cannot be configured for launches. `bin/wine` may be a symlink to the loader.
 
-Brick by Brick also requires removing game-local DXVK DLLs and setting game-only Wine `DllOverrides` for `d3d11`, `d3d12`, `d3d12core`, and `dxgi` to `builtin` while its bottle is stopped. `launch-game` refuses a D3DMetal selection if any of those local DLLs or exact game-only builtin overrides are missing. The current runtime experiment does not automatically change the live bottle's registry or game directory; preserve its backup and prepare only a separate owned probe bottle. Steam's webhelper shim remains a separate Steam UI workaround. Manual mapped-module and game graphics log evidence are required before calling a backend operational.
+With `--backend d3dmetal`, `launch-game` prepares Brick by Brick on first use: it moves game-local DXVK DLLs to `graphics-backups/brick-by-brick` and sets game-only Wine `DllOverrides` for `d3d10`, `d3d11`, `d3d12`, `d3d12core`, and `dxgi` to `builtin` for `BrickByBrick.exe`. Steam itself is not switched to D3DMetal by these overrides.
+
+The CrossOver-based runtime uses the Windows user name `crossover`, so the bottle's profile moves from `drive_c/users/<you>` to `drive_c/users/crossover`. Copy `AppData/LocalLow/PaperPixelGames` (saves) once after switching; Steam asks for one new sign-in because its stored login is bound to the old profile. `DXVK` remains selectable with `--backend dxvk --dxvk-config FILE --vulkan-icd FILE`.
 
 `doctor` reads state without creating the data directory. `init-bottle` waits at most five minutes for `wine wineboot -u`, then up to 30 seconds for Wine's registry file, which may appear after the command exits. It marks the bottle as owned before setup and ready only after both checks pass. An incomplete owned setup can be retried. Overcross refuses to adopt an existing unmarked Wine prefix. On setup timeout it signals only the process group it started; Wine may leave a separately daemonized wineserver, which Overcross does not stop. Installer, Steam, and game commands dispatch a GUI request and write subprocess output to a log. Repeated requests truncate a log once it exceeds 10 MiB; an active GUI process may still grow its log beyond that size. A sent request does **not** prove installation, process lifetime, or playability. After Steam login and game installation, manually test actual play, save, quit, relaunch, and save reload. Compatibility remains unverified until that sequence passes on the target Mac.
 
 GUI requests start Wine with the working directory set to the validated Windows installer or Steam executable's folder, matching the packaged Wine app's file-open behavior. Bottle setup and wineserver wait keep their normal working directory.
 
-The Swift Testing suite checks persisted configuration, executable and installer paths, owned bottle and log scope, Steam arguments and URI, environment isolation, app IDs, and setup process failure and timeout behavior using local fake executables. It does not exercise Wine or Steam. This Command Line Tools installation needs the explicit macro-library flag shown above; a full Xcode toolchain can use plain `swift test`. The owned Steam library UI and Steam Web API catalog are deferred until this first game passes the manual gate.
+The Swift Testing suite checks persisted configuration, executable and installer paths, owned bottle and log scope, Steam arguments and URI, environment isolation, app IDs, and setup process failure and timeout behavior using local fake executables. It does not exercise Wine or Steam. This Command Line Tools installation needs the explicit macro-library flag shown above; a full Xcode toolchain can use plain `swift test`. With the first game's manual gate passed, the next step is the SwiftUI app with the owned Steam library and per-game profiles.

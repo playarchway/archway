@@ -89,3 +89,14 @@ On 2026-10-23 the black window was traced to cross-process presentation. Steam's
 Ruled out in an APFS clone of the bottle: forcing `SDL_RENDER_DRIVER=software`, and disabling `opengl32` for `steamwebhelper.exe` only. Confirmed: starting the browser webhelper with `--in-process-gpu` (via a wrapper at Steam's helper path, Steam started with `-noverifyfiles -norepairfiles`) renders the complete login window; screenshots were checked directly. Without `-noverifyfiles` Steam restores its helper at startup.
 
 Overcross now installs this shim automatically (see the README). Verified on the real `steam-5228920` bottle through `overcross open-steam`: the login window renders, no separate GPU process runs, a cooperative `steam.exe -shutdown` lets the Wine server exit within about 6 seconds, and killing the shim also ends the real helper through a kill-on-close job object. Login, game installation, and play are still untested.
+
+
+## D3DMetal on a CrossOver-based runtime (verified)
+
+Brick by Brick's Unity build could not create a Direct3D 11 device with Wine's builtin `wined3d` (`80004005`). DXVK 3.1 rendered the menu, but mouse and keyboard input did not reach the game. Apple's D3DMetal (GPTK 4.0 beta 3, user-downloaded) was then staged into an Overcross-owned copy of Whisky's CrossOver-based Wine 11.17 runtime and configured with `--backend d3dmetal`. On 2026-10-23, in the real `steam-5228920` bottle, Unity reported `Direct3D 11.0 [level 11.1]`, `Renderer: AMD Compatibility Mode`, and the user confirmed menu input, play, save, and reload. Steam keeps the webhelper shim on this runtime: a cloned bottle without the shim still showed a black Steam window.
+
+Switching runtimes changed the Windows profile to `users/crossover`; saves were copied from `users/mschoenb`, and Steam required one new sign-in. The previous configuration is kept as `config.before-d3dmetal.json`.
+
+## Upstream Wine 11.20 feasibility (in progress)
+
+A separate build of upstream Wine 11.20 (`~/dev/overcross-wine`) carries Codex's cross-process GDI fix, with which Steam renders and signs in without the shim. D3DMetal needs CrossOver's exported `macdrv_functions` table; its 24-entry layout was read from CrossOver's `winemac.so` and reimplemented in `dlls/winemac.drv/d3dmetal.c`. All other Wine symbols D3DMetal looks up already exist upstream. With this build, Brick by Brick still crashes early (null read in a macOS system library on a thread Wine did not create) before D3DMetal calls the table, so upstream D3DMetal is not yet usable. A Codex thread continues the investigation in `upstream-1120-probe`; the production setup stays on the CrossOver-based runtime.

@@ -3,10 +3,12 @@ import SwiftUI
 /// One game's page: the game itself, whether it runs, and your progress. Technical settings stay behind "Erweitert".
 struct GameDetailPage: View {
     let game: PreviewGame
+    let heroNamespace: Namespace.ID
 
     @State private var details: SteamStoreDetails?
     @State private var loadFailed = false
-    @State private var isRunning = false
+    @State private var runningSince: Date?
+    @State private var hasAppeared = false
     @State private var showsAdvanced = false
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
@@ -33,11 +35,15 @@ struct GameDetailPage: View {
                 .padding(.vertical, 32)
                 .frame(maxWidth: 1180, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                .opacity(hasAppeared ? 1 : 0)
+                .offset(y: hasAppeared ? 0 : 28)
             }
         }
         .ignoresSafeArea(edges: .top)
         .background(Color.black)
-        .navigationTitle(game.title)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.85).delay(0.18)) { hasAppeared = true }
+        }
         .task(id: game.id) { await load() }
         .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game) }
         .sheet(item: $enlargedScreenshot) { shot in
@@ -61,6 +67,8 @@ struct GameDetailPage: View {
                     game.tint
                 }
             }
+            .scaleEffect(hasAppeared ? 1 : 1.08)
+            .opacity(hasAppeared ? 1 : 0)
             .frame(height: 420)
             .frame(maxWidth: .infinity)
             .clipped()
@@ -74,8 +82,9 @@ struct GameDetailPage: View {
 
             HStack(alignment: .bottom, spacing: 28) {
                 GameCover(game: game, cornerRadius: 12)
-                    .frame(width: 300)
                     .saturation(game.isUnsupported ? 0 : 1)
+                    .frame(width: 300)
+                    .matchedGeometryEffect(id: game.id, in: heroNamespace)
                     .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
                 VStack(alignment: .leading, spacing: 12) {
                     Text(game.title)
@@ -85,6 +94,8 @@ struct GameDetailPage: View {
                     StatusPill(compatibility: game.compatibility)
                     actions.padding(.top, 6)
                 }
+                .opacity(hasAppeared ? 1 : 0)
+                .offset(x: hasAppeared ? 0 : -16)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 40)
@@ -111,18 +122,10 @@ struct GameDetailPage: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.extraLarge)
             } else {
-                Button {
-                    withAnimation(.snappy) { isRunning.toggle() }
-                } label: {
-                    Label(isRunning ? "Beenden" : "Spielen", systemImage: isRunning ? "stop.fill" : "play.fill")
-                        .frame(minWidth: 130)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(isRunning ? .red : .green)
-                .controlSize(.extraLarge)
-                if isRunning {
-                    ProgressView().controlSize(.small)
-                    Text("Läuft seit 0:42").foregroundStyle(.secondary)
+                PlayButton(runningSince: $runningSince)
+                if let runningSince {
+                    RunningIndicator(since: runningSince)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                 }
             }
             Menu {
@@ -235,6 +238,50 @@ struct GameDetailPage: View {
 }
 
 // MARK: - Building blocks
+
+private struct PlayButton: View {
+    @Binding var runningSince: Date?
+
+    var body: some View {
+        let isRunning = runningSince != nil
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                runningSince = isRunning ? nil : .now
+            }
+        } label: {
+            Label {
+                Text(isRunning ? "Beenden" : "Spielen").contentTransition(.interpolate)
+            } icon: {
+                Image(systemName: isRunning ? "stop.fill" : "play.fill").contentTransition(.symbolEffect(.replace))
+            }
+            .font(.title3.weight(.semibold))
+            .frame(minWidth: 130)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(isRunning ? Color(white: 0.28) : .overcrossAccent)
+        .foregroundStyle(isRunning ? .white : .black)
+        .controlSize(.extraLarge)
+    }
+}
+
+/// A live "running for" counter with a gently pulsing dot.
+private struct RunningIndicator: View {
+    let since: Date
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 8))
+                .foregroundStyle(.green)
+                .symbolEffect(.pulse)
+            TimelineView(.periodic(from: since, by: 1)) { context in
+                Text("Läuft seit \(Duration.seconds(context.date.timeIntervalSince(since)).formatted(.time(pattern: .minuteSecond)))")
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.secondary)
+        }
+    }
+}
 
 private struct StatusPill: View {
     let compatibility: PreviewGame.Compatibility

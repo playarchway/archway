@@ -6,6 +6,8 @@ set -euo pipefail
 configuration="${1:-debug}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
+# release-please keeps the version in version.txt.
+version="$(tr -d '[:space:]' < version.txt)"
 
 swift build --product Archway -c "$configuration"
 bin="$(swift build --product Archway -c "$configuration" --show-bin-path)"
@@ -26,7 +28,7 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/AppIcon.icns"
 
-cat > "$app/Contents/Info.plist" <<'PLIST'
+cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -37,8 +39,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key><string>Archway</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>$version</string>
+    <key>CFBundleVersion</key><string>$version</string>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>
     <key>LSApplicationCategoryType</key><string>public.app-category.games</string>

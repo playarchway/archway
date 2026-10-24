@@ -7,13 +7,9 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-# Phase 3 will rename local Wine trees; use existing legacy folders until then.
-prefer_existing_dir() {
-    if [ -d "$1" ]; then printf '%s\n' "$1"; else printf '%s\n' "$2"; fi
-}
-wine_source="${WINE_SOURCE:-$(prefer_existing_dir "$HOME/dev/archway-wine" "$HOME/dev/overcross-wine")}"
-build="${WINE_BUILD:-$(prefer_existing_dir "$HOME/dev/archway-wine-build/build64" "$HOME/dev/overcross-wine-build/build64")}"
-tools="${WINE_TOOLS:-$(prefer_existing_dir "$HOME/dev/archway-wine-tools" "$HOME/dev/overcross-wine-tools")}"
+wine_source="${WINE_SOURCE:-$HOME/dev/archway-wine}"
+build="${WINE_BUILD:-$HOME/dev/archway-wine-build/build64}"
+tools="${WINE_TOOLS:-$HOME/dev/archway-wine-tools}"
 data="$HOME/Library/Application Support/Archway/archway-alpha"
 runtime="$data/runtime-overlays/upstream-11.20/Wine"
 install="$(dirname "$build")/install-alpha"
@@ -28,7 +24,8 @@ if [[ "$("$root/scripts/wine-sessions.sh")" == *"$data/"* ]]; then
 fi
 
 echo "Building Wine from $wine_source ($(git -C "$wine_source" log -1 --format='%h %s'))"
-export PATH="$tools/llvm-mingw-20261020-ucrt-macos-universal/bin:$PATH"
+export PATH="$tools/host-deps/bison/3.8.2/bin:$tools/llvm-mingw-20261020-ucrt-macos-universal/bin:$PATH"
+export BISON_PKGDATADIR="$tools/host-deps/bison/3.8.2/share/bison"
 make -C "$build" -j"$(sysctl -n hw.ncpu)" >/dev/null
 rm -rf "$install"
 make -C "$build" install DESTDIR="$install" >/dev/null

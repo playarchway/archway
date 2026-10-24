@@ -14,7 +14,7 @@ Tell sessions apart by prefix instead:
 | Prefix (under the current default data directory) | Owner and purpose |
 |---|---|
 | `bottles/steam-5228920` | Archway CLI default data directory: the user's Windows Steam, on Whisky's CrossOver-based Wine 11.17 with D3DMetal (`runtime-overlays/winecx-gptk-4.7.3`) for Brick by Brick. Start and stop it only through `archway`. |
-| `archway-alpha` | Archway app's alpha runtime (formerly Codex's `upstream-1120-probe`): a clone of the Steam bottle on our own Wine 11.20 build (currently in a legacy local development folder; `scripts/build-alpha-runtime.sh` finds it, and Phase 3 will rename it) with GPTK 4.0 beta 3 staged. Rebuild its runtime after Wine changes with `scripts/build-alpha-runtime.sh`, while no Wine runs in this bottle. Games selected for "Archway · Wine 11.20" start through this bottle's own Windows Steam, with the webhelper shim as in the default bottle. Don't disable `dxgi`/`d3d11` for `steamwebhelper.exe`: Chromium delay-loads `dxgi.dll` and crashes its GPU process without it. |
+| `archway-alpha` | Archway app's alpha runtime (formerly Codex's `upstream-1120-probe`): a clone of the Steam bottle on our own Wine 11.20 build at `~/dev/archway-wine`, with GPTK 4.0 beta 3 staged. Rebuild its runtime after Wine changes with `scripts/build-alpha-runtime.sh`, while no Wine runs in this bottle. Games selected for "Archway · Wine 11.20" start through this bottle's own Windows Steam, with the webhelper shim as in the default bottle. Don't disable `dxgi`/`d3d11` for `steamwebhelper.exe`: Chromium delay-loads `dxgi.dll` and crashes its GPU process without it. |
 
 ## Commits
 

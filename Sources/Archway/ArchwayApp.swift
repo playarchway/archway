@@ -22,6 +22,13 @@ struct ArchwayApp: App {
                 .environment(runner)
         }
         .defaultSize(width: 1320, height: 840)
+        .commands {
+            CommandGroup(before: .appTermination) {
+                Button("Quit Steam") { runner.quitSteam() }
+                    .disabled(!runner.canQuitSteam)
+                Divider()
+            }
+        }
 
         Settings {
             AppSettingsView()

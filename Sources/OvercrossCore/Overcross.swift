@@ -296,6 +296,16 @@ public struct Orchestrator {
         bottleMarker()?.state == .ready && wineRegistryExists()
     }
 
+    /// Whether this bottle's wineserver runs. It listens in /tmp/.wine-<uid>/server-<device>-<inode>/socket
+    /// and removes the socket when it exits.
+    public func wineserverIsRunning() -> Bool {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: paths.bottle.path),
+              let device = (attributes[.systemNumber] as? NSNumber)?.uint64Value,
+              let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value else { return false }
+        let socket = "/tmp/.wine-\(getuid())/server-\(String(device, radix: 16))-\(String(inode, radix: 16))/socket"
+        return FileManager.default.fileExists(atPath: socket)
+    }
+
     public func bottleMarker() -> BottleMarker? {
         let marker = paths.bottle.appendingPathComponent(".overcross-bottle.json")
         guard (try? marker.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,

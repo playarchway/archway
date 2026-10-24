@@ -748,6 +748,16 @@
         }
       }
     },
+    "Quit Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam beenden"
+          }
+        }
+      }
+    },
     "Quitting…": {
       "localizations": {
         "de": {

@@ -23,6 +23,8 @@ final class GameRunner {
     }
 
     private(set) var activities: [Int: Activity] = [:]
+    /// Windows Steam runs in the default bottle.
+    private(set) var isSteamRunning = false
     private(set) var errors: [Int: String] = [:]
 
     private let store: LibraryStore
@@ -36,12 +38,26 @@ final class GameRunner {
     private(set) var selectedRuntimes: [Int: Runtime] = GameRunner.loadRuntimes()
     private static let runtimesDefaultsKey = "gameRuntimes"
     private var watcher: Task<Void, Never>?
+    /// Archway started Steam, so it also closes it once the game is over.
+    private var ownsSteam = false
+    private var steamShutdown: Task<Void, Never>?
 
     /// Steam, a first start, and shader caches can take a while before the game window appears.
     private static let startTimeout: TimeInterval = 240
 
+    /// Steam uploads playtime and cloud saves after a game exits; give it time before closing it.
+    private static let steamShutdownDelay: Duration = .seconds(15)
+
     init(store: LibraryStore) {
         self.store = store
+        refreshSteamState()
+        // Steam keeps running when Archway quits otherwise, and restarts its window when only that is closed.
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { if self.ownsSteam { try? Self.requestSteamShutdown() } }
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { self.refreshSteamState() }
+        }
     }
 
     func activity(for game: LibraryGame) -> Activity? { activities[game.id] }
@@ -77,8 +93,11 @@ final class GameRunner {
         pendingFocus.insert(game.id)
         let runtime = runtime(for: game)
         launchedRuntimes[game.id] = runtime
+        let usesSteam = runtime == .standard && !game.isLocal
+        if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
+                if usesSteam, await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
                 imageNames[game.id] = try await Task.detached { try Self.launch(game, runtime: runtime) }.value
                 watch()
             } catch {
@@ -104,14 +123,49 @@ final class GameRunner {
         guard !game.isLocal, activities[game.id] == nil else { return }
         errors[game.id] = nil
         activities[game.id] = .installing
+        steamShutdown?.cancel()
         Task {
             do {
+                if await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
                 try await Task.detached { try Self.install(appID: game.id) }.value
                 watch()
             } catch {
                 fail(game, error)
             }
         }
+    }
+
+    /// Closes Windows Steam the way its own menu does, so it can finish syncing first.
+    func quitSteam() {
+        guard canQuitSteam else { return }
+        steamShutdown?.cancel()
+        steamShutdown = Task { await shutDownSteam() }
+    }
+
+    /// Not while a game that needs it runs or installs.
+    var canQuitSteam: Bool {
+        isSteamRunning && !activities.contains { id, _ in launchedRuntimes[id] != .archwayAlpha && id > 0 }
+    }
+
+    private func shutDownSteam() async {
+        ownsSteam = false
+        try? await Task.detached { try Self.closeSteam() }.value
+        refreshSteamState()
+    }
+
+    /// After the last game that needed Steam, close it again if Archway started it.
+    private func scheduleSteamShutdown() {
+        guard ownsSteam else { return }
+        steamShutdown?.cancel()
+        steamShutdown = Task {
+            try? await Task.sleep(for: Self.steamShutdownDelay)
+            guard !Task.isCancelled, ownsSteam, canQuitSteam else { return }
+            await shutDownSteam()
+        }
+    }
+
+    private func refreshSteamState() {
+        isSteamRunning = Self.steamIsRunning()
     }
 
     func showFolder(_ game: LibraryGame) {
@@ -145,6 +199,7 @@ final class GameRunner {
     }
 
     private func poll() async {
+        refreshSteamState()
         if activities.values.contains(.installing) { store.refreshInstalled() }
         for (id, activity) in activities {
             if activity == .installing {
@@ -169,7 +224,9 @@ final class GameRunner {
                 missedPolls[id] = isRunning ? 0 : (missedPolls[id] ?? 0) + 1
                 if (missedPolls[id] ?? 0) >= 2 {
                     if let since = startedAt[id] { store.recordSession(gameID: id, from: since, to: .now) }
+                    let usedSteam = launchedRuntimes[id] == .standard && id > 0
                     finish(id)
+                    if usedSteam { scheduleSteamShutdown() }
                 }
             case .installing:
                 break
@@ -264,6 +321,22 @@ final class GameRunner {
         for name in imageNames where !GameProcesses.running(imageNames: [name]).isEmpty {
             try? ProcessRunner.runSetup(orchestrator.stopRequest(imageName: name, force: true), timeout: 30)
         }
+    }
+
+    nonisolated private static func steamIsRunning() -> Bool {
+        (try? orchestrator().wineserverIsRunning()) == true
+    }
+
+    nonisolated private static func requestSteamShutdown() throws {
+        try ProcessRunner.sendGUIRequest(orchestrator().steamShutdown())
+    }
+
+    /// Asks Steam to exit and waits for the bottle's wineserver, like `overcross close-steam`.
+    nonisolated private static func closeSteam() throws {
+        guard steamIsRunning() else { return }
+        let orchestrator = try orchestrator()
+        try ProcessRunner.sendGUIRequest(orchestrator.steamShutdown())
+        try ProcessRunner.runSetup(orchestrator.wineserverWait(), timeout: 30)
     }
 
     nonisolated private static func install(appID: Int) throws {

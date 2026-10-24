@@ -289,17 +289,9 @@ final class GameRunner {
             throw RunnerError.notInAlpha
         }
         if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
-        let shimActive = try prepareSteam(orchestrator, runtime: runtime)
+        let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive))
         return folder.map(GameProcesses.executableNames) ?? []
-    }
-
-    /// The standard runtime needs the webhelper shim to draw Steam's window. Archway's Wine draws Chromium's
-    /// cross-process windows itself, so the alpha bottle keeps Valve's helper. Returns whether the shim is active.
-    nonisolated private static func prepareSteam(_ orchestrator: Orchestrator, runtime: Runtime) throws -> Bool {
-        guard runtime == .archwayAlpha else { return try orchestrator.prepareSteam() }
-        try orchestrator.removeSteamShim()
-        return false
     }
 
     private enum RunnerError: LocalizedError {

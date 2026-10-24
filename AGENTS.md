@@ -14,7 +14,7 @@ Tell sessions apart by prefix instead:
 | Prefix (under `~/Library/Application Support/Overcross/`) | Owner and purpose |
 |---|---|
 | `bottles/steam-5228920` | Overcross CLI default data directory: the user's Windows Steam, on Whisky's CrossOver-based Wine 11.17 with D3DMetal (`runtime-overlays/winecx-gptk-4.7.3`) for Brick by Brick. Start and stop it only through `overcross`. |
-| `archway-alpha` | Archway app's alpha runtime (formerly Codex's `upstream-1120-probe`): a clone of the Steam bottle on our own Wine 11.20 build (`~/dev/overcross-wine`, cross-process GDI fix, D3DMetal table, native-GS ntdll patch) with GPTK 4.0 beta 3 staged. Games selected for "Archway · Wine 11.20" start through this bottle's own Windows Steam, with Valve's webhelper (no shim). Don't disable `dxgi`/`d3d11` for `steamwebhelper.exe`: Chromium delay-loads `dxgi.dll` and crashes its GPU process without it. |
+| `archway-alpha` | Archway app's alpha runtime (formerly Codex's `upstream-1120-probe`): a clone of the Steam bottle on our own Wine 11.20 build (`~/dev/overcross-wine`, cross-process GDI fix, D3DMetal table, native-GS ntdll patch) with GPTK 4.0 beta 3 staged. Games selected for "Archway · Wine 11.20" start through this bottle's own Windows Steam, with the webhelper shim as in the default bottle. Don't disable `dxgi`/`d3d11` for `steamwebhelper.exe`: Chromium delay-loads `dxgi.dll` and crashes its GPU process without it. |
 
 ## Commits
 

@@ -14,8 +14,7 @@ prefer_existing_dir() {
 wine_source="${WINE_SOURCE:-$(prefer_existing_dir "$HOME/dev/archway-wine" "$HOME/dev/overcross-wine")}"
 build="${WINE_BUILD:-$(prefer_existing_dir "$HOME/dev/archway-wine-build/build64" "$HOME/dev/overcross-wine-build/build64")}"
 tools="${WINE_TOOLS:-$(prefer_existing_dir "$HOME/dev/archway-wine-tools" "$HOME/dev/overcross-wine-tools")}"
-# Phase 2 will move the existing alpha bottle with the rest of the app data.
-data="$HOME/Library/Application Support/Overcross/archway-alpha"
+data="$HOME/Library/Application Support/Archway/archway-alpha"
 runtime="$data/runtime-overlays/upstream-11.20/Wine"
 install="$(dirname "$build")/install-alpha"
 freetype="$tools/freetype-2.15.0/install/lib/libfreetype.6.dylib"
@@ -39,7 +38,7 @@ archway="$(swift build --package-path "$root" --product archway --show-bin-path)
 redist="$(/usr/bin/python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["d3dMetalDirectory"])' "$data/config.json")"
 
 # Put Wine's own Direct3D DLLs back so the update starts from a clean tree.
-if [ -d "$runtime/.overcross-d3dmetal-backup" ]; then
+if [ -d "$runtime/.archway-d3dmetal-backup" ]; then
     "$archway" --data-dir "$data" restore-d3dmetal --redist-lib "$redist" --runtime-root "$runtime"
 fi
 

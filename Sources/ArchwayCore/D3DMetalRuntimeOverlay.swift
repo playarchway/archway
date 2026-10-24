@@ -12,7 +12,7 @@ public struct D3DMetalRuntimeOverlay {
     public let redist: D3DMetalRedist
     public var wine: URL { runtimeRoot.appendingPathComponent("bin/wine") }
     public var wineserver: URL { runtimeRoot.appendingPathComponent("bin/wineserver") }
-    public var backupDirectory: URL { runtimeRoot.appendingPathComponent(".\(LegacyStorage.name.lowercased())-d3dmetal-backup") }
+    public var backupDirectory: URL { runtimeRoot.appendingPathComponent(".archway-d3dmetal-backup") }
     private var stateFile: URL { backupDirectory.appendingPathComponent("state.json") }
 
     private enum Kind: String, Codable { case file, framework, bridge }

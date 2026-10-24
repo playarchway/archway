@@ -1,11 +1,6 @@
 import Foundation
 import Darwin
 
-enum LegacyStorage {
-    // Phase 1 keeps the existing data directory and on-disk markers until data migration.
-    static let name = "Overcross"
-}
-
 public enum ArchwayError: Error, LocalizedError, Equatable {
     case invalidPath(String)
     case invalidAppID(String)
@@ -39,8 +34,9 @@ public struct AppPaths {
     public var logs: URL { dataDirectory.appendingPathComponent("logs") }
 
     public init(dataDirectory: URL? = nil) throws {
+        if dataDirectory == nil { try DataMigration.migrateIfNeeded() }
         let selected = dataDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(LegacyStorage.name)
+            .appendingPathComponent("Archway")
         guard selected.isFileURL, selected.path.hasPrefix("/"), selected.path != "/" else {
             throw ArchwayError.invalidPath("Data directory must be an absolute local directory other than /.")
         }
@@ -312,7 +308,7 @@ public struct Orchestrator {
     }
 
     public func bottleMarker() -> BottleMarker? {
-        let marker = paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json")
+        let marker = paths.bottle.appendingPathComponent(".archway-bottle.json")
         guard (try? marker.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
               let data = try? Data(contentsOf: marker),
               let decoded = try? JSONDecoder().decode(BottleMarker.self, from: data),
@@ -351,7 +347,7 @@ public struct Orchestrator {
 
     private func saveBottleMarker(_ marker: BottleMarker) throws {
         let data = try JSONEncoder().encode(marker)
-        try data.write(to: paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json"), options: [.atomic])
+        try data.write(to: paths.bottle.appendingPathComponent(".archway-bottle.json"), options: [.atomic])
     }
 
     public func steamExecutable() -> URL? {

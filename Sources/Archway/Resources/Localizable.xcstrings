@@ -173,6 +173,16 @@
       }
     },
     "Archway": {},
+    "Archway couldn't prepare its data. Check the data folders in Application Support and close any Wine session using the old folder. For details, run archway migrate-data in Terminal.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway konnte seine Daten nicht vorbereiten. Prüfe die Datenordner unter Application Support und beende jede Wine-Sitzung, die den alten Ordner verwendet. Weitere Informationen zeigt archway migrate-data im Terminal."
+          }
+        }
+      }
+    },
     "Archway Wine · Alpha": {},
     "Archway isn’t set up on this Mac yet.": {
       "localizations": {
@@ -1156,6 +1166,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wird aktualisiert …"
+          }
+        }
+      }
+    },
+    "Unable to open Archway data": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway-Daten können nicht geöffnet werden"
           }
         }
       }

@@ -34,12 +34,12 @@ final class LibraryStore {
     private var sessionTotals: [Int: (minutes: Int, lastPlayedAt: Date)] = [:]
     private var sessionRefresh: Task<Void, Never>?
 
-    private let paths: AppPaths?
-    private var cacheURL: URL? { paths?.dataDirectory.appendingPathComponent("steam-library-cache.json") }
-    private var localGamesURL: URL? { paths?.dataDirectory.appendingPathComponent("local-games.json") }
+    private let paths: AppPaths
+    private var cacheURL: URL { paths.dataDirectory.appendingPathComponent("steam-library-cache.json") }
+    private var localGamesURL: URL { paths.dataDirectory.appendingPathComponent("local-games.json") }
 
-    init() {
-        paths = try? AppPaths()
+    init(paths: AppPaths) {
+        self.paths = paths
         loadCache()
         loadLocalGames()
     }
@@ -73,7 +73,7 @@ final class LibraryStore {
         await SteamSession.signOut()
         steamGames = []
         lastUpdated = nil
-        if let cacheURL { try? FileManager.default.removeItem(at: cacheURL) }
+        try? FileManager.default.removeItem(at: cacheURL)
         phase = .needsAccount
     }
 
@@ -133,8 +133,8 @@ final class LibraryStore {
 
     /// Steam marks a fully installed game with `StateFlags` 4 in its app manifest.
     private func installedAppIDs() -> Set<Int> {
-        guard let steamapps = paths?.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps"),
-              let files = try? FileManager.default.contentsOfDirectory(atPath: steamapps.path) else { return [] }
+        let steamapps = paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps")
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: steamapps.path) else { return [] }
         var ids = Set<Int>()
         for file in files where file.hasPrefix("appmanifest_") && file.hasSuffix(".acf") {
             guard let id = Int(file.dropFirst("appmanifest_".count).dropLast(".acf".count)),
@@ -176,13 +176,12 @@ final class LibraryStore {
     }
 
     private func loadLocalGames() {
-        guard let localGamesURL, let data = try? Data(contentsOf: localGamesURL),
+        guard let data = try? Data(contentsOf: localGamesURL),
               let entries = try? JSONDecoder().decode([LocalEntry].self, from: data) else { return }
         localGames = entries.map(localGame)
     }
 
     private func saveLocalGames() {
-        guard let localGamesURL else { return }
         let entries = localGames.compactMap { game in
             game.executablePath.map { LocalEntry(id: game.id, title: game.title, path: $0) }
         }
@@ -199,7 +198,7 @@ final class LibraryStore {
     }
 
     private func loadCache() {
-        guard let cacheURL, let steamID = SteamSession.steamID,
+        guard let steamID = SteamSession.steamID,
               let data = try? Data(contentsOf: cacheURL),
               let cache = try? JSONDecoder().decode(Cache.self, from: data),
               cache.steamID == steamID else {
@@ -211,7 +210,7 @@ final class LibraryStore {
     }
 
     private func saveCache(_ owned: [SteamWebAPI.OwnedGame]) {
-        guard let cacheURL, let steamID = SteamSession.steamID, let lastUpdated else { return }
+        guard let steamID = SteamSession.steamID, let lastUpdated else { return }
         try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(Cache(steamID: steamID, fetchedAt: lastUpdated, games: owned))
             .write(to: cacheURL, options: .atomic)

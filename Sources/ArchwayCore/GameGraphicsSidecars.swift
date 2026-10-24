@@ -18,7 +18,7 @@ public struct GameGraphicsSidecars {
     public init(paths: AppPaths) throws {
         self.paths = paths
         try paths.validateBottleScope()
-        let marker = paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json")
+        let marker = paths.bottle.appendingPathComponent(".archway-bottle.json")
         let registry = paths.bottle.appendingPathComponent("system.reg")
         guard try Self.isRegular(marker), try Self.isRegular(registry),
               let ownership = try? JSONDecoder().decode(BottleMarker.self, from: Data(contentsOf: marker)),

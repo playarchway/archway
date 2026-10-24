@@ -16,7 +16,7 @@ app="$root/.build/Archway.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin/Archway" "$app/Contents/MacOS/Archway"
-cp -R "$bin/Overcross_Archway.bundle" "$app/Contents/Resources/"
+cp -R "$bin"/Overcross_*.bundle "$app/Contents/Resources/"
 # SwiftUI looks up its strings in the main bundle. Not every SwiftPM toolchain compiles string catalogs,
 # so compile it here.
 xcrun xcstringstool compile Sources/Archway/Resources/Localizable.xcstrings --output-directory "$app/Contents/Resources"

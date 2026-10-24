@@ -1,8 +1,8 @@
 import AppKit
 import Observation
-import OvercrossCore
+import ArchwayCore
 
-/// Starts, watches, and stops games in the Overcross bottle, and follows Steam installs.
+/// Starts, watches, and stops games in the Archway bottle, and follows Steam installs.
 /// Wine and Steam work runs off the main thread; the state here drives the play buttons.
 @MainActor
 @Observable
@@ -267,7 +267,7 @@ final class GameRunner {
 
     nonisolated private static func orchestrator(_ runtime: Runtime = .standard) throws -> Orchestrator {
         let paths = try paths(runtime)
-        guard let configuration = try ConfigStore(paths: paths).load() else { throw OvercrossError.missingConfiguration }
+        guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
         return Orchestrator(paths: paths, configuration: configuration)
     }
 
@@ -320,7 +320,7 @@ final class GameRunner {
         try ProcessRunner.sendGUIRequest(orchestrator().steamShutdown())
     }
 
-    /// Asks Steam to exit and waits for the bottle's wineserver, like `overcross close-steam`.
+    /// Asks Steam to exit and waits for the bottle's wineserver, like `archway close-steam`.
     nonisolated private static func closeSteam() throws {
         guard steamIsRunning() else { return }
         let orchestrator = try orchestrator()
@@ -335,7 +335,7 @@ final class GameRunner {
     }
 
     nonisolated private static func message(for error: Error) -> String {
-        switch error as? OvercrossError {
+        switch error as? ArchwayError {
         case .missingConfiguration?: String(localized: "Archway isn’t set up on this Mac yet.")
         case .missingBottle?: String(localized: "Archway’s Windows environment isn’t set up yet.")
         case .missingSteam?: String(localized: "Windows Steam isn’t installed in Archway yet.")

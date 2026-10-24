@@ -2,23 +2,23 @@
 import PackageDescription
 
 let package = Package(
-    name: "Overcross",
+    name: "Archway",
     defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "OvercrossCore", targets: ["OvercrossCore"]),
-        .executable(name: "overcross", targets: ["overcross"]),
-        .executable(name: "Archway", targets: ["Archway"]),
+        .library(name: "ArchwayCore", targets: ["ArchwayCore"]),
+        .executable(name: "archway", targets: ["ArchwayCLI"]),
+        .executable(name: "ArchwayApp", targets: ["Archway"]),
     ],
     targets: [
-        .target(name: "OvercrossCore", resources: [.copy("Resources/steamwebhelper-shim.exe")]),
-        .executableTarget(name: "overcross", dependencies: ["OvercrossCore"]),
-        .executableTarget(name: "Archway", dependencies: ["OvercrossCore"], resources: [
+        .target(name: "ArchwayCore", resources: [.copy("Resources/steamwebhelper-shim.exe")]),
+        .executableTarget(name: "ArchwayCLI", dependencies: ["ArchwayCore"]),
+        .executableTarget(name: "Archway", dependencies: ["ArchwayCore"], resources: [
             .copy("Resources/AppIcon.png"),
             .copy("Resources/AppIcon-Gateway.png"),
             .copy("Resources/DefaultBackdrop.jpg"),
             .process("Resources/Localizable.xcstrings"),
         ]),
-        .testTarget(name: "OvercrossCoreTests", dependencies: ["OvercrossCore"]),
+        .testTarget(name: "ArchwayCoreTests", dependencies: ["ArchwayCore"]),
     ]
 )

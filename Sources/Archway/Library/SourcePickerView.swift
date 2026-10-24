@@ -48,7 +48,7 @@ struct SourcePickerView: View {
             HStack(spacing: 16) {
                 Image(systemName: "plus.square.dashed")
                     .font(.system(size: 30, weight: .light))
-                    .foregroundStyle(Color.overcrossAccent)
+                    .foregroundStyle(Color.archwayAccent)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Add Windows Game").font(.headline)
                     Text("An .exe from your Mac").foregroundStyle(.secondary)
@@ -98,14 +98,14 @@ private struct SourceTile: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(source.isAvailable ? .black : .white.opacity(0.8))
                 .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(source.isAvailable ? Color.overcrossAccent : .white.opacity(0.15), in: Capsule())
+                .background(source.isAvailable ? Color.archwayAccent : .white.opacity(0.15), in: Capsule())
                 .padding(12)
             }
             .frame(width: 240, height: 150)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.overcrossAccent.opacity(isHovered && source.isAvailable ? 0.9 : 0), lineWidth: 2)
+                    .strokeBorder(Color.archwayAccent.opacity(isHovered && source.isAvailable ? 0.9 : 0), lineWidth: 2)
             }
             .saturation(source.isAvailable ? 1 : 0.35)
             .opacity(source.isAvailable ? 1 : 0.6)

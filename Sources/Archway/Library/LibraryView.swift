@@ -67,16 +67,16 @@ struct LibraryView: View {
         }
         // Also picks up a Steam session that already exists, for example from an earlier sign-in.
         .task { await store.refresh() }
-        // OVERCROSS_PREVIEW_GAME=<app id> opens that game's page once the library has loaded, for design screenshots.
+        // ARCHWAY_PREVIEW_GAME=<app id> opens that game's page once the library has loaded, for design screenshots.
         .onChange(of: store.games.count, initial: true) {
-            guard openGame == nil, let id = ProcessInfo.processInfo.environment["OVERCROSS_PREVIEW_GAME"].flatMap(Int.init),
+            guard openGame == nil, let id = ProcessInfo.processInfo.environment["ARCHWAY_PREVIEW_GAME"].flatMap(Int.init),
                   let game = store.games.first(where: { $0.id == id }) else { return }
             openHeroID = "preview-\(id)"
             openGame = game
         }
         // Let the backdrop run under the title bar so the window reads as one surface.
         .toolbarBackground(.hidden, for: .windowToolbar)
-        .tint(.overcrossAccent)
+        .tint(.archwayAccent)
         .preferredColorScheme(.dark)
     }
 
@@ -95,14 +95,14 @@ struct LibraryView: View {
     }
 
     private func open(_ game: LibraryGame, heroID: String) {
-        withAnimation(.overcrossHero) {
+        withAnimation(.archwayHero) {
             openHeroID = heroID
             openGame = game
         }
     }
 
     private func close() {
-        withAnimation(.overcrossHero) { openGame = nil }
+        withAnimation(.archwayHero) { openGame = nil }
     }
 
     // MARK: States
@@ -373,7 +373,7 @@ private struct LibrarySearchField: View {
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(isFocused ? Color.overcrossAccent : .white.opacity(0.7))
+                .foregroundStyle(isFocused ? Color.archwayAccent : .white.opacity(0.7))
             TextField("Search Library", text: $text)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
@@ -389,7 +389,7 @@ private struct LibrarySearchField: View {
         .frame(width: 260, height: 30)
         .background(.white.opacity(isFocused ? 0.16 : 0.11), in: Capsule())
         .overlay {
-            Capsule().strokeBorder(isFocused ? Color.overcrossAccent.opacity(0.85) : .white.opacity(0.18), lineWidth: 1)
+            Capsule().strokeBorder(isFocused ? Color.archwayAccent.opacity(0.85) : .white.opacity(0.18), lineWidth: 1)
         }
         .animation(.snappy(duration: 0.18), value: isFocused)
         .background {

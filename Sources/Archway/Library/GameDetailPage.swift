@@ -420,10 +420,10 @@ struct HeroActionButtonStyle: ButtonStyle {
                 .padding(.horizontal, 26)
                 .frame(height: HeroActionButtonStyle.height)
                 .background {
-                    Capsule().fill(isBusy ? Color.white.opacity(0.16) : Color.overcrossAccent)
+                    Capsule().fill(isBusy ? Color.white.opacity(0.16) : Color.archwayAccent)
                         .overlay(Capsule().fill(.white.opacity(isHovered && !isBusy ? 0.15 : 0)))
                 }
-                .shadow(color: Color.overcrossAccent.opacity(isBusy ? 0 : (isHovered ? 0.55 : 0.35)),
+                .shadow(color: Color.archwayAccent.opacity(isBusy ? 0 : (isHovered ? 0.55 : 0.35)),
                         radius: isHovered ? 18 : 12, y: 4)
                 .scaleEffect(configuration.isPressed ? 0.97 : (isHovered ? 1.02 : 1))
                 .animation(.snappy(duration: 0.18), value: isHovered)
@@ -451,7 +451,7 @@ private struct HeroPlaceholder: View {
 private struct LaunchGlow: View {
     var body: some View {
         PhaseAnimator([0.4, 0.8]) { intensity in
-            RadialGradient(colors: [Color.overcrossAccent.opacity(0.4), Color.overcrossAccent.opacity(0.12), .clear],
+            RadialGradient(colors: [Color.archwayAccent.opacity(0.4), Color.archwayAccent.opacity(0.12), .clear],
                            center: UnitPoint(x: 0.35, y: 0.85), startRadius: 0, endRadius: 700)
                 .opacity(intensity)
         } animation: { _ in
@@ -633,10 +633,10 @@ struct AlphaBadge: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.overcrossAccent)
+            .foregroundStyle(Color.archwayAccent)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color.overcrossAccent.opacity(0.15), in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.overcrossAccent.opacity(0.35)))
+            .background(Color.archwayAccent.opacity(0.15), in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.archwayAccent.opacity(0.35)))
     }
 }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// One game in the library: what Steam reports, plus what Overcross knows about running it.
+/// One game in the library: what Steam reports, plus what Archway knows about running it.
 struct LibraryGame: Identifiable, Hashable {
     enum Compatibility: Hashable {
         case tested

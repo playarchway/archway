@@ -3,7 +3,8 @@
 # Every Wine process appears as "wine" in the Dock, so use this to tell sessions apart.
 set -eu
 
-root="${OVERCROSS_DATA_DIR:-$HOME/Library/Application Support/Overcross}"
+# Phase 2 will migrate the existing default data directory.
+root="${ARCHWAY_DATA_DIR:-$HOME/Library/Application Support/Overcross}"
 sessions=0
 
 for server in $(pgrep -f '/wineserver$' || true); do

@@ -1,10 +1,10 @@
 import Foundation
-import OvercrossCore
+import ArchwayCore
 
 private let help = """
-Overcross technical proof of concept (Brick by Brick, Steam app 5228920)
+Archway technical proof of concept (Brick by Brick, Steam app 5228920)
 
-Usage: overcross [--data-dir ABSOLUTE_PATH] COMMAND [OPTIONS]
+Usage: archway [--data-dir ABSOLUTE_PATH] COMMAND [OPTIONS]
 
 Commands:
   help                                      Show this help
@@ -44,7 +44,7 @@ private func applyWebHelperShim(_ orchestrator: Orchestrator, enabled: Bool = tr
 private func takeOption(_ name: String, from arguments: inout [String]) throws -> String? {
     guard let index = arguments.firstIndex(of: name) else { return nil }
     guard arguments.indices.contains(index + 1), !arguments[index + 1].hasPrefix("--") else {
-        throw OvercrossError.invalidPath("Missing value for \(name).")
+        throw ArchwayError.invalidPath("Missing value for \(name).")
     }
     let value = arguments[index + 1]
     arguments.removeSubrange(index...index + 1)
@@ -53,18 +53,18 @@ private func takeOption(_ name: String, from arguments: inout [String]) throws -
 
 private func takeFlag(_ name: String, from arguments: inout [String]) throws -> Bool {
     let matches = arguments.indices.filter { arguments[$0] == name }
-    guard matches.count <= 1 else { throw OvercrossError.invalidPath("Duplicate option: \(name)") }
+    guard matches.count <= 1 else { throw ArchwayError.invalidPath("Duplicate option: \(name)") }
     guard let index = matches.first else { return false }
     arguments.remove(at: index)
     return true
 }
 
 private func requireNoExtras(_ arguments: [String]) throws {
-    guard arguments.isEmpty else { throw OvercrossError.invalidPath("Unexpected arguments: \(arguments.joined(separator: " "))") }
+    guard arguments.isEmpty else { throw ArchwayError.invalidPath("Unexpected arguments: \(arguments.joined(separator: " "))") }
 }
 
 private func requiredConfiguration(_ store: ConfigStore) throws -> Configuration {
-    guard let config = try store.load() else { throw OvercrossError.missingConfiguration }
+    guard let config = try store.load() else { throw ArchwayError.missingConfiguration }
     return config
 }
 
@@ -179,7 +179,7 @@ private func run() throws {
         doctor(paths, store)
     case "check-d3dmetal":
         guard let redistPath = try takeOption("--redist-lib", from: &arguments) else {
-            throw OvercrossError.invalidPath("Missing --redist-lib /absolute/path/to/redist/lib.")
+            throw ArchwayError.invalidPath("Missing --redist-lib /absolute/path/to/redist/lib.")
         }
         try requireNoExtras(arguments)
         let redist = try D3DMetalRedist(root: PathValidator.libraryDirectory(redistPath))
@@ -187,11 +187,11 @@ private func run() throws {
     case "stage-d3dmetal", "restore-d3dmetal":
         guard let redistPath = try takeOption("--redist-lib", from: &arguments),
               let runtimePath = try takeOption("--runtime-root", from: &arguments) else {
-            throw OvercrossError.invalidPath("Supply --redist-lib and --runtime-root absolute paths.")
+            throw ArchwayError.invalidPath("Supply --redist-lib and --runtime-root absolute paths.")
         }
         let allowUnverified = try takeFlag("--allow-unverified-runtime", from: &arguments)
         guard command == "stage-d3dmetal" || !allowUnverified else {
-            throw OvercrossError.invalidPath("--allow-unverified-runtime applies only to staging.")
+            throw ArchwayError.invalidPath("--allow-unverified-runtime applies only to staging.")
         }
         try requireNoExtras(arguments)
         let redist = try D3DMetalRedist(root: PathValidator.libraryDirectory(redistPath))
@@ -206,7 +206,7 @@ private func run() throws {
         }
     case "configure":
         guard let wine = try takeOption("--wine", from: &arguments) else {
-            throw OvercrossError.invalidPath("Missing --wine /absolute/path/to/wine.")
+            throw ArchwayError.invalidPath("Missing --wine /absolute/path/to/wine.")
         }
         let server = try takeOption("--wineserver", from: &arguments)
         let libraryDirectory = try takeOption("--library-dir", from: &arguments)
@@ -237,7 +237,7 @@ private func run() throws {
         print("Bottle initialized: \(paths.bottle.path)")
     case "install-steam":
         guard let installer = try takeOption("--installer", from: &arguments) else {
-            throw OvercrossError.invalidPath("Missing --installer /absolute/path/to/SteamSetup.exe.")
+            throw ArchwayError.invalidPath("Missing --installer /absolute/path/to/SteamSetup.exe.")
         }
         let silent = try takeFlag("--silent", from: &arguments)
         try requireNoExtras(arguments)
@@ -253,7 +253,7 @@ private func run() throws {
         let enableCEFDebugging = try takeFlag("--cef-debugging", from: &arguments)
         let debugPort = try takeOption("--cef-debug-port", from: &arguments).map(Orchestrator.cefDebugPort)
         guard debugPort == nil || enableCEFDebugging else {
-            throw OvercrossError.invalidPath("--cef-debug-port requires --cef-debugging.")
+            throw ArchwayError.invalidPath("--cef-debug-port requires --cef-debugging.")
         }
         let renderer = try takeOption("--wine-renderer", from: &arguments).map(SteamWineRenderer.parse)
         let withoutShim = try takeFlag("--without-webhelper-shim", from: &arguments)
@@ -284,7 +284,7 @@ private func run() throws {
         let rawID = try takeOption("--app-id", from: &arguments)
         let graphicsAPI = try takeOption("--graphics-api", from: &arguments).map(GameGraphicsAPI.parse)
         guard command == "launch-game" || graphicsAPI == nil else {
-            throw OvercrossError.invalidPath("--graphics-api is available only for launch-game.")
+            throw ArchwayError.invalidPath("--graphics-api is available only for launch-game.")
         }
         try requireNoExtras(arguments)
         let appID = try rawID.map(Orchestrator.appID) ?? Orchestrator.firstAppID
@@ -302,7 +302,7 @@ private func run() throws {
         try ProcessRunner.sendGUIRequest(request)
         print("Request sent. Confirm the result in Windows Steam and the game; success is not yet verified.")
     default:
-        throw OvercrossError.invalidPath("Unknown command '\(command)'. Run overcross help.")
+        throw ArchwayError.invalidPath("Unknown command '\(command)'. Run archway help.")
     }
 }
 

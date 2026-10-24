@@ -18,16 +18,16 @@ public struct GameGraphicsSidecars {
     public init(paths: AppPaths) throws {
         self.paths = paths
         try paths.validateBottleScope()
-        let marker = paths.bottle.appendingPathComponent(".overcross-bottle.json")
+        let marker = paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json")
         let registry = paths.bottle.appendingPathComponent("system.reg")
         guard try Self.isRegular(marker), try Self.isRegular(registry),
               let ownership = try? JSONDecoder().decode(BottleMarker.self, from: Data(contentsOf: marker)),
               ownership.version == 1, ownership.state == .ready else {
-            throw OvercrossError.missingBottle
+            throw ArchwayError.missingBottle
         }
         try Self.checkDirectoryChain(gameDirectory, within: paths.bottle)
         guard try Self.isRegular(gameExecutable) else {
-            throw OvercrossError.invalidPath("BrickByBrick.exe is missing from the owned Steam bottle.")
+            throw ArchwayError.invalidPath("BrickByBrick.exe is missing from the owned Steam bottle.")
         }
         try Self.checkDirectoryChain(backupDirectory, within: paths.dataDirectory)
     }
@@ -40,23 +40,23 @@ public struct GameGraphicsSidecars {
     public func requireD3DMetalReady() throws {
         for name in Self.allowedNames {
             if FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent(name).path) {
-                throw OvercrossError.invalidPath("D3DMetal game profile has an app-local \(name); suspend the DXVK sidecars first.")
+                throw ArchwayError.invalidPath("D3DMetal game profile has an app-local \(name); suspend the DXVK sidecars first.")
             }
         }
         let registry = paths.bottle.appendingPathComponent("user.reg")
         guard try Self.isRegular(registry) else {
-            throw OvercrossError.invalidPath("Wine user registry is missing; cannot verify game-only builtin D3D overrides.")
+            throw ArchwayError.invalidPath("Wine user registry is missing; cannot verify game-only builtin D3D overrides.")
         }
         let contents = try String(contentsOf: registry, encoding: .utf8)
         let section = "[Software\\\\Wine\\\\AppDefaults\\\\BrickByBrick.exe\\\\DllOverrides]"
         guard let start = contents.range(of: section) else {
-            throw OvercrossError.invalidPath("Brick by Brick has no D3DMetal builtin overrides in user.reg.")
+            throw ArchwayError.invalidPath("Brick by Brick has no D3DMetal builtin overrides in user.reg.")
         }
         let remainder = contents[start.upperBound...]
         let body = remainder.prefix(while: { $0 != "[" })
         for name in ["d3d11", "d3d12", "d3d12core", "dxgi"] {
             guard body.contains("\"\(name)\"=\"builtin\"") else {
-                throw OvercrossError.invalidPath("Brick by Brick requires a game-only builtin override for \(name); D3DMetal launch refused.")
+                throw ArchwayError.invalidPath("Brick by Brick requires a game-only builtin override for \(name); D3DMetal launch refused.")
             }
         }
     }
@@ -69,7 +69,7 @@ public struct GameGraphicsSidecars {
     func apply(_ sources: [String: URL], backend: GraphicsBackend,
                beforeInstall: (String) throws -> Void) throws {
         guard backend == .dxvk, Set(sources.keys) == ["d3d11.dll", "dxgi.dll"] else {
-            throw OvercrossError.invalidPath("Only DXVK d3d11.dll and dxgi.dll may be installed beside the game.")
+            throw ArchwayError.invalidPath("Only DXVK d3d11.dll and dxgi.dll may be installed beside the game.")
         }
         try change(sources, names: sources.keys.sorted(), backend: backend, beforeInstall: beforeInstall)
     }
@@ -83,7 +83,7 @@ public struct GameGraphicsSidecars {
     private func change(_ sources: [String: URL], names: [String], backend: GraphicsBackend,
                         beforeInstall: (String) throws -> Void) throws {
         guard try readState() == nil else {
-            throw OvercrossError.invalidPath("A game graphics profile is already applied; restore it before switching.")
+            throw ArchwayError.invalidPath("A game graphics profile is already applied; restore it before switching.")
         }
         for name in names {
             if let source = sources[name] { _ = try Self.validatedPE(source) }
@@ -93,7 +93,7 @@ public struct GameGraphicsSidecars {
         try Self.checkDirectoryChain(parent, within: paths.dataDirectory)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         guard !FileManager.default.fileExists(atPath: backupDirectory.path) else {
-            throw OvercrossError.invalidPath("Graphics backup directory already exists without a valid state; inspect it before retrying: \(backupDirectory.path)")
+            throw ArchwayError.invalidPath("Graphics backup directory already exists without a valid state; inspect it before retrying: \(backupDirectory.path)")
         }
         try FileManager.default.createDirectory(at: backupDirectory, withIntermediateDirectories: false)
         var savedState = State(version: 1, backend: backend, files: [])
@@ -134,12 +134,12 @@ public struct GameGraphicsSidecars {
             try Self.checkTarget(target)
             let currentHash = try Self.isRegular(target) ? Self.hash(target) : nil
             guard currentHash == entry.installedHash || currentHash == entry.originalHash else {
-                throw OvercrossError.invalidPath("Game DLL changed since graphics installation; refusing to overwrite \(target.path).")
+                throw ArchwayError.invalidPath("Game DLL changed since graphics installation; refusing to overwrite \(target.path).")
             }
             if let originalHash = entry.originalHash {
                 let backup = backupDirectory.appendingPathComponent(entry.name)
                 guard try Self.isRegular(backup), try Self.hash(backup) == originalHash else {
-                    throw OvercrossError.invalidPath("Original game DLL backup is missing or changed: \(backup.path)")
+                    throw ArchwayError.invalidPath("Original game DLL backup is missing or changed: \(backup.path)")
                 }
                 if currentHash != originalHash { try Self.atomicCopy(backup, to: target) }
             } else if currentHash != nil {
@@ -165,13 +165,13 @@ public struct GameGraphicsSidecars {
         try Self.checkDirectoryChain(backupDirectory, within: paths.dataDirectory)
         guard FileManager.default.fileExists(atPath: stateFile.path) else { return nil }
         guard try Self.isRegular(stateFile) else {
-            throw OvercrossError.invalidPath("Graphics state must be a regular file: \(stateFile.path)")
+            throw ArchwayError.invalidPath("Graphics state must be a regular file: \(stateFile.path)")
         }
         let state = try JSONDecoder().decode(State.self, from: Data(contentsOf: stateFile))
         guard state.version == 1, state.backend != .builtin, !state.files.isEmpty,
               Set(state.files.map(\.name)).isSubset(of: Self.allowedNames),
               Set(state.files.map(\.name)).count == state.files.count else {
-            throw OvercrossError.invalidPath("Graphics backup state is invalid: \(stateFile.path)")
+            throw ArchwayError.invalidPath("Graphics backup state is invalid: \(stateFile.path)")
         }
         return state
     }
@@ -180,53 +180,53 @@ public struct GameGraphicsSidecars {
         let rootPath = root.standardizedFileURL.path
         let path = directory.standardizedFileURL.path
         guard path == rootPath || path.hasPrefix(rootPath + "/") else {
-            throw OvercrossError.invalidPath("Graphics path escapes its owned directory: \(path)")
+            throw ArchwayError.invalidPath("Graphics path escapes its owned directory: \(path)")
         }
         var current = root
         for part in path.dropFirst(rootPath.count).split(separator: "/") {
             current.appendPathComponent(String(part))
             if (try? current.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
-                throw OvercrossError.invalidPath("Graphics directory must not be a symlink: \(current.path)")
+                throw ArchwayError.invalidPath("Graphics directory must not be a symlink: \(current.path)")
             }
         }
     }
 
     private static func checkTarget(_ target: URL) throws {
         if (try? target.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
-            throw OvercrossError.invalidPath("Game DLL target must not be a symlink: \(target.path)")
+            throw ArchwayError.invalidPath("Game DLL target must not be a symlink: \(target.path)")
         }
         if FileManager.default.fileExists(atPath: target.path), try !isRegular(target) {
-            throw OvercrossError.invalidPath("Game DLL target must be a regular file: \(target.path)")
+            throw ArchwayError.invalidPath("Game DLL target must be a regular file: \(target.path)")
         }
     }
 
     private static func isRegular(_ file: URL) throws -> Bool {
         guard let values = try? file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { return false }
         guard values.isSymbolicLink != true else {
-            throw OvercrossError.invalidPath("Graphics file must not be a symlink: \(file.path)")
+            throw ArchwayError.invalidPath("Graphics file must not be a symlink: \(file.path)")
         }
         return values.isRegularFile == true
     }
 
     static func validatedPE(_ file: URL) throws -> URL {
         guard try isRegular(file), FileManager.default.isReadableFile(atPath: file.path) else {
-            throw OvercrossError.invalidPath("Direct3D component must be a readable regular file: \(file.path)")
+            throw ArchwayError.invalidPath("Direct3D component must be a readable regular file: \(file.path)")
         }
         let handle = try FileHandle(forReadingFrom: file)
         defer { try? handle.close() }
         let dos = try handle.read(upToCount: 64) ?? Data()
         guard dos.count == 64, dos[0] == 0x4d, dos[1] == 0x5a else {
-            throw OvercrossError.invalidPath("Direct3D component is not a Windows PE file: \(file.path)")
+            throw ArchwayError.invalidPath("Direct3D component is not a Windows PE file: \(file.path)")
         }
         let offset = UInt64(dos[0x3c]) | UInt64(dos[0x3d]) << 8 | UInt64(dos[0x3e]) << 16 | UInt64(dos[0x3f]) << 24
         guard offset >= 64, offset < 1_048_576 else {
-            throw OvercrossError.invalidPath("Direct3D component has an invalid PE header: \(file.path)")
+            throw ArchwayError.invalidPath("Direct3D component has an invalid PE header: \(file.path)")
         }
         try handle.seek(toOffset: offset)
         let header = try handle.read(upToCount: 6) ?? Data()
         guard header.count == 6, Array(header.prefix(4)) == [0x50, 0x45, 0, 0],
               header[4] == 0x64, header[5] == 0x86 else {
-            throw OvercrossError.invalidPath("Direct3D component must be a Windows x64 DLL: \(file.path)")
+            throw ArchwayError.invalidPath("Direct3D component must be a Windows x64 DLL: \(file.path)")
         }
         return file
     }
@@ -241,7 +241,7 @@ public struct GameGraphicsSidecars {
 
     private static func atomicCopy(_ source: URL, to target: URL) throws {
         try checkTarget(target)
-        let temporary = target.deletingLastPathComponent().appendingPathComponent(".overcross-\(UUID().uuidString).tmp")
+        let temporary = target.deletingLastPathComponent().appendingPathComponent(".archway-\(UUID().uuidString).tmp")
         defer { try? FileManager.default.removeItem(at: temporary) }
         try FileManager.default.copyItem(at: source, to: temporary)
         guard rename(temporary.path, target.path) == 0 else {

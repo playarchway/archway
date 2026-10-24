@@ -1,9 +1,9 @@
 /*
- * Overcross steamwebhelper shim.
+ * Archway steamwebhelper shim.
  *
  * Wine's macOS driver drops pixels that one process draws into a window owned
  * by another (Wine bugs 35456 and 60263). Chromium's GPU process does exactly
- * that for Steam's client UI, so the window stays black. Overcross installs
+ * that for Steam's client UI, so the window stays black. Archway installs
  * this shim at Steam's webhelper path and moves Valve's helper next to it; the
  * shim starts that helper with --in-process-gpu so the compositor draws from
  * the process that owns the window.

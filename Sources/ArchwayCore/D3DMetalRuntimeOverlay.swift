@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 /// Deploys an official, user-supplied GPTK redist into an already cloned Wine
-/// runtime under Overcross's runtime-overlays directory. It never edits the
+/// runtime under Archway's runtime-overlays directory. It never edits the
 /// source Wine installation or the Steam bottle.
 public struct D3DMetalRuntimeOverlay {
     public enum Capability: String { case providerDeclared, unverified }
@@ -12,7 +12,7 @@ public struct D3DMetalRuntimeOverlay {
     public let redist: D3DMetalRedist
     public var wine: URL { runtimeRoot.appendingPathComponent("bin/wine") }
     public var wineserver: URL { runtimeRoot.appendingPathComponent("bin/wineserver") }
-    public var backupDirectory: URL { runtimeRoot.appendingPathComponent(".overcross-d3dmetal-backup") }
+    public var backupDirectory: URL { runtimeRoot.appendingPathComponent(".\(LegacyStorage.name.lowercased())-d3dmetal-backup") }
     private var stateFile: URL { backupDirectory.appendingPathComponent("state.json") }
 
     private enum Kind: String, Codable { case file, framework, bridge }
@@ -40,7 +40,7 @@ public struct D3DMetalRuntimeOverlay {
         self.redist = redist
         let ownedRoot = paths.dataDirectory.appendingPathComponent("runtime-overlays").standardizedFileURL.path + "/"
         guard self.runtimeRoot.path.hasPrefix(ownedRoot) else {
-            throw OvercrossError.invalidPath("D3DMetal runtime must be an Overcross-owned clone under \(ownedRoot)")
+            throw ArchwayError.invalidPath("D3DMetal runtime must be an Archway-owned clone under \(ownedRoot)")
         }
         try paths.validateBottleScope()
         _ = try PathValidator.executable(wine.path)
@@ -71,17 +71,17 @@ public struct D3DMetalRuntimeOverlay {
                beforeReplace: (String) throws -> Void) throws {
         try redist.validate()
         guard capability == .providerDeclared || allowUnverifiedRuntime else {
-            throw OvercrossError.invalidPath("This Wine clone has no recognized GPTK capability metadata. Supply a compatible runtime, or explicitly stage an unverified candidate for a controlled probe.")
+            throw ArchwayError.invalidPath("This Wine clone has no recognized GPTK capability metadata. Supply a compatible runtime, or explicitly stage an unverified candidate for a controlled probe.")
         }
         guard try readState() == nil else {
-            throw OvercrossError.invalidPath("D3DMetal is already staged in this runtime clone; restore before replacing it.")
+            throw ArchwayError.invalidPath("D3DMetal is already staged in this runtime clone; restore before replacing it.")
         }
         let nodes = componentNodes()
         try checkTargets()
         try FileManager.default.createDirectory(at: runtimeRoot.appendingPathComponent("lib/external"),
                                                 withIntermediateDirectories: true)
         guard !FileManager.default.fileExists(atPath: backupDirectory.path) else {
-            throw OvercrossError.invalidPath("D3DMetal runtime backup exists without valid state: \(backupDirectory.path)")
+            throw ArchwayError.invalidPath("D3DMetal runtime backup exists without valid state: \(backupDirectory.path)")
         }
         try FileManager.default.createDirectory(at: backupDirectory, withIntermediateDirectories: false)
         var entries: [Entry] = []
@@ -95,7 +95,7 @@ public struct D3DMetalRuntimeOverlay {
                     try FileManager.default.copyItem(at: target, to: backup)
                 }
                 let installed = try fingerprint(node.source, kind: node.kind)
-                guard let installed else { throw OvercrossError.invalidPath("D3DMetal component is missing: \(node.source.path)") }
+                guard let installed else { throw ArchwayError.invalidPath("D3DMetal component is missing: \(node.source.path)") }
                 entries.append(Entry(relativePath: node.relativePath, kind: node.kind,
                                      originalFingerprint: original, installedFingerprint: installed))
             }
@@ -130,12 +130,12 @@ public struct D3DMetalRuntimeOverlay {
             let target = runtimeRoot.appendingPathComponent("lib/" + entry.relativePath)
             let current = try fingerprint(target, kind: entry.kind)
             guard current == entry.installedFingerprint || current == entry.originalFingerprint else {
-                throw OvercrossError.invalidPath("D3DMetal runtime component changed; refusing to overwrite \(target.path).")
+                throw ArchwayError.invalidPath("D3DMetal runtime component changed; refusing to overwrite \(target.path).")
             }
             if let original = entry.originalFingerprint {
                 let backup = backupDirectory.appendingPathComponent(entry.relativePath)
                 guard try fingerprint(backup, kind: entry.kind) == original else {
-                    throw OvercrossError.invalidPath("D3DMetal runtime backup is missing or changed: \(backup.path)")
+                    throw ArchwayError.invalidPath("D3DMetal runtime backup is missing or changed: \(backup.path)")
                 }
                 if current != original { try replace(backup, at: target, kind: entry.kind) }
             } else if current != nil {
@@ -163,7 +163,7 @@ public struct D3DMetalRuntimeOverlay {
         try checkTargets()
         guard FileManager.default.fileExists(atPath: stateFile.path) else { return nil }
         guard (try? stateFile.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
-            throw OvercrossError.invalidPath("D3DMetal state must not be a symlink.")
+            throw ArchwayError.invalidPath("D3DMetal state must not be a symlink.")
         }
         let state = try JSONDecoder().decode(State.self, from: Data(contentsOf: stateFile))
         let expected = Dictionary(uniqueKeysWithValues: componentNodes().map { ($0.relativePath, $0.kind) })
@@ -171,7 +171,7 @@ public struct D3DMetalRuntimeOverlay {
               state.entries.count == expected.count,
               state.entries.allSatisfy({ expected[$0.relativePath] == $0.kind }),
               Set(state.entries.map(\.relativePath)).count == expected.count else {
-            throw OvercrossError.invalidPath("D3DMetal runtime state is invalid.")
+            throw ArchwayError.invalidPath("D3DMetal runtime state is invalid.")
         }
         return state
     }
@@ -186,13 +186,13 @@ public struct D3DMetalRuntimeOverlay {
             var parent = target.deletingLastPathComponent()
             while parent.path.hasPrefix(runtimeRoot.path), parent.path != runtimeRoot.path {
                 if (try? parent.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
-                    throw OvercrossError.invalidPath("D3DMetal runtime directory must not be a symlink: \(parent.path)")
+                    throw ArchwayError.invalidPath("D3DMetal runtime directory must not be a symlink: \(parent.path)")
                 }
                 parent.deleteLastPathComponent()
             }
         }
         if (try? backupDirectory.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
-            throw OvercrossError.invalidPath("D3DMetal backup must not be a symlink.")
+            throw ArchwayError.invalidPath("D3DMetal backup must not be a symlink.")
         }
     }
 
@@ -216,7 +216,7 @@ public struct D3DMetalRuntimeOverlay {
 
     private func replace(_ source: URL, at target: URL, kind: Kind) throws {
         let fm = FileManager.default
-        let temporary = target.deletingLastPathComponent().appendingPathComponent(".overcross-\(UUID().uuidString)")
+        let temporary = target.deletingLastPathComponent().appendingPathComponent(".archway-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: temporary) }
         if kind == .bridge, let link = try? fm.destinationOfSymbolicLink(atPath: source.path) {
             try fm.createSymbolicLink(atPath: temporary.path, withDestinationPath: link)

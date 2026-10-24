@@ -1,10 +1,10 @@
 import Foundation
 import Testing
-@testable import OvercrossCore
+@testable import ArchwayCore
 
 private func temporaryDirectory() throws -> URL {
     let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    let url = package.appendingPathComponent(".build/test-temp/overcross-tests-\(UUID().uuidString)")
+    let url = package.appendingPathComponent(".build/test-temp/archway-tests-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }
@@ -30,7 +30,7 @@ private func steam(_ paths: AppPaths) throws -> URL {
 
 private func ownedGame(_ paths: AppPaths) throws -> URL {
     try initializedBottle(paths)
-    try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".overcross-bottle.json"))
+    try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json"))
     let game = paths.bottle.appendingPathComponent(GameGraphicsSidecars.gameRelativePath)
     try FileManager.default.createDirectory(at: game.deletingLastPathComponent(), withIntermediateDirectories: true)
     try Data("game".utf8).write(to: game)
@@ -159,7 +159,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(throws: Error.self) {
         try overlay.stage(allowUnverifiedRuntime: true) { name in
             if name == "wine/x86_64-windows/d3d11.dll" {
-                throw OvercrossError.invalidPath("injected replacement failure")
+                throw ArchwayError.invalidPath("injected replacement failure")
             }
         }
     }
@@ -171,7 +171,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
 @Test func gameGraphicsSidecarsPreservePreviousDXVKAndRestore() throws {
     let directory = try temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
-    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Overcross Data"))
+    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Archway Data"))
     let game = try ownedGame(paths)
     let gameDirectory = game.deletingLastPathComponent()
     let old11 = try windowsDLL("d3d11.dll", in: gameDirectory, tag: 1)
@@ -212,7 +212,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let manager = try GameGraphicsSidecars(paths: paths)
     #expect(throws: Error.self) {
         try manager.apply(["d3d11.dll": new11, "dxgi.dll": newGI], backend: .dxvk) { name in
-            if name == "dxgi.dll" { throw OvercrossError.invalidPath("injected copy failure") }
+            if name == "dxgi.dll" { throw ArchwayError.invalidPath("injected copy failure") }
         }
     }
     #expect(try Data(contentsOf: old11) == oldBytes)
@@ -256,7 +256,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
 @Test func configurationRoundTripAndPathValidation() throws {
     let directory = try temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
-    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Application Support/Overcross"))
+    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Application Support/Archway"))
     let store = ConfigStore(paths: paths)
     #expect(try store.load() == nil)
     let config = Configuration(wine: "/some path/wine", wineserver: nil)
@@ -326,7 +326,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     defer { try? FileManager.default.removeItem(at: directory) }
     let wine = try executable("wine with spaces", in: directory)
     let server = try executable("wineserver", in: directory)
-    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Overcross Data"))
+    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("Archway Data"))
     let orchestrator = Orchestrator(paths: paths, configuration: Configuration(wine: wine.path, wineserver: server.path))
     let source = ["PATH": "/bin", "WINEPREFIX": "/other/bottle", "WINEARCH": "win32", "WINEDLLOVERRIDES": "bad", "WINE_D3D_CONFIG": "renderer=vulkan", "DXVK_HUD": "1", "DXVK_CONFIG_FILE": "/untrusted/dxvk.conf", "VK_ICD_FILENAMES": "/untrusted/icd.json", "DYLD_INSERT_LIBRARIES": "bad", "DYLD_LIBRARY_PATH": "/untrusted", "STEAM_RUNTIME": "bad"]
     let initRequest = try orchestrator.bottleInit(environment: source)
@@ -346,10 +346,10 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(initRequest.environment["PATH"] == "/bin")
 
     try initializedBottle(paths)
-    #expect(throws: OvercrossError.missingBottle) { try orchestrator.steamOpen(environment: source) }
-    #expect(throws: OvercrossError.missingBottle) { try orchestrator.steamShutdown(environment: source) }
-    #expect(throws: OvercrossError.missingBottle) { try orchestrator.wineserverWait(environment: source) }
-    #expect(throws: OvercrossError.unownedBottle) { try orchestrator.bottleInit(environment: source) }
+    #expect(throws: ArchwayError.missingBottle) { try orchestrator.steamOpen(environment: source) }
+    #expect(throws: ArchwayError.missingBottle) { try orchestrator.steamShutdown(environment: source) }
+    #expect(throws: ArchwayError.missingBottle) { try orchestrator.wineserverWait(environment: source) }
+    #expect(throws: ArchwayError.unownedBottle) { try orchestrator.bottleInit(environment: source) }
     try FileManager.default.removeItem(at: paths.bottle.appendingPathComponent("system.reg"))
     try orchestrator.prepareBottleInitialization()
     try Data("registry".utf8).write(to: paths.bottle.appendingPathComponent("system.reg"))
@@ -418,7 +418,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(wait.environment["STEAM_RUNTIME"] == nil)
     #expect(wait.workingDirectory == nil)
     let noServer = Orchestrator(paths: paths, configuration: Configuration(wine: wine.path))
-    #expect(throws: OvercrossError.missingWineserver) { try noServer.wineserverWait(environment: source) }
+    #expect(throws: ArchwayError.missingWineserver) { try noServer.wineserverWait(environment: source) }
 
     let support = directory.appendingPathComponent("runtime support libs")
     try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
@@ -502,10 +502,10 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("data"))
     try initializedBottle(paths)
     try FileManager.default.createDirectory(at: paths.bottle, withIntermediateDirectories: true)
-    try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".overcross-bottle.json"))
+    try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json"))
     let orchestrator = Orchestrator(paths: paths, configuration: Configuration(wine: wine.path))
     _ = try steam(paths)
-    let shim = try orchestrator.steamWebHelperShim(shim: Data("overcross shim".utf8))
+    let shim = try orchestrator.steamWebHelperShim(shim: Data("archway shim".utf8))
     let fm = FileManager.default
 
     #expect(try shim.state() == .missing)
@@ -623,10 +623,10 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     defer { try? FileManager.default.removeItem(at: directory) }
     let failure = try executable("failure", in: directory, body: "exit 7")
     let failedRequest = LaunchRequest(executable: failure, arguments: [], environment: ["PATH": "/bin"], log: directory.appendingPathComponent("failure.log"), label: "failure")
-    #expect(throws: OvercrossError.processFailed("failure", 7)) { try ProcessRunner.runSetup(failedRequest, timeout: 3) }
+    #expect(throws: ArchwayError.processFailed("failure", 7)) { try ProcessRunner.runSetup(failedRequest, timeout: 3) }
     let slow = try executable("slow", in: directory, body: "exec /bin/sleep 2")
     let slowRequest = LaunchRequest(executable: slow, arguments: [], environment: ["PATH": "/bin"], log: directory.appendingPathComponent("slow.log"), label: "slow")
-    #expect(throws: OvercrossError.processTimedOut("slow", 0.1)) { try ProcessRunner.runSetup(slowRequest, timeout: 0.1) }
+    #expect(throws: ArchwayError.processTimedOut("slow", 0.1)) { try ProcessRunner.runSetup(slowRequest, timeout: 0.1) }
 }
 
 @Test func timeoutKillsOwnedProcessGroupDescendant() throws {
@@ -636,7 +636,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let script = "trap '' TERM\n/bin/sleep 30 &\necho $! > '\(childPID.path)'\nwhile :; do /bin/sleep 1; done"
     let stubborn = try executable("stubborn", in: directory, body: script)
     let request = LaunchRequest(executable: stubborn, arguments: [], environment: ["PATH": "/bin"], log: directory.appendingPathComponent("group.log"), label: "stubborn")
-    #expect(throws: OvercrossError.processTimedOut("stubborn", 0.2)) { try ProcessRunner.runSetup(request, timeout: 0.2) }
+    #expect(throws: ArchwayError.processTimedOut("stubborn", 0.2)) { try ProcessRunner.runSetup(request, timeout: 0.2) }
     let pid = try Int32(String(contentsOf: childPID, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines))
     #expect(pid != nil)
     if let pid {
@@ -659,7 +659,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let script = "( trap '' TERM; exec /bin/sleep 30 ) &\necho $! > '\(childPID.path)'\ntrap 'exit 0' TERM\nwait"
     let parent = try executable("term-responsive-parent", in: directory, body: script)
     let request = LaunchRequest(executable: parent, arguments: [], environment: ["PATH": "/bin"], log: directory.appendingPathComponent("group.log"), label: "term-responsive")
-    #expect(throws: OvercrossError.processTimedOut("term-responsive", 0.2)) { try ProcessRunner.runSetup(request, timeout: 0.2) }
+    #expect(throws: ArchwayError.processTimedOut("term-responsive", 0.2)) { try ProcessRunner.runSetup(request, timeout: 0.2) }
     let pid = try Int32(String(contentsOf: childPID, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines))
     #expect(pid != nil)
     if let pid {

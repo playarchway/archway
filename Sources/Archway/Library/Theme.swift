@@ -2,12 +2,12 @@ import SwiftUI
 
 extension Color {
     /// Archway's accent: a warm amber that stays clear of the green and red compatibility states.
-    static let overcrossAccent = Color(red: 1.0, green: 0.72, blue: 0.26)
+    static let archwayAccent = Color(red: 1.0, green: 0.72, blue: 0.26)
 }
 
 extension Animation {
     /// Shared spring for opening and closing a game, so cover and page move as one.
-    static let overcrossHero = Animation.spring(response: 0.48, dampingFraction: 0.86)
+    static let archwayHero = Animation.spring(response: 0.48, dampingFraction: 0.86)
 }
 
 /// The library backdrop: the focused game's artwork, heavily blurred. A new game's artwork loads first and

@@ -21,7 +21,7 @@ public struct D3DMetalRedist {
     public func validate() throws {
         let frameworkBinary = framework.appendingPathComponent("D3DMetal")
         guard frameworkBinary.resolvingSymlinksInPath().path.hasPrefix(framework.path + "/") else {
-            throw OvercrossError.invalidPath("D3DMetal framework binary escapes its framework directory.")
+            throw ArchwayError.invalidPath("D3DMetal framework binary escapes its framework directory.")
         }
         try Self.requireX64MachO(sharedLibrary)
         try Self.requireX64MachO(frameworkBinary.resolvingSymlinksInPath())
@@ -32,7 +32,7 @@ public struct D3DMetalRedist {
             guard values.isSymbolicLink == true,
                   try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == Self.unixBridgeTarget,
                   link.resolvingSymlinksInPath() == sharedLibrary.resolvingSymlinksInPath() else {
-                throw OvercrossError.invalidPath("D3DMetal Unix bridge must link to libd3dshared.dylib: \(link.path)")
+                throw ArchwayError.invalidPath("D3DMetal Unix bridge must link to libd3dshared.dylib: \(link.path)")
             }
         }
     }
@@ -40,7 +40,7 @@ public struct D3DMetalRedist {
     private static func requireX64MachO(_ file: URL) throws {
         guard FileManager.default.isReadableFile(atPath: file.path),
               (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
-            throw OvercrossError.invalidPath("D3DMetal native bridge is missing: \(file.path)")
+            throw ArchwayError.invalidPath("D3DMetal native bridge is missing: \(file.path)")
         }
         let data = try Data(contentsOf: file, options: .mappedIfSafe)
         func big32(_ index: Int) -> UInt32 {
@@ -57,7 +57,7 @@ public struct D3DMetalRedist {
             }
         }
         guard thinX64 || fatX64 else {
-            throw OvercrossError.invalidPath("D3DMetal native bridge must contain x86_64 Mach-O code: \(file.path)")
+            throw ArchwayError.invalidPath("D3DMetal native bridge must contain x86_64 Mach-O code: \(file.path)")
         }
     }
 }

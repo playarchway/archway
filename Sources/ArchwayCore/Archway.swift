@@ -1,7 +1,12 @@
 import Foundation
 import Darwin
 
-public enum OvercrossError: Error, LocalizedError, Equatable {
+enum LegacyStorage {
+    // Phase 1 keeps the existing data directory and on-disk markers until data migration.
+    static let name = "Overcross"
+}
+
+public enum ArchwayError: Error, LocalizedError, Equatable {
     case invalidPath(String)
     case invalidAppID(String)
     case missingConfiguration
@@ -16,12 +21,12 @@ public enum OvercrossError: Error, LocalizedError, Equatable {
         switch self {
         case .invalidPath(let detail): return detail
         case .invalidAppID(let value): return "Invalid Steam app ID '\(value)'; use a positive 32-bit integer."
-        case .missingConfiguration: return "Wine is not configured. Run: overcross configure --wine /absolute/path/to/wine"
-        case .missingBottle: return "The Overcross bottle is not initialized. Run: overcross init-bottle"
-        case .missingSteam: return "Windows Steam is not installed in the Overcross bottle. Run: overcross install-steam --installer /absolute/path/to/SteamSetup.exe"
+        case .missingConfiguration: return "Wine is not configured. Run: archway configure --wine /absolute/path/to/wine"
+        case .missingBottle: return "The Archway bottle is not initialized. Run: archway init-bottle"
+        case .missingSteam: return "Windows Steam is not installed in the Archway bottle. Run: archway install-steam --installer /absolute/path/to/SteamSetup.exe"
         case .processFailed(let command, let code): return "\(command) failed with exit code \(code). Check the log path shown above."
         case .processTimedOut(let command, let seconds): return "\(command) timed out after \(Int(seconds)) seconds. Check the log and bottle state before retrying."
-        case .unownedBottle: return "Bottle path contains an existing Wine prefix without an Overcross ownership marker. Choose a fresh --data-dir; Overcross will not adopt or modify it."
+        case .unownedBottle: return "Bottle path contains an existing Wine prefix without an Archway ownership marker. Choose a fresh --data-dir; Archway will not adopt or modify it."
         case .missingWineserver: return "A configured wineserver is required to confirm Steam shutdown. Run configure with --wine and --wineserver paths."
         }
     }
@@ -35,9 +40,9 @@ public struct AppPaths {
 
     public init(dataDirectory: URL? = nil) throws {
         let selected = dataDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Overcross")
+            .appendingPathComponent(LegacyStorage.name)
         guard selected.isFileURL, selected.path.hasPrefix("/"), selected.path != "/" else {
-            throw OvercrossError.invalidPath("Data directory must be an absolute local directory other than /.")
+            throw ArchwayError.invalidPath("Data directory must be an absolute local directory other than /.")
         }
         self.dataDirectory = selected.standardizedFileURL.resolvingSymlinksInPath()
     }
@@ -52,7 +57,7 @@ public struct AppPaths {
     public func validateBottleScope() throws {
         for location in [dataDirectory, bottle.deletingLastPathComponent(), bottle, logs] {
             guard !isSymlink(location) else {
-                throw OvercrossError.invalidPath("Overcross directory must not be a symlink: \(location.path)")
+                throw ArchwayError.invalidPath("Archway directory must not be a symlink: \(location.path)")
             }
         }
     }
@@ -75,7 +80,7 @@ public enum GraphicsBackend: String, Codable {
 
     public static func parse(_ raw: String) throws -> Self {
         guard let backend = Self(rawValue: raw) else {
-            throw OvercrossError.invalidPath("Unknown graphics backend '\(raw)'; use builtin, dxvk, or d3dmetal.")
+            throw ArchwayError.invalidPath("Unknown graphics backend '\(raw)'; use builtin, dxvk, or d3dmetal.")
         }
         return backend
     }
@@ -86,7 +91,7 @@ public enum GameGraphicsAPI: String {
 
     public static func parse(_ raw: String) throws -> Self {
         guard let api = Self(rawValue: raw) else {
-            throw OvercrossError.invalidPath("Unknown game graphics API '\(raw)'; use d3d11 or d3d12.")
+            throw ArchwayError.invalidPath("Unknown game graphics API '\(raw)'; use d3d11 or d3d12.")
         }
         return api
     }
@@ -123,22 +128,22 @@ public struct Configuration: Codable, Equatable {
         switch selectedGraphicsBackend {
         case .builtin:
             guard dxvkConfigFile == nil, vulkanICDFile == nil, d3dMetalDirectory == nil else {
-                throw OvercrossError.invalidPath("Builtin graphics cannot include DXVK or D3DMetal components.")
+                throw ArchwayError.invalidPath("Builtin graphics cannot include DXVK or D3DMetal components.")
             }
         case .dxvk:
             guard d3dMetalDirectory == nil, try validatedGraphicsFiles() != nil else {
-                throw OvercrossError.invalidPath("DXVK requires --dxvk-config and --vulkan-icd, without --d3dmetal-dir.")
+                throw ArchwayError.invalidPath("DXVK requires --dxvk-config and --vulkan-icd, without --d3dmetal-dir.")
             }
         case .d3dmetal:
             guard dxvkConfigFile == nil, vulkanICDFile == nil, let d3dMetalDirectory else {
-                throw OvercrossError.invalidPath("D3DMetal requires --d3dmetal-dir, without DXVK options.")
+                throw ArchwayError.invalidPath("D3DMetal requires --d3dmetal-dir, without DXVK options.")
             }
             let redist = try D3DMetalRedist(root: PathValidator.libraryDirectory(d3dMetalDirectory))
             if let paths {
                 let runtime = URL(fileURLWithPath: wine).deletingLastPathComponent().deletingLastPathComponent()
                 let overlay = try D3DMetalRuntimeOverlay(paths: paths, runtimeRoot: runtime, redist: redist)
                 guard overlay.capability == .providerDeclared, try overlay.isStaged() else {
-                    throw OvercrossError.invalidPath("D3DMetal requires a staged, provider-declared compatible runtime clone; use stage-d3dmetal and doctor first. An unverified diagnostic overlay cannot be selected for normal launches.")
+                    throw ArchwayError.invalidPath("D3DMetal requires a staged, provider-declared compatible runtime clone; use stage-d3dmetal and doctor first. An unverified diagnostic overlay cannot be selected for normal launches.")
                 }
             }
         }
@@ -146,7 +151,7 @@ public struct Configuration: Codable, Equatable {
 
     public func validatedGraphicsFiles() throws -> (dxvk: URL, icd: URL)? {
         guard (dxvkConfigFile == nil) == (vulkanICDFile == nil) else {
-            throw OvercrossError.invalidPath("--dxvk-config and --vulkan-icd must be configured together.")
+            throw ArchwayError.invalidPath("--dxvk-config and --vulkan-icd must be configured together.")
         }
         guard let dxvkConfigFile, let vulkanICDFile else { return nil }
         return (try PathValidator.profileFile(dxvkConfigFile), try PathValidator.profileFile(vulkanICDFile))
@@ -160,7 +165,7 @@ public enum PathValidator {
         let url = try absoluteFile(path)
         let target = url.resolvingSymlinksInPath()
         guard FileManager.default.isExecutableFile(atPath: target.path), isRegularFile(target) else {
-            throw OvercrossError.invalidPath("Executable not found or not executable: \(path)")
+            throw ArchwayError.invalidPath("Executable not found or not executable: \(path)")
         }
         return url
     }
@@ -169,37 +174,37 @@ public enum PathValidator {
         let url = try absoluteFile(path)
         guard url.pathExtension.lowercased() == "exe", isRegularFile(url),
               FileManager.default.isReadableFile(atPath: url.path) else {
-            throw OvercrossError.invalidPath("Steam installer must be a readable local .exe file: \(path)")
+            throw ArchwayError.invalidPath("Steam installer must be a readable local .exe file: \(path)")
         }
         return url.resolvingSymlinksInPath()
     }
 
     public static func libraryDirectory(_ path: String) throws -> URL {
         guard !path.contains(":") else {
-            throw OvercrossError.invalidPath("Runtime library directory must be a single path without ':': \(path)")
+            throw ArchwayError.invalidPath("Runtime library directory must be a single path without ':': \(path)")
         }
         let url = try absoluteFile(path).resolvingSymlinksInPath()
         guard !url.path.contains(":"),
               (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
-            throw OvercrossError.invalidPath("Runtime library directory must be an existing absolute local directory: \(path)")
+            throw ArchwayError.invalidPath("Runtime library directory must be an existing absolute local directory: \(path)")
         }
         return url
     }
 
     public static func profileFile(_ path: String) throws -> URL {
         guard !path.contains(":") else {
-            throw OvercrossError.invalidPath("Graphics profile must use one file path without ':': \(path)")
+            throw ArchwayError.invalidPath("Graphics profile must use one file path without ':': \(path)")
         }
         let url = try absoluteFile(path).resolvingSymlinksInPath()
         guard !url.path.contains(":"), isRegularFile(url), FileManager.default.isReadableFile(atPath: url.path) else {
-            throw OvercrossError.invalidPath("Graphics profile file must be an existing readable absolute local file: \(path)")
+            throw ArchwayError.invalidPath("Graphics profile file must be an existing readable absolute local file: \(path)")
         }
         return url
     }
 
     public static func absoluteFile(_ path: String) throws -> URL {
         guard path.hasPrefix("/"), !path.contains("\0"), path != "/" else {
-            throw OvercrossError.invalidPath("Use an absolute local path: \(path)")
+            throw ArchwayError.invalidPath("Use an absolute local path: \(path)")
         }
         return URL(fileURLWithPath: path).standardizedFileURL
     }
@@ -263,7 +268,7 @@ public enum SteamWineRenderer: String {
 
     public static func parse(_ value: String) throws -> Self {
         guard let renderer = Self(rawValue: value) else {
-            throw OvercrossError.invalidPath("Unsupported Wine renderer '\(value)'; use gl.")
+            throw ArchwayError.invalidPath("Unsupported Wine renderer '\(value)'; use gl.")
         }
         return renderer
     }
@@ -280,14 +285,14 @@ public struct Orchestrator {
     }
 
     public static func appID(_ raw: String) throws -> UInt32 {
-        guard let id = UInt32(raw), id > 0 else { throw OvercrossError.invalidAppID(raw) }
+        guard let id = UInt32(raw), id > 0 else { throw ArchwayError.invalidAppID(raw) }
         return id
     }
 
     public static func cefDebugPort(_ raw: String) throws -> UInt16 {
         guard !raw.isEmpty, raw.utf8.allSatisfy({ (48...57).contains($0) }),
               let port = UInt16(raw), port >= 1024 else {
-            throw OvercrossError.invalidPath("Invalid CEF debug port '\(raw)'; use 1024 through 65535.")
+            throw ArchwayError.invalidPath("Invalid CEF debug port '\(raw)'; use 1024 through 65535.")
         }
         return port
     }
@@ -307,7 +312,7 @@ public struct Orchestrator {
     }
 
     public func bottleMarker() -> BottleMarker? {
-        let marker = paths.bottle.appendingPathComponent(".overcross-bottle.json")
+        let marker = paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json")
         guard (try? marker.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
               let data = try? Data(contentsOf: marker),
               let decoded = try? JSONDecoder().decode(BottleMarker.self, from: data),
@@ -320,7 +325,7 @@ public struct Orchestrator {
         let fm = FileManager.default
         if fm.fileExists(atPath: paths.bottle.path), bottleMarker() == nil {
             let contents = try fm.contentsOfDirectory(atPath: paths.bottle.path)
-            guard contents.isEmpty else { throw OvercrossError.unownedBottle }
+            guard contents.isEmpty else { throw ArchwayError.unownedBottle }
         }
         try fm.createDirectory(at: paths.bottle, withIntermediateDirectories: true)
         try saveBottleMarker(.init(state: .initializing))
@@ -328,12 +333,12 @@ public struct Orchestrator {
 
     public func markBottleReady(timeout: TimeInterval = 30) throws {
         guard bottleMarker()?.state == .initializing else {
-            throw OvercrossError.invalidPath("Wine exited without a valid owned bottle; inspect the bottle log.")
+            throw ArchwayError.invalidPath("Wine exited without a valid owned bottle; inspect the bottle log.")
         }
         let deadline = Date().addingTimeInterval(timeout)
         while !wineRegistryExists() && Date() < deadline { usleep(200_000) }
         guard wineRegistryExists() else {
-            throw OvercrossError.invalidPath("Wine exited but its registry did not appear within \(Int(timeout)) seconds; inspect the bottle log and retry init-bottle.")
+            throw ArchwayError.invalidPath("Wine exited but its registry did not appear within \(Int(timeout)) seconds; inspect the bottle log and retry init-bottle.")
         }
         try saveBottleMarker(.init(state: .ready))
     }
@@ -346,7 +351,7 @@ public struct Orchestrator {
 
     private func saveBottleMarker(_ marker: BottleMarker) throws {
         let data = try JSONEncoder().encode(marker)
-        try data.write(to: paths.bottle.appendingPathComponent(".overcross-bottle.json"), options: [.atomic])
+        try data.write(to: paths.bottle.appendingPathComponent(".\(LegacyStorage.name.lowercased())-bottle.json"), options: [.atomic])
     }
 
     public func steamExecutable() -> URL? {
@@ -403,14 +408,14 @@ public struct Orchestrator {
     public func bottleInit(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         if FileManager.default.fileExists(atPath: paths.bottle.path), bottleMarker() == nil,
            let contents = try? FileManager.default.contentsOfDirectory(atPath: paths.bottle.path), !contents.isEmpty {
-            throw OvercrossError.unownedBottle
+            throw ArchwayError.unownedBottle
         }
         return try request(arguments: ["wineboot", "-u"], label: "bottle-init", environment: environment)
     }
 
     public func steamInstaller(_ installer: URL, silent: Bool = false,
                                environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
-        guard bottleIsInitialized() else { throw OvercrossError.missingBottle }
+        guard bottleIsInitialized() else { throw ArchwayError.missingBottle }
         let file = try PathValidator.installer(installer.path)
         return try windowsRequest(file, arguments: silent ? ["/S"] : [],
                                   label: "steam-installer", environment: environment)
@@ -419,7 +424,7 @@ public struct Orchestrator {
     public func steamWebHelperShim(shim: Data) throws -> SteamWebHelperShim {
         let directory = try requiredSteam().deletingLastPathComponent().appendingPathComponent("bin/cef/cef.win64")
         guard directory.resolvingSymlinksInPath().path.hasPrefix(paths.bottle.resolvingSymlinksInPath().path + "/") else {
-            throw OvercrossError.invalidPath("Steam's webhelper directory must stay inside the owned bottle: \(directory.path)")
+            throw ArchwayError.invalidPath("Steam's webhelper directory must stay inside the owned bottle: \(directory.path)")
         }
         return SteamWebHelperShim(directory: directory, shim: shim)
     }
@@ -428,10 +433,10 @@ public struct Orchestrator {
                           wineRenderer: SteamWineRenderer? = nil, webHelperShim: Bool = true,
                           environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         guard cefDebugPort == nil || enableCEFDebugging else {
-            throw OvercrossError.invalidPath("--cef-debug-port requires --cef-debugging.")
+            throw ArchwayError.invalidPath("--cef-debug-port requires --cef-debugging.")
         }
         guard cefDebugPort.map({ $0 >= 1024 }) ?? true else {
-            throw OvercrossError.invalidPath("CEF debug port must be 1024 through 65535.")
+            throw ArchwayError.invalidPath("CEF debug port must be 1024 through 65535.")
         }
         let steam = try requiredSteam()
         let flags = (webHelperShim ? SteamWebHelperShim.launchArguments : [])
@@ -454,8 +459,8 @@ public struct Orchestrator {
     }
 
     public func wineserverWait(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
-        guard bottleIsInitialized() else { throw OvercrossError.missingBottle }
-        guard let server = configuration.wineserver else { throw OvercrossError.missingWineserver }
+        guard bottleIsInitialized() else { throw ArchwayError.missingBottle }
+        guard let server = configuration.wineserver else { throw ArchwayError.missingWineserver }
         return LaunchRequest(executable: try PathValidator.executable(server), arguments: ["-w"],
                              environment: try runtimeEnvironment(environment),
                              log: paths.logs.appendingPathComponent("steam-shutdown-wait.log"), label: "steam-shutdown-wait")
@@ -482,7 +487,7 @@ public struct Orchestrator {
     public func gameLaunch(appID: UInt32 = firstAppID, graphicsAPI: GameGraphicsAPI? = nil, webHelperShim: Bool = true,
                            environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         guard graphicsAPI == nil || appID == Self.firstAppID else {
-            throw OvercrossError.invalidPath("--graphics-api is currently supported only for Brick by Brick (5228920).")
+            throw ArchwayError.invalidPath("--graphics-api is currently supported only for Brick by Brick (5228920).")
         }
         // Brick by Brick ships its own DXVK DLLs, so only its game profile must be prepared; other games
         // use the runtime's staged D3DMetal builtins directly.
@@ -497,8 +502,8 @@ public struct Orchestrator {
     }
 
     private func requiredSteam() throws -> URL {
-        guard bottleIsInitialized() else { throw OvercrossError.missingBottle }
-        guard let steam = steamExecutable() else { throw OvercrossError.missingSteam }
+        guard bottleIsInitialized() else { throw ArchwayError.missingBottle }
+        guard let steam = steamExecutable() else { throw ArchwayError.missingSteam }
         return steam
     }
 }
@@ -546,7 +551,7 @@ public enum ProcessRunner {
             let waited = waitpid(pid, &status, WNOHANG)
             if waited == pid {
                 let exitCode: Int32 = (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
-                guard exitCode == 0 else { throw OvercrossError.processFailed(request.label, exitCode) }
+                guard exitCode == 0 else { throw ArchwayError.processFailed(request.label, exitCode) }
                 return
             }
             if waited == -1 { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
@@ -557,7 +562,7 @@ public enum ProcessRunner {
                 // A surviving descendant can outlive the direct child; signal the owned group again.
                 kill(-pid, SIGKILL)
                 while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
-                throw OvercrossError.processTimedOut(request.label, timeout)
+                throw ArchwayError.processTimedOut(request.label, timeout)
             }
             usleep(20_000)
         }
@@ -586,11 +591,11 @@ public enum ProcessRunner {
     private static func openLog(_ url: URL) throws -> Int32 {
         let parent = url.deletingLastPathComponent()
         guard (try? parent.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
-            throw OvercrossError.invalidPath("Log directory must not be a symlink: \(parent.path)")
+            throw ArchwayError.invalidPath("Log directory must not be a symlink: \(parent.path)")
         }
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         guard (try? parent.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
-            throw OvercrossError.invalidPath("Log directory must not be a symlink: \(parent.path)")
+            throw ArchwayError.invalidPath("Log directory must not be a symlink: \(parent.path)")
         }
         let directoryFD = open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard directoryFD >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
@@ -600,7 +605,7 @@ public enum ProcessRunner {
         var info = stat()
         if fstat(fd, &info) != 0 || (info.st_mode & S_IFMT) != S_IFREG {
             close(fd)
-            throw OvercrossError.invalidPath("Log path must be a regular file: \(url.path)")
+            throw ArchwayError.invalidPath("Log path must be a regular file: \(url.path)")
         }
         // Keep repeated requests from appending indefinitely; active GUI logs can still grow.
         if info.st_size > 10 * 1024 * 1024 { _ = ftruncate(fd, 0) }

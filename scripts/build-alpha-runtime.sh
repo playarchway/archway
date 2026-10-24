@@ -7,9 +7,14 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-wine_source="${WINE_SOURCE:-$HOME/dev/overcross-wine}"
-build="${WINE_BUILD:-$HOME/dev/overcross-wine-build/build64}"
-tools="${WINE_TOOLS:-$HOME/dev/overcross-wine-tools}"
+# Phase 3 will rename local Wine trees; use existing legacy folders until then.
+prefer_existing_dir() {
+    if [ -d "$1" ]; then printf '%s\n' "$1"; else printf '%s\n' "$2"; fi
+}
+wine_source="${WINE_SOURCE:-$(prefer_existing_dir "$HOME/dev/archway-wine" "$HOME/dev/overcross-wine")}"
+build="${WINE_BUILD:-$(prefer_existing_dir "$HOME/dev/archway-wine-build/build64" "$HOME/dev/overcross-wine-build/build64")}"
+tools="${WINE_TOOLS:-$(prefer_existing_dir "$HOME/dev/archway-wine-tools" "$HOME/dev/overcross-wine-tools")}"
+# Phase 2 will move the existing alpha bottle with the rest of the app data.
 data="$HOME/Library/Application Support/Overcross/archway-alpha"
 runtime="$data/runtime-overlays/upstream-11.20/Wine"
 install="$(dirname "$build")/install-alpha"
@@ -29,13 +34,13 @@ make -C "$build" -j"$(sysctl -n hw.ncpu)" >/dev/null
 rm -rf "$install"
 make -C "$build" install DESTDIR="$install" >/dev/null
 
-swift build --package-path "$root" --product overcross >/dev/null
-overcross="$(swift build --package-path "$root" --product overcross --show-bin-path)/overcross"
+swift build --package-path "$root" --product archway >/dev/null
+archway="$(swift build --package-path "$root" --product archway --show-bin-path)/archway"
 redist="$(/usr/bin/python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["d3dMetalDirectory"])' "$data/config.json")"
 
 # Put Wine's own Direct3D DLLs back so the update starts from a clean tree.
 if [ -d "$runtime/.overcross-d3dmetal-backup" ]; then
-    "$overcross" --data-dir "$data" restore-d3dmetal --redist-lib "$redist" --runtime-root "$runtime"
+    "$archway" --data-dir "$data" restore-d3dmetal --redist-lib "$redist" --runtime-root "$runtime"
 fi
 
 # Copy only changed files: an unchanged wine.inf keeps its date, so the bottle skips a prefix update.
@@ -51,7 +56,7 @@ plist="$(dirname "$runtime")/WhiskyWineVersion.plist"
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>gptkCapable</key><true/></dict></plist>
 PLIST
-"$overcross" --data-dir "$data" stage-d3dmetal --redist-lib "$redist" --runtime-root "$runtime"
-"$overcross" --data-dir "$data" configure --wine "$runtime/bin/wine" --wineserver "$runtime/bin/wineserver" \
+"$archway" --data-dir "$data" stage-d3dmetal --redist-lib "$redist" --runtime-root "$runtime"
+"$archway" --data-dir "$data" configure --wine "$runtime/bin/wine" --wineserver "$runtime/bin/wineserver" \
     --library-dir "$runtime/lib" --backend d3dmetal --d3dmetal-dir "$redist" >/dev/null
 echo "Alpha runtime ready: $runtime"

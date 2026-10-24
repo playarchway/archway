@@ -1,9 +1,9 @@
 import Foundation
 import Observation
-import OvercrossCore
+import ArchwayCore
 
-/// The library's data: Steam's owned-games list, merged with what is installed in the Overcross bottle
-/// and with Overcross' tested profiles. Keeps the last successful list on disk for offline starts.
+/// The library's data: Steam's owned-games list, merged with what is installed in the Archway bottle
+/// and with Archway's tested profiles. Keeps the last successful list on disk for offline starts.
 @MainActor
 @Observable
 final class LibraryStore {
@@ -14,7 +14,7 @@ final class LibraryStore {
         case failed(SteamCatalogError)
     }
 
-    /// Games Overcross has verified, with the graphics backend that worked.
+    /// Games Archway has verified, with the graphics backend that worked.
     private static let profiles: [Int: (compatibility: LibraryGame.Compatibility, backend: String)] = [
         5_228_920: (.tested, "D3DMetal"),
     ]

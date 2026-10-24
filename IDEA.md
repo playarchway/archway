@@ -1,7 +1,7 @@
 # IDEA — Open-Source Windows Gaming Launcher für macOS
 
 > **Status:** Technischer Machbarkeitsnachweis in Umsetzung
-> **Arbeitstitel:** Overcross
+> **Arbeitstitel:** Archway
 > **Plattform:** macOS auf Apple Silicon (M-Serie)  
 > **Fokus:** Windows-Indie-Games möglichst unkompliziert auf dem Mac spielen
 

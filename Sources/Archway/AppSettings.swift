@@ -49,7 +49,7 @@ struct AppSettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
         .onChange(of: icon) { icon.apply() }
         .navigationTitle("Settings")
-        .tint(.overcrossAccent)
+        .tint(.archwayAccent)
     }
 }
 
@@ -68,11 +68,11 @@ private struct IconChoice: View {
                     .foregroundStyle(isSelected ? .primary : .secondary)
             }
             .padding(10)
-            .background(isSelected ? Color.overcrossAccent.opacity(0.14) : .clear,
+            .background(isSelected ? Color.archwayAccent.opacity(0.14) : .clear,
                         in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(isSelected ? Color.overcrossAccent : .clear, lineWidth: 2)
+                    .strokeBorder(isSelected ? Color.archwayAccent : .clear, lineWidth: 2)
             }
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }

@@ -9,14 +9,14 @@ cd "$root"
 # release-please keeps the version in version.txt.
 version="$(tr -d '[:space:]' < version.txt)"
 
-swift build --product Archway -c "$configuration"
-bin="$(swift build --product Archway -c "$configuration" --show-bin-path)"
+swift build --product ArchwayApp -c "$configuration"
+bin="$(swift build --product ArchwayApp -c "$configuration" --show-bin-path)"
 
 app="$root/.build/Archway.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp "$bin/Archway" "$app/Contents/MacOS/Archway"
-cp -R "$bin"/Overcross_*.bundle "$app/Contents/Resources/"
+cp "$bin/ArchwayApp" "$app/Contents/MacOS/Archway"
+cp -R "$bin"/Archway_*.bundle "$app/Contents/Resources/"
 # SwiftUI looks up its strings in the main bundle. Not every SwiftPM toolchain compiles string catalogs,
 # so compile it here.
 xcrun xcstringstool compile Sources/Archway/Resources/Localizable.xcstrings --output-directory "$app/Contents/Resources"

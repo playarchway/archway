@@ -34,7 +34,7 @@ public struct SteamWebHelperShim {
 
     public static func bundledShim() throws -> Data {
         guard let url = Bundle.module.url(forResource: "steamwebhelper-shim", withExtension: "exe") else {
-            throw OvercrossError.invalidPath("The bundled steamwebhelper shim is missing from this Overcross build.")
+            throw ArchwayError.invalidPath("The bundled steamwebhelper shim is missing from this Archway build.")
         }
         return try Data(contentsOf: url)
     }
@@ -60,12 +60,12 @@ public struct SteamWebHelperShim {
             return false
         case .incomplete:
             guard try isRegularFile(realHelper) else {
-                throw OvercrossError.invalidPath("Steam's webhelper is missing next to the Overcross shim. Run open-steam --without-webhelper-shim once so Steam can repair it.")
+                throw ArchwayError.invalidPath("Steam's webhelper is missing next to the Archway shim. Run open-steam --without-webhelper-shim once so Steam can repair it.")
             }
             try writeShim()
             return true
         case .original:
-            let staged = directory.appendingPathComponent("steamwebhelper.overcross-staged.exe")
+            let staged = directory.appendingPathComponent("steamwebhelper.archway-staged.exe")
             try? FileManager.default.removeItem(at: staged)
             try shim.write(to: staged)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: staged.path)
@@ -106,7 +106,7 @@ public struct SteamWebHelperShim {
     private func isRegularFile(_ url: URL) throws -> Bool {
         guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { return false }
         guard values.isSymbolicLink != true else {
-            throw OvercrossError.invalidPath("Steam webhelper path must not be a symlink: \(url.path)")
+            throw ArchwayError.invalidPath("Steam webhelper path must not be a symlink: \(url.path)")
         }
         return values.isRegularFile == true
     }

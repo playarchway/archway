@@ -13,6 +13,11 @@ struct GameDetailPage: View {
     @State private var backdrop: NSImage?
     @State private var loadFailed = false
     @State private var hasAppeared = false
+    /// Drives the artwork's slow drift, so the page never looks frozen.
+    @State private var isDrifting = false
+    /// Opening a game blooms its artwork outward from the cover.
+    @State private var isRevealed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsAdvanced = false
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
@@ -44,10 +49,16 @@ struct GameDetailPage: View {
                 .offset(y: hasAppeared ? 0 : 28)
             }
         }
+        .scrollIndicators(.never)
         .ignoresSafeArea(edges: .top)
-        .background(Color.black)
+        // No background of its own: the library's ambient backdrop of the same game stays underneath,
+        // so opening a game never passes through black.
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85).delay(0.18)) { hasAppeared = true }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 1.1)) { isRevealed = true }
+            if !reduceMotion {
+                withAnimation(.easeInOut(duration: 28).repeatForever(autoreverses: true)) { isDrifting = true }
+            }
         }
         .task(id: game.id) { if !game.isLocal { await load() } }
         .task(id: game.id) {
@@ -72,19 +83,30 @@ struct GameDetailPage: View {
         ZStack(alignment: .bottomLeading) {
             ZStack {
                 HeroPlaceholder(tint: game.tint)
-                if let backdrop {
+                // Read the cache directly too, so a preloaded image is there from the first frame.
+                if let backdrop = backdrop ?? ArtworkLoader.shared.cachedBackdrop(for: game) {
                     Image(nsImage: backdrop).resizable().scaledToFill()
                         .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 1.04)), removal: .identity))
                 }
             }
+            // A slow Ken Burns pan across the artwork.
+            .scaleEffect(isDrifting ? 1.1 : 1.05)
+            .offset(x: isDrifting ? -20 : 20, y: isDrifting ? -8 : 0)
             .scaleEffect(hasAppeared ? 1 : 1.08)
             // Launching pushes slowly into the artwork; once the game runs it settles slightly enlarged.
             .scaleEffect(launchStage.artworkScale)
             .animation(launchStage == .launching ? .easeInOut(duration: 8) : .smooth(duration: 1.2), value: launchStage)
-            .opacity(hasAppeared ? 1 : 0)
+            // Parallax: the artwork scrolls at half speed and stretches when pulled down.
+            .visualEffect { content, proxy in
+                let offset = proxy.frame(in: .scrollView).minY
+                return content
+                    .scaleEffect(offset > 0 ? 1 + offset / 580 : 1, anchor: .bottom)
+                    .offset(y: offset < 0 ? -offset * 0.5 : 0)
+            }
             .frame(height: 580)
             .frame(maxWidth: .infinity)
             .clipped()
+            .blur(radius: isRevealed ? 0 : 24)
             .saturation(game.isUnsupported ? 0 : 1)
             .overlay {
                 LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.35)], startPoint: .top, endPoint: .bottom)
@@ -98,6 +120,17 @@ struct GameDetailPage: View {
                                        .init(color: .black.opacity(0.15), location: 0.87),
                                        .init(color: .clear, location: 1)],
                                startPoint: .top, endPoint: .bottom)
+            }
+            .mask {
+                GeometryReader { proxy in
+                    // The cover sits bottom left in the centered content column.
+                    let cover = CGPoint(x: max(0, (proxy.size.width - 1180) / 2) + 40 + 150, y: proxy.size.height - 78)
+                    Circle()
+                        .frame(width: 4000, height: 4000)
+                        .scaleEffect(isRevealed ? 1 : 0.04)
+                        .blur(radius: 80)
+                        .position(cover)
+                }
             }
             .overlay {
                 if launchStage == .launching {
@@ -406,7 +439,7 @@ private struct HeroPlaceholder: View {
 
     var body: some View {
         PhaseAnimator([false, true]) { bright in
-            RadialGradient(colors: [tint.opacity(bright ? 0.75 : 0.45), tint.opacity(0.15), .black],
+            RadialGradient(colors: [tint.opacity(bright ? 0.6 : 0.35), tint.opacity(0.1), .clear],
                            center: UnitPoint(x: 0.6, y: 0.3), startRadius: 0, endRadius: bright ? 900 : 700)
         } animation: { _ in
             .easeInOut(duration: 1.6)

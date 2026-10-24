@@ -21,7 +21,11 @@ struct AmbientBackground: View {
         var isVisible = false
     }
 
-    @State private var layers: [Layer] = []
+    /// Until a game is focused, and without games at all, Archway's own amber arch stands in for the artwork.
+    private static let defaultBackdrop = Bundle.module.url(forResource: "DefaultBackdrop", withExtension: "jpg")
+        .flatMap(NSImage.init(contentsOf:))
+
+    @State private var layers: [Layer] = defaultBackdrop.map { [Layer(image: $0, isVisible: true)] } ?? []
 
     var body: some View {
         ZStack {
@@ -43,12 +47,6 @@ struct AmbientBackground: View {
             }
             .clipped()
 
-            if game == nil {
-                RadialGradient(colors: [Color.overcrossAccent.opacity(0.16), .clear],
-                               center: .topLeading, startRadius: 0, endRadius: 900)
-                    .transition(.opacity)
-            }
-
             // Keep the shelves legible: darken towards the bottom and the edges.
             LinearGradient(stops: [.init(color: .black.opacity(0.1), location: 0),
                                    .init(color: .black.opacity(0.55), location: 0.55),
@@ -62,13 +60,15 @@ struct AmbientBackground: View {
     }
 
     private func show(_ game: LibraryGame?) async {
-        guard let game else {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                for index in layers.indices { layers[index].isVisible = false }
-            }
-            return
+        let image: NSImage?
+        if let game {
+            image = await ArtworkLoader.shared.header(for: game)
+            // Fetch the game page's artwork while the game is only focused, so the page opens with it in place.
+            Task { _ = await ArtworkLoader.shared.backdrop(for: game) }
+        } else {
+            image = Self.defaultBackdrop
         }
-        guard let image = await ArtworkLoader.shared.header(for: game), !Task.isCancelled else { return }
+        guard let image, !Task.isCancelled, layers.last?.image !== image else { return }
 
         // The new layer starts transparent on top; everything underneath stays as it is until it covers them.
         layers = Array(layers.suffix(2))

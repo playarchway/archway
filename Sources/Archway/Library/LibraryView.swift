@@ -163,6 +163,8 @@ struct LibraryView: View {
             }
             .padding(.vertical, 18)
         }
+        // A permanent scroller track (mouse users) sits lost beside the full-bleed artwork.
+        .scrollIndicators(.never)
     }
 
     private func tile(_ game: LibraryGame, width: CGFloat?, section: String) -> some View {

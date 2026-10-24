@@ -16,6 +16,7 @@ let package = Package(
         .executableTarget(name: "Archway", dependencies: ["OvercrossCore"], resources: [
             .copy("Resources/AppIcon.png"),
             .copy("Resources/AppIcon-Gateway.png"),
+            .copy("Resources/DefaultBackdrop.jpg"),
             .process("Resources/Localizable.xcstrings"),
         ]),
         .testTarget(name: "OvercrossCoreTests", dependencies: ["OvercrossCore"]),

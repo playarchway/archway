@@ -12,13 +12,17 @@ extension View {
 }
 
 private struct TitleBarGlass: ViewModifier {
-    @State private var isScrolled = false
+    /// How far the frost has faded in, from 0 at the top to 1 after `fadeDistance` points of scrolling.
+    @State private var amount: CGFloat = 0
+    private let fadeDistance: CGFloat = 48
 
     func body(content: Content) -> some View {
         Group {
             if #available(macOS 15.0, *) {
-                content.onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 2 } action: {
-                    isScrolled = $1
+                content.onScrollGeometryChange(for: CGFloat.self) {
+                    min(1, max(0, ($0.contentOffset.y + $0.contentInsets.top) / fadeDistance))
+                } action: { _, newAmount in
+                    amount = newAmount
                 }
             } else {
                 content
@@ -32,8 +36,9 @@ private struct TitleBarGlass: ViewModifier {
                                              .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
                 .frame(height: 84)
                 .ignoresSafeArea(edges: .top)
-                .opacity(isScrolled ? 1 : 0)
-                .animation(.easeOut(duration: 0.2), value: isScrolled)
+                .opacity(amount)
+                // Smooths a fast flick, so the frost never pops in.
+                .animation(.easeOut(duration: 0.5), value: amount)
                 .allowsHitTesting(false)
         }
     }

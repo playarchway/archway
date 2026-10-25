@@ -1023,3 +1023,27 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     #expect(Orchestrator.installPhase(appID: 48000, contentLog: log + "\n[x] AppID 48000 App update changed : Running Update,Committing,") == .installing)
     #expect(Orchestrator.installPhase(appID: 7, contentLog: log) == nil)
 }
+
+@Test func uninstallsSteamGameButKeepsOtherGames() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (orchestrator, steam) = try steamOrchestrator(in: root)
+    let steamapps = steam.appendingPathComponent("steamapps")
+    for (id, folder) in [(48000, "LIMBO"), (550, "Left 4 Dead 2")] {
+        try FileManager.default.createDirectory(at: steamapps.appendingPathComponent("common/\(folder)"), withIntermediateDirectories: true)
+        try Data("\"AppState\" { \"installdir\" \"\(folder)\" }".utf8)
+            .write(to: steamapps.appendingPathComponent("appmanifest_\(id).acf"))
+    }
+    try FileManager.default.createDirectory(at: steamapps.appendingPathComponent("shadercache/48000"), withIntermediateDirectories: true)
+
+    try orchestrator.uninstallSteamGame(appID: 48000)
+
+    for gone in ["appmanifest_48000.acf", "common/LIMBO", "shadercache/48000"] {
+        #expect(!FileManager.default.fileExists(atPath: steamapps.appendingPathComponent(gone).path))
+    }
+    #expect(FileManager.default.fileExists(atPath: steamapps.appendingPathComponent("common/Left 4 Dead 2").path))
+
+    try Data("\"AppState\" { \"installdir\" \"..\" }".utf8).write(to: steamapps.appendingPathComponent("appmanifest_550.acf"))
+    #expect(throws: ArchwayError.self) { try orchestrator.uninstallSteamGame(appID: 550) }
+    #expect(FileManager.default.fileExists(atPath: steamapps.appendingPathComponent("common").path))
+}

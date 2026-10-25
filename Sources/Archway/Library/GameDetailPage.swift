@@ -19,6 +19,7 @@ struct GameDetailPage: View {
     @State private var isRevealed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsAdvanced = false
+    @State private var confirmsUninstall = false
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
     @Environment(GameRunner.self) private var runner
@@ -68,6 +69,11 @@ struct GameDetailPage: View {
             withAnimation(.easeOut(duration: 0.7)) { backdrop = image }
         }
         .sheet(isPresented: $showsAdvanced) { AdvancedSettingsSheet(game: game) }
+        .confirmationDialog("Uninstall “\(game.title)”?", isPresented: $confirmsUninstall) {
+            Button("Uninstall", role: .destructive) { runner.uninstall(game) }
+        } message: {
+            Text("Saves in the Steam Cloud stay. You can install the game again at any time.")
+        }
         .sheet(item: $enlargedScreenshot) { shot in
             ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
         }
@@ -249,7 +255,16 @@ struct GameDetailPage: View {
                 .disabled(activity == .installing || !setup.isReady)
             } else {
                 // While the game runs, the button turns into a status; quit from the game itself.
-                if case .running(let since) = activity {
+                if runner.uninstalling.contains(game.id) {
+                    Button {} label: {
+                        HStack(spacing: 10) {
+                            ProgressView().controlSize(.small)
+                            Text("Uninstalling…")
+                        }
+                    }
+                    .buttonStyle(HeroActionButtonStyle(isBusy: true))
+                    .disabled(true)
+                } else if case .running(let since) = activity {
                     RunningIndicator(since: since)
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                 } else {
@@ -268,6 +283,11 @@ struct GameDetailPage: View {
                     if game.isInstalled { Button("Show Game Folder in Finder") { runner.showFolder(game) } }
                 }
                 Divider()
+                if !game.isLocal && game.isInstalled && runner.activity(for: game) == nil {
+                    Button("Uninstall…", role: .destructive) { confirmsUninstall = true }
+                        .disabled(!runner.canUninstall || runner.uninstalling.contains(game.id))
+                    Divider()
+                }
                 if case .running = runner.activity(for: game) {
                     Button("Quit Game") { runner.stop(game) }
                     Divider()

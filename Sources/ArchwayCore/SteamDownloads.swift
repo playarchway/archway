@@ -81,6 +81,25 @@ extension Orchestrator {
         return (try? handle.readToEnd()).map { String(decoding: $0, as: UTF8.self) }
     }
 
+    /// Removes an installed game the way Steam does, without its confirmation dialog: the manifest, the game
+    /// folder, and its shader cache and unfinished download. Saves outside the game folder stay. Steam must not run.
+    public func uninstallSteamGame(appID: Int) throws {
+        guard let steamapps = steamAppsDirectory else { throw ArchwayError.missingSteam }
+        let manifest = steamapps.appendingPathComponent("appmanifest_\(appID).acf")
+        let fm = FileManager.default
+        if let text = try? String(contentsOf: manifest, encoding: .utf8),
+           let folder = GameProcesses.value(of: "installdir", inManifest: text) {
+            guard !folder.isEmpty, !folder.contains("/"), !folder.contains("\\"), folder != "..", folder != "." else {
+                throw ArchwayError.invalidPath("Steam's manifest names an unexpected game folder: \(folder)")
+            }
+            try? fm.removeItem(at: steamapps.appendingPathComponent("common").appendingPathComponent(folder))
+        }
+        for leftover in ["downloading/\(appID)", "shadercache/\(appID)"] {
+            try? fm.removeItem(at: steamapps.appendingPathComponent(leftover))
+        }
+        if fm.fileExists(atPath: manifest.path) { try fm.removeItem(at: manifest) }
+    }
+
     /// Whether Windows Steam has a remembered sign-in, so it can start without showing its login window.
     public func steamIsSignedIn() -> Bool {
         guard let steam = steamExecutable(),

@@ -32,6 +32,7 @@ final class GameRunner {
     private(set) var installPhases: [Int: Orchestrator.SteamInstallPhase] = [:]
     /// Games that wait for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
     private(set) var installNotes: [Int: InstallNote] = [:]
+    private(set) var uninstalling: Set<Int> = []
 
     enum InstallNote: Equatable {
         case signIn
@@ -153,6 +154,31 @@ final class GameRunner {
             }
         }
     }
+
+    /// Removes the game from the bottle. Steam closes first, so it doesn't restore what is being deleted.
+    func uninstall(_ game: LibraryGame) {
+        guard !game.isLocal, activities[game.id] == nil, !uninstalling.contains(game.id), !steamGameIsActive else { return }
+        errors[game.id] = nil
+        uninstalling.insert(game.id)
+        steamShutdown?.cancel()
+        Task {
+            do {
+                try await Task.detached {
+                    try Self.closeSteam()
+                    try Self.orchestrator().uninstallSteamGame(appID: game.id)
+                }.value
+                ownsSteam = false
+            } catch {
+                errors[game.id] = Self.message(for: error)
+            }
+            uninstalling.remove(game.id)
+            refreshSteamState()
+            store.refreshInstalled()
+        }
+    }
+
+    /// Uninstalling closes Steam, which would end a game that runs through it.
+    var canUninstall: Bool { !steamGameIsActive }
 
     /// A game started through the default bottle's Steam is starting, running, or stopping.
     private var steamGameIsActive: Bool {

@@ -1709,6 +1709,56 @@
           }
         }
       }
+    },
+    "Uninstall…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deinstallieren …"
+          }
+        }
+      }
+    },
+    "Uninstall “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ deinstallieren?"
+          }
+        }
+      }
+    },
+    "Uninstall": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deinstallieren"
+          }
+        }
+      }
+    },
+    "Saves in the Steam Cloud stay. You can install the game again at any time.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielstände in der Steam Cloud bleiben erhalten. Du kannst das Spiel jederzeit wieder installieren."
+          }
+        }
+      }
+    },
+    "Uninstalling…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird deinstalliert …"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

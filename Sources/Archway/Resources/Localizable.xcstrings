@@ -1470,86 +1470,6 @@
         }
       }
     },
-    "Play your Windows games on this Mac. Archway sets up everything they need and keeps it out of your way.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spiele deine Windows-Spiele auf diesem Mac. Archway richtet alles ein, was sie brauchen, und hält es dir aus dem Weg."
-          }
-        }
-      }
-    },
-    "How Archway Works": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "So funktioniert Archway"
-          }
-        }
-      }
-    },
-    "Windows Layer": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Windows-Schicht"
-          }
-        }
-      }
-    },
-    "Wine answers the questions a game asks Windows, in macOS terms.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wine übersetzt, was ein Spiel von Windows erwartet, in die Sprache von macOS."
-          }
-        }
-      }
-    },
-    "Graphics on Metal": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grafik über Metal"
-          }
-        }
-      }
-    },
-    "Apple’s D3DMetal turns DirectX into Metal for your Mac’s graphics chip.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apples D3DMetal übersetzt DirectX in Metal für den Grafikchip deines Mac."
-          }
-        }
-      }
-    },
-    "Your Steam Library": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Steam-Bibliothek"
-          }
-        }
-      }
-    },
-    "Your games come from Steam, which runs in its own Windows environment.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Spiele kommen von Steam, das in einer eigenen Windows-Umgebung läuft."
-          }
-        }
-      }
-    },
     "All Set": {
       "localizations": {
         "de": {
@@ -1570,26 +1490,6 @@
         }
       }
     },
-    "Windows support is ready.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Windows-Unterstützung ist bereit."
-          }
-        }
-      }
-    },
-    "Archway is setting up Windows support while you read this. It takes a few minutes, and you can use your library meanwhile.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Während du das liest, richtet Archway die Windows-Unterstützung ein. Das dauert ein paar Minuten, deine Bibliothek kannst du in der Zeit schon nutzen."
-          }
-        }
-      }
-    },
     "Ready to Play": {
       "localizations": {
         "de": {
@@ -1606,26 +1506,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hol deine Spiele dazu"
-          }
-        }
-      }
-    },
-    "Your Steam library is linked. Pick a game and press Play.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Steam-Bibliothek ist verknüpft. Such dir ein Spiel aus und klicke auf „Spielen“."
-          }
-        }
-      }
-    },
-    "Link your Steam account to see the games you own. You sign in on Steam’s own page; Archway never sees your password.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verknüpfe dein Steam-Konto, um deine Spiele zu sehen. Du meldest dich auf Steams eigener Seite an, Archway sieht dein Passwort nie."
           }
         }
       }
@@ -1656,6 +1536,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weiter"
+          }
+        }
+      }
+    },
+    "Your Windows games, on your Mac.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Windows-Spiele, auf deinem Mac."
+          }
+        }
+      }
+    },
+    "Three Steps to Play": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In drei Schritten zum Spiel"
+          }
+        }
+      }
+    },
+    "Link Your Libraries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliotheken verknüpfen"
+          }
+        }
+      }
+    },
+    "Steam today, more stores soon.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam schon jetzt, weitere Stores folgen."
+          }
+        }
+      }
+    },
+    "Download Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele laden"
+          }
+        }
+      }
+    },
+    "One click, and Archway installs the game.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Klick, und Archway installiert das Spiel."
+          }
+        }
+      }
+    },
+    "Press Play": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Losspielen"
+          }
+        }
+      }
+    },
+    "Archway starts the game with the right settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway startet das Spiel mit den passenden Einstellungen."
+          }
+        }
+      }
+    },
+    "Archway sets itself up in the background. You can start right away.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway richtet sich im Hintergrund ein. Du kannst schon loslegen."
+          }
+        }
+      }
+    },
+    "Pick a game and press Play.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Such dir ein Spiel aus und klick auf „Spielen“."
+          }
+        }
+      }
+    },
+    "Link Steam to see your games.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verknüpfe Steam, um deine Spiele zu sehen."
           }
         }
       }

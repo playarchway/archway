@@ -92,35 +92,31 @@ struct IntroductionView: View {
         switch page {
         case .welcome:
             PageText(title: String(localized: "Welcome to Archway"),
-                     message: String(localized: "Play your Windows games on this Mac. Archway sets up everything they need and keeps it out of your way."))
+                     message: String(localized: "Your Windows games, on your Mac."))
         case .howItWorks:
             VStack(spacing: 22) {
                 HStack(alignment: .top, spacing: 16) {
-                    FeatureCard(image: "intro-card-wine", title: String(localized: "Windows Layer"),
-                                message: String(localized: "Wine answers the questions a game asks Windows, in macOS terms."),
-                                delay: 0.1)
-                    FeatureCard(image: "intro-card-metal", title: String(localized: "Graphics on Metal"),
-                                message: String(localized: "Apple’s D3DMetal turns DirectX into Metal for your Mac’s graphics chip."),
-                                delay: 0.22)
-                    FeatureCard(image: "intro-card-library", title: String(localized: "Your Steam Library"),
-                                message: String(localized: "Your games come from Steam, which runs in its own Windows environment."),
-                                delay: 0.34)
+                    FeatureCard(step: 1, image: "intro-card-library", title: String(localized: "Link Your Libraries"),
+                                message: String(localized: "Steam today, more stores soon."), delay: 0.1)
+                    FeatureCard(step: 2, image: "intro-card-download", title: String(localized: "Download Games"),
+                                message: String(localized: "One click, and Archway installs the game."), delay: 0.22)
+                    FeatureCard(step: 3, image: "intro-card-play", title: String(localized: "Press Play"),
+                                message: String(localized: "Archway starts the game with the right settings."), delay: 0.34)
                 }
-                PageText(title: String(localized: "How Archway Works"), message: nil)
+                PageText(title: String(localized: "Three Steps to Play"), message: nil)
             }
         case .setup:
             VStack(spacing: 18) {
                 PageText(title: setup.isReady ? String(localized: "All Set") : String(localized: "Already Underway"),
-                         message: setup.isReady
-                         ? String(localized: "Windows support is ready.")
-                         : String(localized: "Archway is setting up Windows support while you read this. It takes a few minutes, and you can use your library meanwhile."))
+                         message: setup.isReady ? nil
+                         : String(localized: "Archway sets itself up in the background. You can start right away."))
                 SetupChecklist(axis: .horizontal)
             }
         case .steam:
             PageText(title: hasSteamAccount ? String(localized: "Ready to Play") : String(localized: "Bring Your Games"),
                      message: hasSteamAccount
-                     ? String(localized: "Your Steam library is linked. Pick a game and press Play.")
-                     : String(localized: "Link your Steam account to see the games you own. You sign in on Steam’s own page; Archway never sees your password."))
+                     ? String(localized: "Pick a game and press Play.")
+                     : String(localized: "Link Steam to see your games."))
         }
     }
 
@@ -319,6 +315,7 @@ private struct PageText: View {
 }
 
 private struct FeatureCard: View {
+    let step: Int
     let image: String
     let title: String
     let message: String
@@ -330,23 +327,33 @@ private struct FeatureCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // The scenes are square with the subject above the middle; show the top and less floor.
             Group {
                 if let artwork = IntroArtwork.image(image) {
-                    Image(nsImage: artwork).resizable().scaledToFill()
+                    Image(nsImage: artwork).resizable()
                 }
             }
-            .frame(width: 236, height: 150)
-            .scaleEffect(isVisible ? 1.06 : 1.2)
+            .frame(width: 236, height: 236)
+            .scaleEffect(isVisible ? 1 : 1.12)
+            .offset(y: 26)
+            .frame(width: 236, height: 168)
             .clipped()
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.headline)
+                HStack(spacing: 8) {
+                    Text(step, format: .number)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 20, height: 20)
+                        .background(Color.archwayAccent, in: Circle())
+                    Text(title).font(.headline)
+                }
                 Text(message)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
             .padding(16)
-            .frame(width: 236, height: 108, alignment: .topLeading)
+            .frame(width: 236, height: 96, alignment: .topLeading)
         }
         .background(.black.opacity(0.55))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -362,7 +369,7 @@ private struct FeatureCard: View {
             guard !reduceMotion else { return }
             withAnimation(.easeOut(duration: 0.25)) {
                 if case .active(let location) = phase {
-                    tilt = CGSize(width: location.x / 236 - 0.5, height: location.y / 258 - 0.5)
+                    tilt = CGSize(width: location.x / 236 - 0.5, height: location.y / 264 - 0.5)
                 } else {
                     tilt = .zero
                 }

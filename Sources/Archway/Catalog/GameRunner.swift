@@ -14,14 +14,6 @@ final class GameRunner {
         case installing
     }
 
-    /// The Wine build a game starts with.
-    enum Runtime: String, CaseIterable, Sendable {
-        /// CrossOver-based Wine 11.17 with Steam, the tested default.
-        case standard
-        /// Archway's own Wine 11.20 build with D3DMetal, in a bottle with its own Windows Steam.
-        case archwayAlpha
-    }
-
     private(set) var activities: [Int: Activity] = [:]
     /// Windows Steam runs in the default bottle.
     private(set) var isSteamRunning = false
@@ -45,10 +37,6 @@ final class GameRunner {
     private var missedPolls: [Int: Int] = [:]
     /// Games whose window should come to the front once it appears.
     private var pendingFocus: Set<Int> = []
-    /// The runtime each started game runs in, so stopping reaches the right bottle.
-    private var launchedRuntimes: [Int: Runtime] = [:]
-    private(set) var selectedRuntimes: [Int: Runtime] = GameRunner.loadRuntimes()
-    private static let runtimesDefaultsKey = "gameRuntimes"
     private var watcher: Task<Void, Never>?
     /// Archway started Steam, so it also closes it once the game is over.
     private var ownsSteam = false
@@ -62,6 +50,8 @@ final class GameRunner {
 
     init(store: LibraryStore) {
         self.store = store
+        // Games could once pick a separate alpha runtime; there is only one now.
+        UserDefaults.standard.removeObject(forKey: "gameRuntimes")
         refreshSteamState()
         // Steam keeps running when Archway quits otherwise, and restarts its window when only that is closed.
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
@@ -74,27 +64,6 @@ final class GameRunner {
 
     func activity(for game: LibraryGame) -> Activity? { activities[game.id] }
 
-    func runtime(for game: LibraryGame) -> Runtime { selectedRuntimes[game.id] ?? .standard }
-
-    func setRuntime(_ runtime: Runtime, for game: LibraryGame) {
-        selectedRuntimes[game.id] = runtime == .standard ? nil : runtime
-        UserDefaults.standard.set(Dictionary(uniqueKeysWithValues: selectedRuntimes.map { (String($0.key), $0.value.rawValue) }),
-                                  forKey: Self.runtimesDefaultsKey)
-    }
-
-    /// The alpha runtime only has the games that are installed in its own bottle.
-    func isAlphaAvailable(for game: LibraryGame) -> Bool {
-        !game.isLocal && (try? Self.orchestrator(.archwayAlpha).steamInstallDirectory(appID: game.id))
-            .map { FileManager.default.fileExists(atPath: $0.path) } == true
-    }
-
-    private static func loadRuntimes() -> [Int: Runtime] {
-        let stored = UserDefaults.standard.dictionary(forKey: runtimesDefaultsKey) as? [String: String] ?? [:]
-        return Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
-            Int(key).flatMap { id in Runtime(rawValue: value).map { (id, $0) } }
-        })
-    }
-
     // MARK: Actions
 
     func play(_ game: LibraryGame) {
@@ -103,14 +72,12 @@ final class GameRunner {
         activities[game.id] = .starting
         startedAt[game.id] = .now
         pendingFocus.insert(game.id)
-        let runtime = runtime(for: game)
-        launchedRuntimes[game.id] = runtime
-        let usesSteam = runtime == .standard && !game.isLocal
+        let usesSteam = !game.isLocal
         if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
                 if usesSteam, await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
-                imageNames[game.id] = try await Task.detached { try Self.launch(game, runtime: runtime) }.value
+                imageNames[game.id] = try await Task.detached { try Self.launch(game) }.value
                 watch()
             } catch {
                 fail(game, error)
@@ -121,10 +88,9 @@ final class GameRunner {
     func stop(_ game: LibraryGame) {
         guard case .running = activities[game.id], let names = imageNames[game.id] else { return }
         activities[game.id] = .stopping
-        let runtime = launchedRuntimes[game.id] ?? .standard
         Task {
             do {
-                try await Task.detached { try Self.stop(imageNames: names, runtime: runtime) }.value
+                try await Task.detached { try Self.stop(imageNames: names) }.value
             } catch {
                 fail(game, error)
             }
@@ -182,7 +148,7 @@ final class GameRunner {
 
     /// A game started through the default bottle's Steam is starting, running, or stopping.
     private var steamGameIsActive: Bool {
-        activities.contains { id, activity in id > 0 && activity != .installing && launchedRuntimes[id] == .standard }
+        activities.contains { id, activity in id > 0 && activity != .installing }
     }
 
     /// Once the game that kept Steam busy has ended, restart Steam so it reads the queued downloads.
@@ -216,7 +182,7 @@ final class GameRunner {
 
     /// Not while a game that needs it runs or installs.
     var canQuitSteam: Bool {
-        isSteamRunning && !activities.contains { id, _ in launchedRuntimes[id] != .archwayAlpha && id > 0 }
+        isSteamRunning && !activities.keys.contains { $0 > 0 }
     }
 
     private func shutDownSteam() async {
@@ -250,8 +216,7 @@ final class GameRunner {
 
     /// The log of the game's last start, if there is one.
     func logURL(for game: LibraryGame) -> URL? {
-        let runtime = runtime(for: game)
-        guard let paths = try? Self.paths(runtime) else { return nil }
+        guard let paths = try? AppPaths.app() else { return nil }
         let url = paths.logs.appendingPathComponent("\(Self.logLabel(for: game)).log")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
@@ -308,9 +273,8 @@ final class GameRunner {
                 missedPolls[id] = isRunning ? 0 : (missedPolls[id] ?? 0) + 1
                 if (missedPolls[id] ?? 0) >= 2 {
                     if let since = startedAt[id] { store.recordSession(gameID: id, from: since, to: .now) }
-                    let usedSteam = launchedRuntimes[id] == .standard && id > 0
                     finish(id)
-                    if usedSteam { scheduleSteamShutdown() }
+                    if id > 0 { scheduleSteamShutdown() }
                 }
             case .installing:
                 break
@@ -334,7 +298,6 @@ final class GameRunner {
         installPhases[id] = nil
         installNotes[id] = nil
         pendingFocus.remove(id)
-        launchedRuntimes[id] = nil
         missedPolls[id] = nil
         startedAt[id] = nil
     }
@@ -346,35 +309,26 @@ final class GameRunner {
 
     // MARK: Work off the main thread
 
-    nonisolated private static func paths(_ runtime: Runtime) throws -> AppPaths {
+    nonisolated private static func orchestrator() throws -> Orchestrator {
         let paths = try AppPaths.app()
-        guard runtime == .archwayAlpha else { return paths }
-        return try AppPaths(dataDirectory: paths.dataDirectory.appendingPathComponent("archway-alpha"))
-    }
-
-    nonisolated private static func orchestrator(_ runtime: Runtime = .standard) throws -> Orchestrator {
-        let paths = try paths(runtime)
         guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
         return Orchestrator(paths: paths, configuration: configuration)
     }
 
-    /// Matches the label of the request that starts the game; each runtime keeps its logs in its own folder.
+    /// Matches the label of the request that starts the game.
     nonisolated private static func logLabel(for game: LibraryGame) -> String {
         game.isLocal ? "local-game-\(-game.id)" : "game-launch-\(game.id)"
     }
 
     /// Starts the game and returns the image names that identify its processes.
-    nonisolated private static func launch(_ game: LibraryGame, runtime: Runtime) throws -> Set<String> {
+    nonisolated private static func launch(_ game: LibraryGame) throws -> Set<String> {
         if let path = game.executablePath {
             let executable = URL(fileURLWithPath: path)
             try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: logLabel(for: game)))
             return [executable.lastPathComponent.lowercased()]
         }
-        let orchestrator = try orchestrator(runtime)
+        let orchestrator = try orchestrator()
         let folder = orchestrator.steamInstallDirectory(appID: game.id)
-        if runtime == .archwayAlpha && folder.map({ FileManager.default.fileExists(atPath: $0.path) }) != true {
-            throw RunnerError.notInAlpha
-        }
         if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
         let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive,
@@ -382,14 +336,9 @@ final class GameRunner {
         return folder.map(GameProcesses.executableNames) ?? []
     }
 
-    private enum RunnerError: LocalizedError {
-        case notInAlpha
-        var errorDescription: String? { String(localized: "The game isn’t installed in the Archway runtime.") }
-    }
-
     /// Asks the game to close, then ends it if it is still there after a few seconds.
-    nonisolated private static func stop(imageNames: Set<String>, runtime: Runtime) throws {
-        let orchestrator = try orchestrator(runtime)
+    nonisolated private static func stop(imageNames: Set<String>) throws {
+        let orchestrator = try orchestrator()
         for name in imageNames where !GameProcesses.running(imageNames: [name]).isEmpty {
             try ProcessRunner.runSetup(orchestrator.stopRequest(imageName: name, force: false), timeout: 30)
         }
@@ -448,7 +397,7 @@ final class GameRunner {
         case .missingConfiguration?: String(localized: "Archway isn’t set up on this Mac yet.")
         case .missingBottle?: String(localized: "Archway’s Windows environment isn’t set up yet.")
         case .missingSteam?: String(localized: "Windows Steam isn’t installed in Archway yet.")
-        default: (error as? RunnerError)?.errorDescription ?? String(localized: "That didn’t work: \(error.localizedDescription)")
+        default: String(localized: "That didn’t work: \(error.localizedDescription)")
         }
     }
 }

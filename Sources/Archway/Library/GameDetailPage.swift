@@ -156,10 +156,7 @@ struct GameDetailPage: View {
                         .font(.system(size: 36, weight: .bold))
                         .lineLimit(2)
                     if let byline { Text(byline).font(.title3).foregroundStyle(.secondary) }
-                    HStack(spacing: 8) {
-                        StatusPill(compatibility: game.compatibility)
-                        if runner.runtime(for: game) == .archwayAlpha { AlphaBadge(text: "Archway Wine · Alpha") }
-                    }
+                    StatusPill(compatibility: game.compatibility)
                     actions.padding(.top, 6)
                 }
                 .opacity(hasAppeared ? 1 : 0)
@@ -671,20 +668,6 @@ private struct ScreenshotViewer: View {
 }
 
 /// The technical choices for one game, out of the way of the normal page.
-/// A small amber capsule for features that are still in early testing.
-struct AlphaBadge: View {
-    var text: LocalizedStringKey = "Alpha"
-
-    var body: some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.archwayAccent)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color.archwayAccent.opacity(0.15), in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.archwayAccent.opacity(0.35)))
-    }
-}
-
 private struct AdvancedSettingsSheet: View {
     let game: LibraryGame
     @State private var backend: String
@@ -698,12 +681,6 @@ private struct AdvancedSettingsSheet: View {
 
     private var logURL: URL? { runner.logURL(for: game) }
 
-    private var runtime: Binding<GameRunner.Runtime> {
-        Binding { runner.runtime(for: game) } set: { runner.setRuntime($0, for: game) }
-    }
-
-    private var isAlphaAvailable: Bool { runner.isAlphaAvailable(for: game) }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Advanced Settings").font(.title3.weight(.semibold))
@@ -713,35 +690,13 @@ private struct AdvancedSettingsSheet: View {
                 Picker("Graphics", selection: $backend) {
                     ForEach(["D3DMetal", "DXVK", "WineD3D"], id: \.self) { Text($0) }
                 }
-                Section {
-                    Picker("Windows Environment", selection: runtime) {
-                        Text("Default · Wine 11.17 with Steam").tag(GameRunner.Runtime.standard)
-                        HStack(spacing: 6) {
-                            Text("Archway · Wine 11.20")
-                            AlphaBadge()
-                        }
-                        .tag(GameRunner.Runtime.archwayAlpha)
-                        .disabled(!isAlphaAvailable)
-                    }
-                    .pickerStyle(.radioGroup)
-                    .disabled(runner.activity(for: game) != nil)
-                } footer: {
-                    Text(isAlphaAvailable
-                         ? "Archway’s own Wine version, still in early testing. Starts the game through a separate Steam."
-                         : "Archway’s own Wine version isn’t available for this game yet.")
-                        .font(.callout).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
                 LabeledContent("Last Launch") {
                     Button("Export Log…", action: exportLog).disabled(logURL == nil)
                 }
             }
             .formStyle(.grouped)
             HStack {
-                Button("Restore Defaults") {
-                    backend = game.backend
-                    if runner.activity(for: game) == nil { runner.setRuntime(.standard, for: game) }
-                }
+                Button("Restore Defaults") { backend = game.backend }
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }

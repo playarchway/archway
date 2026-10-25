@@ -1,15 +1,17 @@
 name: Runtime
 
 # Builds Archway's Wine runtime (Wine, FreeType, Wine Mono, D3DMetal) and publishes it as a prerelease that the app
-# can download. Needs two things in this repository:
-# - Leafline Bot: variable LEAFLINE_BOT_APP_ID and secret LEAFLINE_BOT_PRIVATE_KEY, to read Leafline-Labs/archway-wine
-# - a release tagged gptk-4.0-beta-3 holding Apple's Evaluation_environment_for_Windows_games_4.0_beta_3.dmg
+# can download. Needs Archway Bot (variable ARCHWAY_BOT_APP_ID, secret ARCHWAY_BOT_PRIVATE_KEY) to read the private
+# repositories playarchway/archway-wine and playarchway/archway-build-inputs; the latter holds Apple's
+# Evaluation_environment_for_Windows_games_4.0_beta_3.dmg in its release gptk-4.0-beta-3.
+# Runners come from the repository variables MACOS_RUNNER and LINUX_RUNNER, for example Blacksmith labels;
+# without them, the jobs use GitHub's own runners.
 
 on:
   workflow_dispatch:
     inputs:
       wine_ref:
-        description: Branch, tag, or commit of Leafline-Labs/archway-wine
+        description: Branch, tag, or commit of playarchway/archway-wine
         default: main
 
 permissions:
@@ -21,20 +23,20 @@ env:
 
 jobs:
   build:
-    runs-on: blacksmith-6vcpu-macos-26
+    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - id: bot
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ vars.LEAFLINE_BOT_APP_ID }}
-          private-key: ${{ secrets.LEAFLINE_BOT_PRIVATE_KEY }}
-          repositories: archway-wine
+          app-id: ${{ vars.ARCHWAY_BOT_APP_ID }}
+          private-key: ${{ secrets.ARCHWAY_BOT_PRIVATE_KEY }}
+          repositories: archway-wine,archway-build-inputs
           permission-contents: read
       - uses: actions/checkout@v4
         with:
-          repository: Leafline-Labs/archway-wine
+          repository: playarchway/archway-wine
           ref: ${{ inputs.wine_ref }}
           token: ${{ steps.bot.outputs.token }}
           path: wine
@@ -51,9 +53,9 @@ jobs:
         run: scripts/fetch-wine-tools.sh "$RUNNER_TEMP/tools"
       - name: Fetch GPTK
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot.outputs.token }}
         run: |
-          gh release download gptk-4.0-beta-3 --pattern "$GPTK_DMG" --dir "$RUNNER_TEMP"
+          gh release download gptk-4.0-beta-3 --repo playarchway/archway-build-inputs --pattern "$GPTK_DMG" --dir "$RUNNER_TEMP"
           echo "$GPTK_SHA256  $RUNNER_TEMP/$GPTK_DMG" | shasum -a 256 -c -
       - name: Build Wine
         env:
@@ -78,4 +80,4 @@ jobs:
         run: |
           gh release create "runtime-$VERSION" dist/* --prerelease --latest=false \
             --title "Archway Wine $VERSION" \
-            --notes "Wine runtime for Archway, built from Leafline-Labs/archway-wine at $(git -C wine rev-parse HEAD), with FreeType 2.15.0, Wine Mono 11.3.0, and Apple's D3DMetal (GPTK 4.0 beta 3, non-commercial redistribution under Apple's license). Unpack into DATA/runtime-overlays/NAME/."
+            --notes "Wine runtime for Archway, built from playarchway/archway-wine at $(git -C wine rev-parse HEAD), with FreeType 2.15.0, Wine Mono 11.3.0, and Apple's D3DMetal (GPTK 4.0 beta 3, non-commercial redistribution under Apple's license). Unpack into DATA/runtime-overlays/NAME/."

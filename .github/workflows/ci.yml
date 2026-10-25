@@ -5,13 +5,15 @@ on:
     branches: [main]
   pull_request:
 
+# Runners come from the repository variables MACOS_RUNNER and LINUX_RUNNER, for example Blacksmith labels;
+# without them, the jobs use GitHub's own runners.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: blacksmith-6vcpu-macos-26
+    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     steps:
       - uses: actions/checkout@v4
       - name: Test

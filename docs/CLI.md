@@ -45,7 +45,7 @@ The shim's source is `Shims/steamwebhelper/steamwebhelper_shim.c`. `Shims/steamw
 
 ## D3DMetal
 
-D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with CrossOver's Mac driver interface (`macdrv_functions`), which upstream Wine does not provide; [archway-wine](https://github.com/Leafline-Labs/archway-wine) adds it, and Archway's runtime package ships D3DMetal already staged. For local setups, download Apple's *Evaluation environment for Windows games* yourself and point Archway at its `redist/lib`. Its license (4.0 beta 3, §2A(iii) and §2C) allows distributing D3DMetal and the other `redist` components for non-commercial purposes only, unmodified and with Apple's notices. Archway's runtime package relies on that permission.
+D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with CrossOver's Mac driver interface (`macdrv_functions`), which upstream Wine does not provide; [archway-wine](https://github.com/playarchway/archway-wine) adds it, and Archway's runtime package ships D3DMetal already staged. For local setups, download Apple's *Evaluation environment for Windows games* yourself and point Archway at its `redist/lib`. Its license (4.0 beta 3, §2A(iii) and §2C) allows distributing D3DMetal and the other `redist` components for non-commercial purposes only, unmodified and with Apple's notices. Archway's runtime package relies on that permission.
 
 ```sh
 archway check-d3dmetal --redist-lib REDIST_LIB

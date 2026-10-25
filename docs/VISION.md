@@ -30,7 +30,7 @@ Wine setups, graphics backends, and Windows dependencies are confusing for casua
 
 | Part | Role |
 | --- | --- |
-| **Wine** | Windows APIs on macOS. Archway builds and ships its own Wine with a few macOS patches ([archway-wine](https://github.com/Leafline-Labs/archway-wine)). |
+| **Wine** | Windows APIs on macOS. Archway builds and ships its own Wine with a few macOS patches ([archway-wine](https://github.com/playarchway/archway-wine)). |
 | **Rosetta** | Runs Wine's x86_64 code on Apple silicon. |
 | **D3DMetal** | Apple's Direct3D 11 and 12 translation to Metal, from the Game Porting Toolkit. Its license allows non-commercial redistribution, which Archway relies on. |
 | **DXVK, WineD3D** | Alternative graphics paths for games that need them. |

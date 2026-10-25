@@ -4,32 +4,38 @@ on:
   push:
     branches: [main]
 
-# Release Please runs as Leafline Bot: workflows don't start for pull requests that GITHUB_TOKEN opens.
+# Runners come from the repository variables MACOS_RUNNER and LINUX_RUNNER, for example Blacksmith labels;
+# without them, the jobs use GitHub's own runners.
+
+# Release Please runs as Archway Bot when its app ID (variable ARCHWAY_BOT_APP_ID) and key (secret
+# ARCHWAY_BOT_PRIVATE_KEY) are set: workflows don't start for pull requests that GITHUB_TOKEN opens.
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   release-please:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
     steps:
       - id: bot
+        if: vars.ARCHWAY_BOT_APP_ID != ''
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ vars.LEAFLINE_BOT_APP_ID }}
-          private-key: ${{ secrets.LEAFLINE_BOT_PRIVATE_KEY }}
+          app-id: ${{ vars.ARCHWAY_BOT_APP_ID }}
+          private-key: ${{ secrets.ARCHWAY_BOT_PRIVATE_KEY }}
       - id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ steps.bot.outputs.token }}
+          token: ${{ steps.bot.outputs.token || github.token }}
 
   build:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
-    runs-on: blacksmith-6vcpu-macos-26
+    runs-on: ${{ vars.MACOS_RUNNER || 'macos-26' }}
     steps:
       - uses: actions/checkout@v4
         with:

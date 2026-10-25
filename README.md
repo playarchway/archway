@@ -34,7 +34,7 @@ open --env ARCHWAY_DATA_DIR="$HOME/Library/Application Support/Archway/first-sta
 
 ## How it works
 
-Archway runs games through [Wine](https://www.winehq.org), with [archway-wine](https://github.com/Leafline-Labs/archway-wine), a Wine 11.20 build with a few macOS patches that let Apple's D3DMetal translate Direct3D 11 and 12 to Metal. The [runtime package](docs/RUNTIME.md) bundles that Wine with FreeType, Wine Mono, and D3DMetal. Windows Steam runs inside Archway's bottle for sign-in, downloads, and launching games; a small shim keeps its window from staying black under Wine's macOS driver.
+Archway runs games through [Wine](https://www.winehq.org), with [archway-wine](https://github.com/playarchway/archway-wine), a Wine 11.20 build with a few macOS patches that let Apple's D3DMetal translate Direct3D 11 and 12 to Metal. The [runtime package](docs/RUNTIME.md) bundles that Wine with FreeType, Wine Mono, and D3DMetal. Windows Steam runs inside Archway's bottle for sign-in, downloads, and launching games; a small shim keeps its window from staying black under Wine's macOS driver.
 
 | Folder | Contents |
 | --- | --- |
@@ -55,7 +55,7 @@ Archway is licensed under the [GNU General Public License v3.0](LICENSE).
 
 The runtime package that Archway downloads contains third-party software under its own terms:
 
-- **Wine** ([archway-wine](https://github.com/Leafline-Labs/archway-wine)): GNU LGPL 2.1 or later.
+- **Wine** ([archway-wine](https://github.com/playarchway/archway-wine)): GNU LGPL 2.1 or later.
 - **FreeType**: FreeType License.
 - **Wine Mono**: MIT and LGPL components.
 - **D3DMetal** from Apple's Game Porting Toolkit: Apple's license, which permits redistribution for non-commercial purposes only. Archway is free and non-commercial; anyone redistributing the runtime package must respect this.

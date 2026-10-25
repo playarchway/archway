@@ -1,6 +1,6 @@
 # Archway technical proof of concept
 
-Archway is a Swift command-line core for testing **Brick by Brick: Tidy Up the Small Town!** (Steam app `5228920`) in a dedicated Wine bottle on macOS. It does not bundle Wine, Steam, or a game. Its library target is intended for a later native SwiftUI app.
+Archway is a Swift command-line core for testing **Brick by Brick: Tidy Up the Small Town!** (Steam app `5228920`) in a dedicated Wine bottle on macOS. The app does not bundle Wine, Steam, or a game; the Wine runtime is a separate download (see [Runtime package](#runtime-package)). Its library target is intended for a later native SwiftUI app.
 
 **Verified setup (2026-10-23, macOS 27.0.1, Apple M5 Pro):** Windows Steam and Brick by Brick run in the owned bottle on Whisky's CrossOver-based Wine 11.17 runtime with Apple's D3DMetal (GPTK 4.0 beta 3) for the game and the steamwebhelper shim for Steam's UI. Install, play, save, quit, relaunch, and save reload passed manually. Unity reports `Direct3D 11.0 [level 11.1]` on `AMD Compatibility Mode`, D3DMetal's adapter.
 
@@ -35,6 +35,20 @@ For a separate renderer experiment, `configure` also accepts `--dxvk-config '/ab
 
 As an alternative to the interactive installer command above, add `--silent` to pass only NSIS `/S` to the locally supplied Windows installer. The installer chooses its normal location. Both modes dispatch a request; check `doctor` for the Steam executable afterward. Steam account login still happens in the Windows Steam GUI.
 
+### Runtime package
+
+The Runtime workflow (`.github/workflows/runtime.yml`, started by hand on a Blacksmith macOS runner) builds the runtime that Archway is meant to download: our Wine tree from `Leafline-Labs/archway-wine`, FreeType 2.15.0, Wine Mono 11.3.0 (shared, so new bottles skip the Mono download dialog), and D3DMetal staged on top. It publishes `archway-wine-VERSION.tar.xz` with a SHA-256 file as a `runtime-VERSION` prerelease. The archive holds `Wine/` and `WhiskyWineVersion.plist`; unpack it to `DATA/runtime-overlays/NAME/` and configure Archway with `--library-dir` and `--d3dmetal-dir` both set to `DATA/runtime-overlays/NAME/Wine/lib`. Wine's license files, FreeType's license, Apple's GPTK license, and the exact Wine source commit are in the archive.
+
+The same steps run locally:
+
+```sh
+scripts/fetch-wine-tools.sh TOOLS          # pinned llvm-mingw, Wine Mono, x86_64 FreeType; needs `brew install bison`
+WINE_TOOLS=TOOLS WINE_BUILD=BUILD scripts/build-wine.sh INSTALL
+WINE_TOOLS=TOOLS scripts/package-runtime.sh INSTALL/usr/local Evaluation_environment_for_Windows_games_4.0_beta_3.dmg DIST VERSION
+```
+
+Wine is LGPL, so whoever receives the runtime must be able to get its source; `Leafline-Labs/archway-wine` has to be public, or the source offered otherwise, before the package is shared.
+
 ### Steam's black window
 
 Under Wine's macOS driver, Windows Steam's client window stays black: Chromium's GPU process draws into a window owned by Steam's browser process, and `winemac.drv` cannot present drawing from another process ([Wine bug 35456](https://bugs.winehq.org/show_bug.cgi?id=35456), [60263](https://bugs.winehq.org/show_bug.cgi?id=60263)). `open-steam`, `install-game`, and `launch-game` therefore install a small shim: Valve's `bin/cef/cef.win64/steamwebhelper.exe` moves to `steamwebhelper.real.exe`, and the shim takes its place and starts it with `--in-process-gpu`. Steam then starts with `-noverifyfiles -norepairfiles`, because its bootstrapper would otherwise restore the original file. A Steam update can still replace the shim during a running session; the next `open-steam` reinstalls it with the updated helper. `doctor` shows the shim state, and `open-steam --without-webhelper-shim` restores Valve's helper for comparison. Directly after `install-steam`, Steam has not downloaded its webhelper yet; let the first start finish updating, then run `close-steam` and `open-steam`.
@@ -47,7 +61,7 @@ The shim's source is `Shims/steamwebhelper/steamwebhelper_shim.c`. `Shims/steamw
 
 ### D3DMetal
 
-D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with CrossOver's Mac driver interface (`macdrv_functions`), which upstream Wine does not provide; the verified runtime is Whisky's CrossOver-based Wine 11.17 (`runtime-overlays/winecx-gptk-4.7.3`). Apple's Game Porting Toolkit is not redistributable, so Archway never bundles it: download Apple's *Evaluation environment for Windows games* yourself and point Archway at its `redist/lib`.
+D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with CrossOver's Mac driver interface (`macdrv_functions`), which upstream Wine does not provide; the verified runtime is Whisky's CrossOver-based Wine 11.17 (`runtime-overlays/winecx-gptk-4.7.3`). For local setups, download Apple's *Evaluation environment for Windows games* yourself and point Archway at its `redist/lib`. Its license (4.0 beta 3, §2A(iii) and §2C) allows distributing D3DMetal and the other `redist` components for non-commercial purposes only, unmodified and with Apple's notices. Archway's runtime package relies on that permission (see [Runtime package](#runtime-package)).
 
 ```sh
 archway check-d3dmetal --redist-lib REDIST_LIB

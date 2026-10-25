@@ -1,0 +1,74 @@
+name: Runtime
+
+# Builds Archway's Wine runtime (Wine, FreeType, Wine Mono, D3DMetal) and publishes it as a prerelease that the app
+# can download. Needs two things in this repository:
+# - secret WINE_REPO_TOKEN: read access to Leafline-Labs/archway-wine
+# - a release tagged gptk-4.0-beta-3 holding Apple's Evaluation_environment_for_Windows_games_4.0_beta_3.dmg
+
+on:
+  workflow_dispatch:
+    inputs:
+      wine_ref:
+        description: Branch, tag, or commit of Leafline-Labs/archway-wine
+        default: main
+
+permissions:
+  contents: write
+
+env:
+  GPTK_DMG: Evaluation_environment_for_Windows_games_4.0_beta_3.dmg
+  GPTK_SHA256: afa311da371f5b6dd970b45378a3d3df567cc9e535818f56f9b3f9d4c9537c1d
+
+jobs:
+  build:
+    runs-on: blacksmith-6vcpu-macos-26
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Leafline-Labs/archway-wine
+          ref: ${{ inputs.wine_ref }}
+          token: ${{ secrets.WINE_REPO_TOKEN }}
+          path: wine
+      - name: Install Rosetta and Bison
+        # Wine is an x86_64 build; configure and the build run x86_64 tools.
+        run: |
+          sudo softwareupdate --install-rosetta --agree-to-license
+          brew install bison
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/tools
+          key: wine-tools-${{ hashFiles('scripts/fetch-wine-tools.sh') }}
+      - name: Fetch tools
+        run: scripts/fetch-wine-tools.sh "$RUNNER_TEMP/tools"
+      - name: Fetch GPTK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download gptk-4.0-beta-3 --pattern "$GPTK_DMG" --dir "$RUNNER_TEMP"
+          echo "$GPTK_SHA256  $RUNNER_TEMP/$GPTK_DMG" | shasum -a 256 -c -
+      - name: Build Wine
+        env:
+          WINE_SOURCE: ${{ github.workspace }}/wine
+          WINE_BUILD: ${{ runner.temp }}/wine-build
+          WINE_TOOLS: ${{ runner.temp }}/tools
+          BISON_DIR: /opt/homebrew/opt/bison
+        run: scripts/build-wine.sh "$RUNNER_TEMP/wine-install"
+      - name: Package
+        id: package
+        env:
+          WINE_SOURCE: ${{ github.workspace }}/wine
+          WINE_TOOLS: ${{ runner.temp }}/tools
+        run: |
+          version="$(cut -d' ' -f3 wine/VERSION)-$(git -C wine rev-parse --short=7 HEAD)"
+          scripts/package-runtime.sh "$RUNNER_TEMP/wine-install/usr/local" "$RUNNER_TEMP/$GPTK_DMG" dist "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          gh release create "runtime-$VERSION" dist/* --prerelease --latest=false \
+            --title "Archway Wine $VERSION" \
+            --notes "Wine runtime for Archway, built from Leafline-Labs/archway-wine at $(git -C wine rev-parse HEAD), with FreeType 2.15.0, Wine Mono 11.3.0, and Apple's D3DMetal (GPTK 4.0 beta 3, non-commercial redistribution under Apple's license). Unpack into DATA/runtime-overlays/NAME/."

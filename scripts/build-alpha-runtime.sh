@@ -23,12 +23,7 @@ if [[ "$("$root/scripts/wine-sessions.sh")" == *"$data/"* ]]; then
     exit 1
 fi
 
-echo "Building Wine from $wine_source ($(git -C "$wine_source" log -1 --format='%h %s'))"
-export PATH="$tools/host-deps/bison/3.8.2/bin:$tools/llvm-mingw-20261020-ucrt-macos-universal/bin:$PATH"
-export BISON_PKGDATADIR="$tools/host-deps/bison/3.8.2/share/bison"
-make -C "$build" -j"$(sysctl -n hw.ncpu)" >/dev/null
-rm -rf "$install"
-make -C "$build" install DESTDIR="$install" >/dev/null
+WINE_SOURCE="$wine_source" WINE_BUILD="$build" WINE_TOOLS="$tools" "$root/scripts/build-wine.sh" "$install"
 
 swift build --package-path "$root" --product archway >/dev/null
 archway="$(swift build --package-path "$root" --product archway --show-bin-path)/archway"

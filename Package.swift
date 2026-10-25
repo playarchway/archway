@@ -20,6 +20,7 @@ let package = Package(
             .copy("Resources/AppIcon.png"),
             .copy("Resources/AppIcon-Gateway.png"),
             .copy("Resources/DefaultBackdrop.jpg"),
+            .copy("Resources/Introduction"),
             .process("Resources/Localizable.xcstrings"),
         ]),
         .testTarget(name: "ArchwayCoreTests", dependencies: ["ArchwayCore"]),

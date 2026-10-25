@@ -1,6 +1,8 @@
+import AppKit
 import SwiftUI
 
-/// A short introduction on first start. Setup already runs underneath, and the third page shows it live.
+/// A short introduction on first start. Each page is a scene in the app icon's glowing glass;
+/// setup already runs underneath, and the third page shows it live.
 struct IntroductionView: View {
     enum Page: Int, CaseIterable {
         case welcome, howItWorks, setup, steam
@@ -23,17 +25,24 @@ struct IntroductionView: View {
 
     var body: some View {
         ZStack {
-            AmbientBackground(game: nil)
-            RadialGradient(colors: [Color.archwayAccent.opacity(0.18), .clear], center: .init(x: 0.5, y: 0.32),
-                           startRadius: 10, endRadius: 520)
+            Color.black.ignoresSafeArea()
+
+            // Scenes cross-fade; each keeps its own slow camera move.
+            ZStack {
+                scene.id(page).transition(.opacity)
+            }
+            .animation(.easeInOut(duration: 0.9), value: page)
+
+            // Darken the lower part so the text reads on the floor's reflection.
+            LinearGradient(stops: [.init(color: .clear, location: 0.42),
+                                   .init(color: .black.opacity(0.75), location: 0.66),
+                                   .init(color: .black, location: 0.92)],
+                           startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
 
-            VStack(spacing: 0) {
-                ArchMark(page: page, setupFraction: setup.fractionDone)
-                    .frame(width: page == .howItWorks ? 130 : 220, height: page == .howItWorks ? 130 : 220)
-                    .padding(.bottom, 28)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8), value: page)
-
+            VStack(spacing: 22) {
+                Spacer(minLength: 0)
                 ZStack {
                     pageContent
                         .id(page)
@@ -41,20 +50,39 @@ struct IntroductionView: View {
                             insertion: .offset(x: isMovingForward ? 60 : -60).combined(with: .opacity),
                             removal: .offset(x: isMovingForward ? -60 : 60).combined(with: .opacity)))
                 }
-                .frame(maxWidth: 640, minHeight: 260, alignment: .top)
-
-                controls.padding(.top, 20)
+                .frame(maxWidth: 820)
+                controls
             }
-            .padding(48)
+            .padding(.horizontal, 48)
+            .padding(.bottom, 40)
         }
         .overlay(alignment: .topTrailing) {
             if page != Page.allCases.last {
                 Button("Skip") { onFinish(false) }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                     .padding(.top, 22)
                     .padding(.trailing, 28)
             }
+        }
+    }
+
+    // MARK: Scenes
+
+    @ViewBuilder private var scene: some View {
+        switch page {
+        case .welcome:
+            IntroScene(image: "intro-welcome", revealsFromDark: true)
+        case .howItWorks:
+            IntroScene(image: "intro-arch")
+                .opacity(0.45)
+                .blur(radius: 10)
+        case .setup:
+            IntroScene(image: "intro-arch") {
+                LitArch(fraction: setup.fractionDone)
+            }
+        case .steam:
+            IntroScene(image: "intro-steam", floats: true)
         }
     }
 
@@ -67,29 +95,26 @@ struct IntroductionView: View {
                      message: String(localized: "Play your Windows games on this Mac. Archway sets up everything they need and keeps it out of your way."))
         case .howItWorks:
             VStack(spacing: 22) {
-                PageText(title: String(localized: "How Archway Works"), message: nil)
-                HStack(alignment: .top, spacing: 14) {
-                    FeatureCard(symbol: "square.stack.3d.up.fill", title: String(localized: "Windows Layer"),
+                HStack(alignment: .top, spacing: 16) {
+                    FeatureCard(image: "intro-card-wine", title: String(localized: "Windows Layer"),
                                 message: String(localized: "Wine answers the questions a game asks Windows, in macOS terms."),
-                                delay: 0.05)
-                    FeatureCard(symbol: "sparkles", title: String(localized: "Graphics on Metal"),
+                                delay: 0.1)
+                    FeatureCard(image: "intro-card-metal", title: String(localized: "Graphics on Metal"),
                                 message: String(localized: "Apple’s D3DMetal turns DirectX into Metal for your Mac’s graphics chip."),
-                                delay: 0.15)
-                    FeatureCard(symbol: "gamecontroller.fill", title: String(localized: "Your Steam Library"),
+                                delay: 0.22)
+                    FeatureCard(image: "intro-card-library", title: String(localized: "Your Steam Library"),
                                 message: String(localized: "Your games come from Steam, which runs in its own Windows environment."),
-                                delay: 0.25)
+                                delay: 0.34)
                 }
+                PageText(title: String(localized: "How Archway Works"), message: nil)
             }
         case .setup:
-            VStack(spacing: 22) {
+            VStack(spacing: 18) {
                 PageText(title: setup.isReady ? String(localized: "All Set") : String(localized: "Already Underway"),
                          message: setup.isReady
                          ? String(localized: "Windows support is ready.")
                          : String(localized: "Archway is setting up Windows support while you read this. It takes a few minutes, and you can use your library meanwhile."))
-                SetupChecklist()
-                    .padding(18)
-                    .frame(width: 300, alignment: .leading)
-                    .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                SetupChecklist(axis: .horizontal)
             }
         case .steam:
             PageText(title: hasSteamAccount ? String(localized: "Ready to Play") : String(localized: "Bring Your Games"),
@@ -106,7 +131,7 @@ struct IntroductionView: View {
         HStack(spacing: 24) {
             Button("Back") { go(to: page.rawValue - 1) }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.7))
                 .opacity(page == .welcome ? 0 : 1)
                 .disabled(page == .welcome)
                 .frame(width: 220, alignment: .trailing)
@@ -151,6 +176,128 @@ struct IntroductionView: View {
     }
 }
 
+// MARK: - Scene
+
+/// One of the introduction's artworks (1536 × 1024), filling the window with the arch in its upper part.
+/// It drifts like a slow camera move and follows the pointer a little. `overlay` draws in image coordinates.
+private struct IntroScene<Overlay: View>: View {
+    static var size: CGSize { CGSize(width: 1536, height: 1024) }
+
+    let image: String
+    var revealsFromDark = false
+    var floats = false
+    @ViewBuilder var overlay: () -> Overlay
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasAppeared = false
+    @State private var drifts = false
+    @State private var pointer: CGSize = .zero
+
+    init(image: String, revealsFromDark: Bool = false, floats: Bool = false,
+         @ViewBuilder overlay: @escaping () -> Overlay = { EmptyView() }) {
+        self.image = image
+        self.revealsFromDark = revealsFromDark
+        self.floats = floats
+        self.overlay = overlay
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            // The arch spans y 145…740 in every artwork. Fit it into the upper 62 % of the window, from 6 % down,
+            // and fill the width; the artworks fade to black at their edges.
+            let scale = max(proxy.size.width / Self.size.width, 0.62 * proxy.size.height / 595)
+            let lift = 0.06 * proxy.size.height - proxy.size.height / 2 - (145 - Self.size.height / 2) * scale
+            ZStack {
+                if let artwork = IntroArtwork.image(image) {
+                    Image(nsImage: artwork).resizable()
+                }
+                overlay()
+            }
+            .frame(width: Self.size.width, height: Self.size.height)
+            .scaleEffect(scale * (drifts ? 1.05 : 1) * (hasAppeared || !revealsFromDark ? 1 : 1.12))
+            .offset(x: pointer.width * -14, y: pointer.height * -10 + (floats && drifts ? -8 : 0))
+            .offset(y: lift)
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .brightness(revealsFromDark && !hasAppeared ? -1 : 0)
+            .clipped()
+            .onContinuousHover { phase in
+                guard !reduceMotion else { return }
+                withAnimation(.easeOut(duration: 0.6)) {
+                    if case .active(let location) = phase {
+                        pointer = CGSize(width: location.x / proxy.size.width - 0.5, height: location.y / proxy.size.height - 0.5)
+                    } else {
+                        pointer = .zero
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            guard !reduceMotion else { hasAppeared = true; return }
+            withAnimation(.easeOut(duration: revealsFromDark ? 2.4 : 0.01)) { hasAppeared = true }
+            withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { drifts = true }
+        }
+    }
+}
+
+private enum IntroArtwork {
+    @MainActor private static var cache: [String: NSImage] = [:]
+
+    @MainActor static func image(_ name: String) -> NSImage? {
+        if let cached = cache[name] { return cached }
+        let image = Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Introduction")
+            .flatMap(NSImage.init(contentsOf:))
+        cache[name] = image
+        return image
+    }
+}
+
+/// The arch artwork, unlit, with light running along the glass from the left foot to the right one
+/// as setup moves on. Drawn in the artwork's coordinates.
+private struct LitArch: View {
+    let fraction: Double
+
+    var body: some View {
+        ZStack {
+            // The dark arch: the same glass with its light switched off.
+            if let artwork = IntroArtwork.image("intro-arch") {
+                Image(nsImage: artwork).resizable()
+                    .saturation(0)
+                    .brightness(-0.32)
+                    .contrast(1.1)
+                    .mask(alignment: .center) {
+                        ZStack {
+                            // The glow on the floor brightens with the whole setup.
+                            Rectangle().opacity(0.85 * (1 - fraction))
+                            ArchCenterline()
+                                .trim(from: max(0.001, fraction), to: 1)
+                                .stroke(style: .init(lineWidth: 150, lineCap: .butt))
+                                .blur(radius: 14)
+                        }
+                    }
+            }
+        }
+        .animation(.easeInOut(duration: 1.2), value: fraction)
+    }
+}
+
+/// The centre line of the glass arch in the 1536 × 1024 artwork, from the left foot over the top to the right foot.
+private struct ArchCenterline: Shape {
+    func path(in rect: CGRect) -> Path {
+        let sx = rect.width / 1536, sy = rect.height / 1024
+        let center = CGPoint(x: 763.5 * sx, y: 407 * sy)
+        let radius = 202.5 * sx
+        var path = Path()
+        path.move(to: CGPoint(x: center.x - radius, y: 760 * sy))
+        path.addLine(to: CGPoint(x: center.x - radius, y: center.y))
+        path.addArc(center: center, radius: radius, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
+        path.addLine(to: CGPoint(x: center.x + radius, y: 760 * sy))
+        return path
+    }
+}
+
+// MARK: - Text and cards
+
 private struct PageText: View {
     let title: String
     let message: String?
@@ -162,119 +309,67 @@ private struct PageText: View {
             if let message {
                 Text(message)
                     .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: 540)
+                    .foregroundStyle(.white.opacity(0.72))
+                    .frame(maxWidth: 560)
             }
         }
         .multilineTextAlignment(.center)
+        .shadow(color: .black.opacity(0.6), radius: 12)
     }
 }
 
 private struct FeatureCard: View {
-    let symbol: String
+    let image: String
     let title: String
     let message: String
     let delay: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isVisible = false
+    @State private var tilt: CGSize = .zero
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: symbol)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(Color.archwayAccent)
-                .symbolEffect(.bounce, value: isVisible)
-                .frame(height: 30, alignment: .leading)
-            Text(title).font(.headline)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
-        .padding(18)
-        .frame(width: 200, height: 170, alignment: .topLeading)
-        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.08))
-        }
-        .opacity(isVisible ? 1 : 0)
-        .offset(y: isVisible || reduceMotion ? 0 : 16)
-        .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(delay)) { isVisible = true }
-        }
-    }
-}
-
-/// Archway's arch as a line of light. It draws itself on the first page, waits smaller on the explanation,
-/// fills with the setup's progress on the setup page, and glows fully at the end.
-private struct ArchMark: View {
-    let page: IntroductionView.Page
-    let setupFraction: Double
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var drawn: CGFloat = 0
-    @State private var breathes = false
-
-    private var trim: CGFloat {
-        switch page {
-        case .welcome, .howItWorks: drawn
-        case .setup: max(0.04, setupFraction)
-        case .steam: 1
-        }
-    }
-
-    var body: some View {
-        ZStack {
-            // The floor glow under the arch, as in the app icon.
-            GeometryReader { proxy in
-                Ellipse()
-                    .fill(RadialGradient(colors: [Color.archwayAccent.opacity(0.55), .clear], center: .center,
-                                         startRadius: 0, endRadius: proxy.size.width / 2))
-                    .frame(width: proxy.size.width * 1.1, height: proxy.size.width * 0.21)
-                    .position(x: proxy.size.width / 2, y: proxy.size.height - 12)
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                if let artwork = IntroArtwork.image(image) {
+                    Image(nsImage: artwork).resizable().scaledToFill()
+                }
             }
-                .opacity(Double(trim) * (breathes ? 1 : 0.7))
-                .blur(radius: 6)
+            .frame(width: 236, height: 150)
+            .scaleEffect(isVisible ? 1.06 : 1.2)
+            .clipped()
 
-            // Faint guide of the full arch, so the setup page reads as progress.
-            ArchShape()
-                .stroke(.white.opacity(page == .setup ? 0.1 : 0), style: .init(lineWidth: 18, lineCap: .round))
-
-            ArchShape()
-                .trim(from: 0, to: trim)
-                .stroke(Color.archwayAccent, style: .init(lineWidth: 18, lineCap: .round))
-                .blur(radius: breathes ? 22 : 16)
-                .opacity(0.9)
-            ArchShape()
-                .trim(from: 0, to: trim)
-                .stroke(LinearGradient(colors: [Color(red: 1, green: 0.9, blue: 0.62), .archwayAccent],
-                                       startPoint: .top, endPoint: .bottom),
-                        style: .init(lineWidth: 14, lineCap: .round))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(.headline)
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(16)
+            .frame(width: 236, height: 108, alignment: .topLeading)
         }
-        .animation(.easeInOut(duration: 0.6), value: setupFraction)
+        .background(.black.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.1))
+        }
+        .rotation3DEffect(.degrees(Double(tilt.height) * -6), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
+        .rotation3DEffect(.degrees(Double(tilt.width) * 8), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+        .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible || reduceMotion ? 0 : 24)
+        .onContinuousHover { phase in
+            guard !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 0.25)) {
+                if case .active(let location) = phase {
+                    tilt = CGSize(width: location.x / 236 - 0.5, height: location.y / 258 - 0.5)
+                } else {
+                    tilt = .zero
+                }
+            }
+        }
         .onAppear {
-            guard !reduceMotion else { drawn = 1; return }
-            withAnimation(.easeInOut(duration: 1.6).delay(0.2)) { drawn = 1 }
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true).delay(1.8)) { breathes = true }
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(delay)) { isVisible = true }
         }
-    }
-}
-
-/// The arch from the app icon: two legs and a half circle, drawn from the left foot to the right one.
-private struct ArchShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let width = rect.width * 0.78
-        let radius = width / 2
-        let left = rect.midX - radius
-        let right = rect.midX + radius
-        let top = rect.minY + radius + 8
-        let bottom = rect.maxY - 12
-        var path = Path()
-        path.move(to: CGPoint(x: left, y: bottom))
-        path.addLine(to: CGPoint(x: left, y: top))
-        path.addArc(center: CGPoint(x: rect.midX, y: top), radius: radius,
-                    startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
-        path.addLine(to: CGPoint(x: right, y: bottom))
-        return path
     }
 }

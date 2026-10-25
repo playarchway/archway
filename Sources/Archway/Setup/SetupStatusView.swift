@@ -89,8 +89,12 @@ private struct SetupDetails: View {
 
 /// The setup steps with their state, in the popover and in the introduction.
 struct SetupChecklist: View {
+    var axis: Axis = .vertical
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let layout = axis == .vertical ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+                                       : AnyLayout(HStackLayout(spacing: 22))
+        layout {
             ForEach(SetupModel.Step.allCases, id: \.self) { step in
                 StepRow(step: step)
             }

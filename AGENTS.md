@@ -2,7 +2,7 @@
 
 ## Wine sessions
 
-Several agents may run Wine on this Mac at the same time. Each session is one wineserver per prefix, and every one of its processes shows up in the Dock as "wine" with the Windows program's icon. Stock Wine (checked on 11.18) cannot show another Dock name: all processes run the same `lib/wine/x86_64-unix/wine` loader, and Wine starts child processes through that fixed path.
+Several agents may run Wine on the same Mac at the same time. Each session is one wineserver per prefix, and every one of its processes shows up in the Dock as "wine" with the Windows program's icon. Stock Wine (checked on 11.18) cannot show another Dock name: all processes run the same `lib/wine/x86_64-unix/wine` loader, and Wine starts child processes through that fixed path.
 
 Tell sessions apart by prefix instead:
 
@@ -13,7 +13,7 @@ Tell sessions apart by prefix instead:
 
 | Prefix (under the current default data directory) | Owner and purpose |
 |---|---|
-| `bottles/steam-5228920` | Archway CLI and app default data directory: the user's Windows Steam, on Archway's own Wine 11.20 runtime package (`runtime-overlays/archway-wine-<version>`) with D3DMetal staged, for Brick by Brick. Start and stop it only through `archway`. The CrossOver 11.17 setup it ran on until 2026-10-25 is kept in `backups/`. |
+| `bottles/steam-5228920` | The default bottle of the Archway app and CLI: the developer's Windows Steam and games, on Archway's own Wine runtime package (`runtime-overlays/archway-wine-<version>`) with D3DMetal staged. Start and stop it only through `archway` or the app. |
 
 ## Commits
 

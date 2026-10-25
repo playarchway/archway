@@ -226,11 +226,16 @@ struct GameDetailPage: View {
                 Button { runner.install(game) } label: {
                     HStack(spacing: 10) {
                         if activity == .installing {
-                            if let progress = runner.installProgress[game.id] {
+                            switch runner.installPhases[game.id] {
+                            case .downloading?:
+                                let progress = runner.installProgress[game.id] ?? 0
                                 ProgressView(value: progress).progressViewStyle(.circular).controlSize(.small)
-                                Text("Installing… \(progress.formatted(.percent.precision(.fractionLength(0))))")
+                                Text("Downloading… \(progress.formatted(.percent.precision(.fractionLength(0))))")
                                     .monospacedDigit()
-                            } else {
+                            case .installing?:
+                                ProgressView().controlSize(.small)
+                                Text("Installing…")
+                            default:
                                 ProgressView().controlSize(.small)
                                 Text("Preparing Download…")
                             }

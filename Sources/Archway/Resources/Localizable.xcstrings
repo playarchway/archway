@@ -1640,16 +1640,6 @@
         }
       }
     },
-    "Installing… %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird installiert … %@"
-          }
-        }
-      }
-    },
     "Preparing Download…": {
       "localizations": {
         "de": {
@@ -1706,6 +1696,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spielbibliotheken"
+          }
+        }
+      }
+    },
+    "Downloading… %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird heruntergeladen … %@"
           }
         }
       }

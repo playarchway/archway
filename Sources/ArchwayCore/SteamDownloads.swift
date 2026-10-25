@@ -45,6 +45,42 @@ extension Orchestrator {
             .reduce(0) { $0 + ($1.totalFileAllocatedSize ?? 0) }
     }
 
+    public enum SteamInstallPhase: Equatable, Sendable {
+        /// Steam is starting, waiting in its queue, or preallocating the game's files.
+        case preparing
+        case downloading
+        /// Steam moves the downloaded files into place and checks them.
+        case installing
+    }
+
+    /// The phase Steam's content log names last for the game, or nil before Steam has picked it up.
+    public func steamInstallPhase(appID: Int) -> SteamInstallPhase? {
+        guard let steam = steamExecutable(),
+              let log = Self.tail(of: steam.deletingLastPathComponent().appendingPathComponent("logs/content_log.txt")) else {
+            return nil
+        }
+        return Self.installPhase(appID: appID, contentLog: log)
+    }
+
+    static func installPhase(appID: Int, contentLog: String) -> SteamInstallPhase? {
+        let marker = "AppID \(appID) App update changed : "
+        guard let line = contentLog.split(separator: "\n").last(where: { $0.contains(marker) }),
+              let range = line.range(of: marker) else { return nil }
+        let flags = line[range.upperBound...]
+        if flags.contains("Committing") || flags.contains("Verifying") || flags.contains("Validating") { return .installing }
+        if flags.contains("Downloading") { return .downloading }
+        return .preparing
+    }
+
+    /// The end of a log that can grow to megabytes.
+    private static func tail(of file: URL, bytes: Int = 64 * 1024) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? handle.close() }
+        guard let size = try? handle.seekToEnd() else { return nil }
+        try? handle.seek(toOffset: size > UInt64(bytes) ? size - UInt64(bytes) : 0)
+        return (try? handle.readToEnd()).map { String(decoding: $0, as: UTF8.self) }
+    }
+
     /// Whether Windows Steam has a remembered sign-in, so it can start without showing its login window.
     public func steamIsSignedIn() -> Bool {
         guard let steam = steamExecutable(),

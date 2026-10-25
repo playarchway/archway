@@ -1011,3 +1011,15 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     let launch = try orchestrator.gameLaunch(appID: 48000, webHelperShim: false, silent: true, environment: [:]).arguments
     #expect(Array(launch.suffix(3)) == ["-silent", "-applaunch", "48000"])
 }
+
+@Test func readsSteamInstallPhaseFromContentLog() {
+    let log = """
+    [2026-10-25 20:27:00] AppID 48000 App update changed : Running Update,Reconfiguring,
+    [2026-10-25 20:27:02] AppID 48000 App update changed : Running Update,Preallocating,
+    [2026-10-25 20:27:02] AppID 99 App update changed : Running Update,Committing,
+    """
+    #expect(Orchestrator.installPhase(appID: 48000, contentLog: log) == .preparing)
+    #expect(Orchestrator.installPhase(appID: 48000, contentLog: log + "\n[x] AppID 48000 App update changed : Running Update,Downloading,Staging,") == .downloading)
+    #expect(Orchestrator.installPhase(appID: 48000, contentLog: log + "\n[x] AppID 48000 App update changed : Running Update,Committing,") == .installing)
+    #expect(Orchestrator.installPhase(appID: 7, contentLog: log) == nil)
+}

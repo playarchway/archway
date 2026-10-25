@@ -28,6 +28,8 @@ final class GameRunner {
     private(set) var errors: [Int: String] = [:]
     /// Download progress of installing games, from 0 to 1, once Steam has sized the download.
     private(set) var installProgress: [Int: Double] = [:]
+    /// What Steam is doing for each installing game, once it has picked the game up.
+    private(set) var installPhases: [Int: Orchestrator.SteamInstallPhase] = [:]
     /// Games that wait for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
     private(set) var installNotes: [Int: InstallNote] = [:]
 
@@ -253,10 +255,12 @@ final class GameRunner {
                 if store.games.first(where: { $0.id == id })?.isInstalled == true {
                     finish(id)
                     scheduleSteamShutdown()
-                } else if let progress = await Task.detached(operation: { Self.installProgress(appID: id) }).value {
+                } else {
+                    let (phase, progress) = await Task.detached(operation: { Self.installState(appID: id) }).value
+                    installPhases[id] = phase
                     // Steam moves the finished download out of its folder, so never step back.
-                    installProgress[id] = max(progress, installProgress[id] ?? 0)
-                    if installNotes[id] == .signIn { installNotes[id] = nil }
+                    if let progress { installProgress[id] = max(progress, installProgress[id] ?? 0) }
+                    if phase != nil, installNotes[id] == .signIn { installNotes[id] = nil }
                 }
                 continue
             }
@@ -301,6 +305,7 @@ final class GameRunner {
     private func finish(_ id: Int) {
         activities[id] = nil
         installProgress[id] = nil
+        installPhases[id] = nil
         installNotes[id] = nil
         pendingFocus.remove(id)
         launchedRuntimes[id] = nil
@@ -401,8 +406,9 @@ final class GameRunner {
         try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive, silent: true))
     }
 
-    nonisolated private static func installProgress(appID: Int) -> Double? {
-        try? orchestrator().steamInstallProgress(appID: appID)
+    nonisolated private static func installState(appID: Int) -> (Orchestrator.SteamInstallPhase?, Double?) {
+        guard let orchestrator = try? orchestrator() else { return (nil, nil) }
+        return (orchestrator.steamInstallPhase(appID: appID), orchestrator.steamInstallProgress(appID: appID))
     }
 
     nonisolated private static func openSteamWindow() throws {

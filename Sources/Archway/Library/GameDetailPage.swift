@@ -52,7 +52,6 @@ struct GameDetailPage: View {
             }
         }
         .scrollIndicators(.never)
-        .titleBarGlass()
         .ignoresSafeArea(edges: .top)
         // No background of its own: the library's ambient backdrop of the same game stays underneath,
         // so opening a game never passes through black.

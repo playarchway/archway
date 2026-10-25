@@ -5,45 +5,6 @@ extension Color {
     static let archwayAccent = Color(red: 1.0, green: 0.72, blue: 0.26)
 }
 
-extension View {
-    /// Frosts the transparent title bar once content scrolls under it, so the window controls, title,
-    /// and toolbar stay legible; at the top the backdrop runs through as before. Apply to a scroll view.
-    func titleBarGlass() -> some View { modifier(TitleBarGlass()) }
-}
-
-private struct TitleBarGlass: ViewModifier {
-    /// How far the frost has faded in, from 0 at the top to 1 after `fadeDistance` points of scrolling.
-    @State private var amount: CGFloat = 0
-    private let fadeDistance: CGFloat = 48
-
-    func body(content: Content) -> some View {
-        Group {
-            if #available(macOS 15.0, *) {
-                content.onScrollGeometryChange(for: CGFloat.self) {
-                    min(1, max(0, ($0.contentOffset.y + $0.contentInsets.top) / fadeDistance))
-                } action: { _, newAmount in
-                    amount = newAmount
-                }
-            } else {
-                content
-            }
-        }
-        .overlay(alignment: .top) {
-            // The title bar is about 52 points high; the frost runs a little further and fades out.
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.6),
-                                             .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-                .frame(height: 84)
-                .ignoresSafeArea(edges: .top)
-                .opacity(amount)
-                // Smooths a fast flick, so the frost never pops in.
-                .animation(.easeOut(duration: 0.5), value: amount)
-                .allowsHitTesting(false)
-        }
-    }
-}
-
 extension Animation {
     /// Shared spring for opening and closing a game, so cover and page move as one.
     static let archwayHero = Animation.spring(response: 0.48, dampingFraction: 0.86)

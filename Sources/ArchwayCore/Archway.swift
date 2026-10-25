@@ -435,11 +435,11 @@ public struct Orchestrator {
             throw ArchwayError.invalidPath("CEF debug port must be 1024 through 65535.")
         }
         let steam = try requiredSteam()
-        let flags = (webHelperShim ? SteamWebHelperShim.launchArguments : [])
-                  + (silent ? ["-silent"] : [])
-                  + (disableCEFGPU ? ["-cef-disable-gpu"] : [])
-                  + (enableCEFDebugging ? ["-cef-enable-debugging"] : [])
-                  + (cefDebugPort.map { ["-devtools-port", String($0)] } ?? [])
+        var flags: [String] = webHelperShim ? SteamWebHelperShim.launchArguments : []
+        if silent { flags.append("-silent") }
+        if disableCEFGPU { flags.append("-cef-disable-gpu") }
+        if enableCEFDebugging { flags.append("-cef-enable-debugging") }
+        if let cefDebugPort { flags += ["-devtools-port", String(cefDebugPort)] }
         let base = try windowsRequest(steam, arguments: flags,
                                       label: "steam-open", environment: environment)
         guard let wineRenderer else { return base }

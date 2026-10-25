@@ -1047,3 +1047,23 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     #expect(throws: ArchwayError.self) { try orchestrator.uninstallSteamGame(appID: 550) }
     #expect(FileManager.default.fileExists(atPath: steamapps.appendingPathComponent("common").path))
 }
+
+@Test func removalDeletesDataAndTheAppsOwnLibraryFilesOnly() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let data = root.appendingPathComponent("Archway")
+    let library = root.appendingPathComponent("Library")
+    let id = "com.example.archway"
+    let own = ["Caches/\(id)", "WebKit/\(id)", "HTTPStorages/\(id)"].map { library.appendingPathComponent($0) }
+    let foreign = library.appendingPathComponent("Caches/com.example.other")
+    for folder in [data.appendingPathComponent("bottles/steam-5228920")] + own + [foreign] {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    }
+
+    ArchwayRemoval.stopWine(dataDirectory: data)
+    ArchwayRemoval.delete(ArchwayRemoval.filesToDelete(dataDirectory: data, library: library, bundleIdentifier: id))
+
+    for gone in [data] + own { #expect(!FileManager.default.fileExists(atPath: gone.path)) }
+    #expect(FileManager.default.fileExists(atPath: foreign.path))
+    #expect(ArchwayRemoval.filesToDelete(dataDirectory: data, library: library, bundleIdentifier: nil) == [data])
+}

@@ -34,16 +34,11 @@ extension Orchestrator {
             return nil
         }
         let folder = steamapps.appendingPathComponent("downloading/\(appID)")
-        return min(1, Double(Self.allocatedSize(of: folder)) / total)
+        return min(1, Double(DiskUsage.allocatedSize(of: folder)) / total)
     }
 
-    static func allocatedSize(of folder: URL) -> Int {
-        let keys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .isRegularFileKey]
-        guard let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: Array(keys)) else { return 0 }
-        return files.compactMap { ($0 as? URL).flatMap { try? $0.resourceValues(forKeys: keys) } }
-            .filter { $0.isRegularFile == true }
-            .reduce(0) { $0 + ($1.totalFileAllocatedSize ?? 0) }
-    }
+    /// Where Steam installs games, for showing how much space they take.
+    public var steamGamesDirectory: URL? { steamAppsDirectory?.appendingPathComponent("common") }
 
     public enum SteamInstallPhase: Equatable, Sendable {
         /// Steam is starting, waiting in its queue, or preallocating the game's files.
@@ -119,5 +114,16 @@ extension Orchestrator {
 
     private static func escaped(_ value: String) -> String {
         value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    }
+}
+
+public enum DiskUsage {
+    /// The space a folder takes on disk. APFS clones count fully, as the Finder shows them.
+    public static func allocatedSize(of folder: URL) -> Int {
+        let keys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .isRegularFileKey]
+        guard let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: Array(keys)) else { return 0 }
+        return files.compactMap { ($0 as? URL).flatMap { try? $0.resourceValues(forKeys: keys) } }
+            .filter { $0.isRegularFile == true }
+            .reduce(0) { $0 + ($1.totalFileAllocatedSize ?? 0) }
     }
 }

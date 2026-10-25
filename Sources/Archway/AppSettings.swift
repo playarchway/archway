@@ -32,7 +32,9 @@ enum AppIcon: String, CaseIterable, Identifiable {
 struct AppSettingsView: View {
     let runner: GameRunner?
     let setup: SetupModel?
+    let storage: StorageModel?
     @AppStorage(AppIcon.defaultsKey) private var icon = AppIcon.glow
+    @State private var confirmsRemoval = false
 
     var body: some View {
         Form {
@@ -52,6 +54,39 @@ struct AppSettingsView: View {
             } header: {
                 Text("Game Libraries")
             }
+            if let storage {
+                Section {
+                    LabeledContent("Archway Uses") {
+                        if let total = storage.totalBytes {
+                            Text(total.formatted(.byteCount(style: .file)))
+                        } else {
+                            ProgressView().controlSize(.small)
+                        }
+                    }
+                    if let games = storage.gameBytes, games > 0 {
+                        LabeledContent("Installed Games", value: games.formatted(.byteCount(style: .file)))
+                    }
+                    HStack {
+                        Button("Show in Finder") { storage.showInFinder() }
+                        Spacer()
+                        Button("Remove Archway…", role: .destructive) { confirmsRemoval = true }
+                            .disabled(storage.isRemoving)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Moving Archway to the Trash leaves its games and Windows environment on the disk. Remove Archway here to delete everything.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .task { await storage.measure() }
+                .alert("Remove Archway and all its data?", isPresented: $confirmsRemoval) {
+                    Button("Remove Archway", role: .destructive) { Task { await storage.removeArchway() } }
+                } message: {
+                    Text("This deletes the Windows environment, Windows Steam, and every game installed in Archway. Saves in the Steam Cloud stay; saves kept only on this Mac are lost. Archway then moves itself to the Trash.")
+                }
+            }
             Section("App Icon") {
                 HStack(spacing: 20) {
                     ForEach(AppIcon.allCases) { option in
@@ -63,6 +98,13 @@ struct AppSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .overlay {
+            if storage?.isRemoving == true {
+                ProgressView("Removing Archway…")
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+        }
         .frame(width: 440)
         .fixedSize(horizontal: false, vertical: true)
         .onChange(of: icon) { icon.apply() }

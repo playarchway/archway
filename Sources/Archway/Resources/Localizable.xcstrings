@@ -1716,6 +1716,96 @@
           }
         }
       }
+    },
+    "Archway Uses": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway belegt"
+          }
+        }
+      }
+    },
+    "Installed Games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Davon Spiele"
+          }
+        }
+      }
+    },
+    "Remove Archway…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway entfernen …"
+          }
+        }
+      }
+    },
+    "Storage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speicher"
+          }
+        }
+      }
+    },
+    "Moving Archway to the Trash leaves its games and Windows environment on the disk. Remove Archway here to delete everything.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du Archway in den Papierkorb legst, bleiben Spiele und Windows-Umgebung auf der Festplatte. Entferne Archway hier, um alles zu löschen."
+          }
+        }
+      }
+    },
+    "Remove Archway and all its data?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway mit allen Daten entfernen?"
+          }
+        }
+      }
+    },
+    "Remove Archway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway entfernen"
+          }
+        }
+      }
+    },
+    "This deletes the Windows environment, Windows Steam, and every game installed in Archway. Saves in the Steam Cloud stay; saves kept only on this Mac are lost. Archway then moves itself to the Trash.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dabei werden die Windows-Umgebung, Windows-Steam und alle in Archway installierten Spiele gelöscht. Spielstände in der Steam Cloud bleiben erhalten, nur auf diesem Mac gespeicherte gehen verloren. Danach legt sich Archway selbst in den Papierkorb."
+          }
+        }
+      }
+    },
+    "Removing Archway…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway wird entfernt …"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

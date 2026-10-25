@@ -11,7 +11,10 @@ let package = Package(
         .executable(name: "ArchwayApp", targets: ["Archway"]),
     ],
     targets: [
-        .target(name: "ArchwayCore", resources: [.copy("Resources/steamwebhelper-shim.exe")]),
+        .target(name: "ArchwayCore", resources: [
+            .copy("Resources/steamwebhelper-shim.exe"),
+            .copy("Resources/runtime.json"),
+        ]),
         .executableTarget(name: "ArchwayCLI", dependencies: ["ArchwayCore"]),
         .executableTarget(name: "Archway", dependencies: ["ArchwayCore"], resources: [
             .copy("Resources/AppIcon.png"),

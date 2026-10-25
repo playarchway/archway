@@ -47,6 +47,8 @@ WINE_TOOLS=TOOLS WINE_BUILD=BUILD scripts/build-wine.sh INSTALL
 WINE_TOOLS=TOOLS scripts/package-runtime.sh INSTALL/usr/local Evaluation_environment_for_Windows_games_4.0_beta_3.dmg DIST VERSION
 ```
 
+On first start, the app sets itself up in the background: it checks for Rosetta (installing it asks for an administrator password), downloads the runtime named in `Sources/ArchwayCore/Resources/runtime.json` and checks its SHA-256, creates the bottle, and installs Windows Steam silently from Valve's installer. An already configured runtime is kept. A small toolbar capsule shows progress until setup is done. To try a first start without touching your data, launch the bundle with `open --env ARCHWAY_DATA_DIR=/absolute/empty/dir .build/Archway.app`; while the runtime release is private, add `--env ARCHWAY_RUNTIME_ARCHIVE=/absolute/path/to/archway-wine-VERSION.tar.xz`.
+
 Wine is LGPL, so whoever receives the runtime must be able to get its source; `Leafline-Labs/archway-wine` has to be public, or the source offered otherwise, before the package is shared.
 
 ### Steam's black window

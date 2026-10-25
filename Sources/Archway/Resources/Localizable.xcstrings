@@ -1269,6 +1269,186 @@
           }
         }
       }
+    },
+    "Archway prepares Windows support in the background. You can keep browsing your library.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway richtet die Windows-Unterstützung im Hintergrund ein. Du kannst deine Bibliothek währenddessen weiter durchstöbern."
+          }
+        }
+      }
+    },
+    "Available once Archway has finished setting up.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verfügbar, sobald Archway fertig eingerichtet ist."
+          }
+        }
+      }
+    },
+    "Install Rosetta": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rosetta installieren"
+          }
+        }
+      }
+    },
+    "Rosetta": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rosetta"
+          }
+        }
+      }
+    },
+    "Setting Up Archway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway wird eingerichtet"
+          }
+        }
+      }
+    },
+    "Setting Up…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird eingerichtet …"
+          }
+        }
+      }
+    },
+    "Setup Paused": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einrichtung angehalten"
+          }
+        }
+      }
+    },
+    "Show Setup Progress": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortschritt der Einrichtung anzeigen"
+          }
+        }
+      }
+    },
+    "Windows Runtime": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Laufzeit"
+          }
+        }
+      }
+    },
+    "Windows Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Steam"
+          }
+        }
+      }
+    },
+    "Windows games need Rosetta. macOS asks for your password to install it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows-Spiele brauchen Rosetta. macOS fragt zum Installieren nach deinem Passwort."
+          }
+        }
+      }
+    },
+    "The Steam link has expired.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Steam-Verknüpfung ist abgelaufen."
+          }
+        }
+      }
+    },
+    "Steam can’t be reached.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam ist nicht erreichbar."
+          }
+        }
+      }
+    },
+    "Steam answered unexpectedly.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam hat unerwartet geantwortet."
+          }
+        }
+      }
+    },
+    "Link Steam Again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam neu verknüpfen"
+          }
+        }
+      }
+    },
+    "Archway shows your games again once Steam confirms the link. Installed games and saves stay where they are.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobald Steam die Verknüpfung bestätigt, zeigt Archway deine Spiele wieder an. Installierte Spiele und Spielstände bleiben erhalten."
+          }
+        }
+      }
+    },
+    "Check your internet connection, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe deine Internetverbindung und versuche es dann erneut."
+          }
+        }
+      }
+    },
+    "This is usually temporary. Try again in a moment.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist meist nur vorübergehend. Versuche es gleich noch einmal."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -6,18 +6,21 @@ import ArchwayCore
 struct ArchwayApp: App {
     @State private var store: LibraryStore?
     @State private var runner: GameRunner?
+    @State private var setup: SetupModel?
     private let startupError: String?
 
     init() {
         do {
-            let paths = try AppPaths()
+            let paths = try AppPaths.app()
             let store = LibraryStore(paths: paths)
             _store = State(initialValue: store)
             _runner = State(initialValue: GameRunner(store: store))
+            _setup = State(initialValue: SetupModel(paths: paths))
             startupError = nil
         } catch {
             _store = State(initialValue: nil)
             _runner = State(initialValue: nil)
+            _setup = State(initialValue: nil)
             startupError = String(localized: "Archway couldn't prepare its data. Check the data folders in Application Support and close any Wine session using the old folder. For details, run archway migrate-data in Terminal.")
         }
         // Started through SwiftPM without an app bundle; make it a regular foreground app.
@@ -28,9 +31,11 @@ struct ArchwayApp: App {
 
     var body: some Scene {
         WindowGroup("Archway") {
-            if let store, let runner {
+            if let store, let runner, let setup {
                 LibraryView(store: store)
                     .environment(runner)
+                    .environment(setup)
+                    .task { setup.start() }
             } else {
                 ContentUnavailableView {
                     Label("Unable to open Archway data", systemImage: "externaldrive.badge.exclamationmark")

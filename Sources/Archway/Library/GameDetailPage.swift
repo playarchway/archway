@@ -22,6 +22,7 @@ struct GameDetailPage: View {
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
     @Environment(GameRunner.self) private var runner
+    @Environment(SetupModel.self) private var setup
 
     var body: some View {
         ScrollView {
@@ -195,7 +196,11 @@ struct GameDetailPage: View {
     @ViewBuilder private var actions: some View {
         VStack(alignment: .leading, spacing: 10) {
             actionButtons
-            if let error = runner.errors[game.id] {
+            if !setup.isReady && !game.isUnsupported {
+                Text("Available once Archway has finished setting up.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else if let error = runner.errors[game.id] {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
                     .foregroundStyle(.orange)
@@ -222,7 +227,7 @@ struct GameDetailPage: View {
                     }
                 }
                 .buttonStyle(HeroActionButtonStyle(isBusy: activity == .installing))
-                .disabled(activity == .installing)
+                .disabled(activity == .installing || !setup.isReady)
             } else {
                 // While the game runs, the button turns into a status; quit from the game itself.
                 if case .running(let since) = activity {
@@ -230,6 +235,7 @@ struct GameDetailPage: View {
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                 } else {
                     PlayButton(activity: activity) { runner.play(game) }
+                        .disabled(!setup.isReady)
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                 }
             }

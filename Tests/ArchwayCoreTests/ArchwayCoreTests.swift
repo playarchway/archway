@@ -906,3 +906,51 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(GameProcesses.value(of: "installdir", inManifest: manifest) == "Brick by Brick Tidy Up the Small Town!")
     #expect(GameProcesses.value(of: "missing", inManifest: manifest) == nil)
 }
+
+private func runtimeArchive(in directory: URL) throws -> (archive: URL, sha256: String) {
+    let source = directory.appendingPathComponent("package")
+    let bin = source.appendingPathComponent("Wine/bin")
+    try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+    let wine = bin.appendingPathComponent("wine")
+    try Data("#!/bin/sh\n".utf8).write(to: wine)
+    try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wine.path)
+    let archive = directory.appendingPathComponent("runtime.tar.xz")
+    try RuntimeRelease.run("/usr/bin/tar", ["-cJf", archive.path, "-C", source.path, "."])
+    return (archive, try RuntimeRelease.sha256(of: archive))
+}
+
+@Test func installsVerifiedRuntimeAndConfiguresItsD3DMetal() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
+    let (archive, sha256) = try runtimeArchive(in: root)
+    let release = RuntimeRelease(version: "1.0-test", url: URL(string: "https://example.com/r.tar.xz")!, sha256: sha256, size: 0)
+
+    try release.install(archive: archive, in: paths)
+
+    #expect(release.isInstalled(in: paths))
+    let configuration = release.configuration(in: paths)
+    #expect(configuration.wine == release.wineRoot(in: paths).appendingPathComponent("bin/wine").path)
+    #expect(configuration.libraryDirectory == configuration.d3dMetalDirectory)
+    #expect(configuration.graphicsBackend == .d3dmetal)
+}
+
+@Test func rejectsRuntimeWithWrongChecksumAndLeavesNothingBehind() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
+    let (archive, _) = try runtimeArchive(in: root)
+    let release = RuntimeRelease(version: "1.0-test", url: URL(string: "https://example.com/r.tar.xz")!,
+                                 sha256: String(repeating: "0", count: 64), size: 0)
+
+    #expect(throws: ArchwayError.self) { try release.install(archive: archive, in: paths) }
+    #expect(!release.isInstalled(in: paths))
+    #expect(!FileManager.default.fileExists(atPath: release.directory(in: paths).path))
+}
+
+@Test func bundledRuntimeReleaseIsComplete() throws {
+    let release = try RuntimeRelease.bundled()
+    #expect(release.sha256.count == 64)
+    #expect(release.url.scheme == "https")
+    #expect(release.url.lastPathComponent == "archway-wine-\(release.version).tar.xz")
+}

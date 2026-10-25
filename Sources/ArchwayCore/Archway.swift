@@ -27,7 +27,7 @@ public enum ArchwayError: Error, LocalizedError, Equatable {
     }
 }
 
-public struct AppPaths {
+public struct AppPaths: Sendable {
     public let dataDirectory: URL
     public var config: URL { dataDirectory.appendingPathComponent("config.json") }
     public var bottle: URL { dataDirectory.appendingPathComponent("bottles/steam-5228920") }

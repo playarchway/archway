@@ -205,6 +205,7 @@ struct LibraryView: View {
                     .help("Back to Library")
             }
         }
+        ToolbarItem(placement: .primaryAction) { SetupStatusButton() }
         ToolbarItem(placement: .primaryAction) {
             if openGame == nil && !store.games.isEmpty { LibrarySearchField(text: $search) }
         }

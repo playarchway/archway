@@ -260,7 +260,7 @@ final class GameRunner {
     // MARK: Work off the main thread
 
     nonisolated private static func paths(_ runtime: Runtime) throws -> AppPaths {
-        let paths = try AppPaths()
+        let paths = try AppPaths.app()
         guard runtime == .archwayAlpha else { return paths }
         return try AppPaths(dataDirectory: paths.dataDirectory.appendingPathComponent("archway-alpha"))
     }

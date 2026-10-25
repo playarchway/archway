@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
 
+# Release Please runs as Leafline Bot: workflows don't start for pull requests that GITHUB_TOKEN opens.
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   release-please:
@@ -16,8 +16,15 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
     steps:
+      - id: bot
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LEAFLINE_BOT_APP_ID }}
+          private-key: ${{ secrets.LEAFLINE_BOT_PRIVATE_KEY }}
       - id: release
         uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.bot.outputs.token }}
 
   build:
     needs: release-please

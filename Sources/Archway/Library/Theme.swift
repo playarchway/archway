@@ -5,6 +5,40 @@ extension Color {
     static let archwayAccent = Color(red: 1.0, green: 0.72, blue: 0.26)
 }
 
+extension View {
+    /// Frosts the transparent title bar once content scrolls under it, so the window controls, title,
+    /// and toolbar stay legible; at the top the backdrop runs through as before. Apply to a scroll view.
+    func titleBarGlass() -> some View { modifier(TitleBarGlass()) }
+}
+
+private struct TitleBarGlass: ViewModifier {
+    @State private var isScrolled = false
+
+    func body(content: Content) -> some View {
+        Group {
+            if #available(macOS 15.0, *) {
+                content.onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 2 } action: {
+                    isScrolled = $1
+                }
+            } else {
+                content
+            }
+        }
+        .overlay(alignment: .top) {
+            // The title bar is about 52 points high; the frost runs a little further and fades out.
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.6),
+                                             .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+                .frame(height: 84)
+                .ignoresSafeArea(edges: .top)
+                .opacity(isScrolled ? 1 : 0)
+                .animation(.easeOut(duration: 0.2), value: isScrolled)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
 extension Animation {
     /// Shared spring for opening and closing a game, so cover and page move as one.
     static let archwayHero = Animation.spring(response: 0.48, dampingFraction: 0.86)

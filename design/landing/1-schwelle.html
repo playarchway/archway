@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archway: Windows games on your Mac</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #000;
+    --smoke: #17120c;
+    --ember: #ffb547;
+    --glow: #ffe3a3;
+    --ash: #a39684;
+    --bone: #f3ebde;
+    --display: "Gloock", Georgia, serif;
+    --text: "Hanken Grotesk", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--night); color: var(--bone); }
+  body { margin: 0; font: 400 1.125rem/1.6 var(--text); }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--glow); outline-offset: 4px; border-radius: 4px; }
+
+  /* Hero: the arch opens onto the game world */
+  .hero { position: relative; min-height: 100vh; display: grid; place-items: end center; overflow: hidden; text-align: center; }
+  .hero .scene { position: absolute; inset: 3.5rem 0 auto 0; height: 60%; background: center 38% / auto 125% no-repeat; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+  .hero .closed { background-image: url(../../Sources/Archway/Resources/Introduction/intro-arch.jpg); }
+  .hero .open { background-image: url(../../Sources/Archway/Resources/Introduction/intro-welcome.jpg); opacity: 0; animation: open 2.4s 0.6s cubic-bezier(.4,0,.2,1) forwards; }
+  @keyframes open { to { opacity: 1; } }
+  .hero-copy { position: relative; padding: 0 1.5rem 6vh; max-width: 54rem; }
+  .hero h1 { font: 400 clamp(2.25rem, 4.6vw, 4rem)/1.02 var(--display); letter-spacing: -0.02em; margin: 0 0 1.25rem; text-wrap: balance; text-shadow: 0 2px 40px rgba(0,0,0,.6); }
+  .hero p { margin: 0 auto 1.75rem; max-width: 34rem; color: var(--glow); font-size: 1.2rem; }
+
+  .brand { position: absolute; top: 1.5rem; left: 2rem; display: flex; align-items: center; gap: .6rem; font-weight: 600; letter-spacing: .01em; z-index: 1; text-decoration: none; }
+  .brand img { width: 30px; height: 30px; }
+
+  .download { display: inline-flex; align-items: center; gap: .75rem; padding: 1rem 1.75rem; border-radius: 999px; background: var(--ember); color: #1d1000; font-weight: 600; text-decoration: none; box-shadow: 0 0 0 1px rgba(255,227,163,.5), 0 10px 60px rgba(255,181,71,.45); }
+  .download:hover { background: var(--glow); }
+  .download svg { width: 18px; height: 18px; }
+  .fine { display: block; margin-top: 1rem; font-size: .9rem; color: var(--ash); }
+
+  /* Body */
+  main { max-width: 68rem; margin: 0 auto; padding: 0 1.5rem; }
+  section { padding: 8rem 0 0; }
+  h2 { font: 400 clamp(2rem, 4vw, 3.25rem)/1.05 var(--display); margin: 0 0 1.25rem; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede { max-width: 36rem; color: var(--ash); margin: 0; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+  .pair img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 50% 50% 0 0 / 34% 34% 0 0; }
+  .pair + .pair { margin-top: 6rem; }
+  .pair.flip img { order: 2; }
+
+  .setup { list-style: none; padding: 0; margin: 3rem 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; counter-reset: s; }
+  .setup li { counter-increment: s; border-top: 1px solid #3a2e1f; padding-top: 1.25rem; color: var(--ash); font-size: 1rem; }
+  .setup li::before { content: counter(s); display: block; font: 400 2.5rem/1 var(--display); color: var(--ember); margin-bottom: .75rem; }
+  .setup strong { display: block; color: var(--bone); font-weight: 600; margin-bottom: .25rem; }
+
+  .honest { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #2a2117; border-radius: 20px; overflow: hidden; margin-top: 3rem; }
+  .honest div { background: var(--smoke); padding: 2rem; }
+  .honest h3 { margin: 0 0 .75rem; font-size: 1.05rem; font-weight: 600; }
+  .honest ul { margin: 0; padding-left: 1.1rem; color: var(--ash); }
+
+  .final { text-align: center; padding: 10rem 0 6rem; background: radial-gradient(ellipse 50% 60% at 50% 100%, rgba(255,181,71,.18), transparent 70%); }
+  .final h2 { font-size: clamp(2.5rem, 6vw, 4.5rem); }
+  .final .lede { margin: 0 auto 2.5rem; }
+
+  footer { max-width: 68rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; border-top: 1px solid #241c13; display: flex; justify-content: space-between; gap: 2rem; color: #786d5e; font-size: .85rem; }
+  footer nav { display: flex; gap: 1.5rem; }
+  footer p { margin: 0; max-width: 36rem; }
+
+  @media (max-width: 760px) {
+    .pair, .honest { grid-template-columns: 1fr; gap: 2rem; }
+    .pair.flip img { order: 0; }
+    .setup { grid-template-columns: 1fr 1fr; }
+    footer { flex-direction: column; }
+    section { padding-top: 5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hero .open { animation: none; opacity: 1; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="scene closed" aria-hidden="true"></div>
+  <div class="scene open" aria-hidden="true"></div>
+  <a class="brand" href="#"><img src="../../Sources/Archway/Resources/AppIcon.png" alt="">Archway</a>
+  <div class="hero-copy">
+    <h1>Your Windows games, through a door on your Mac.</h1>
+    <p>Archway shows your Steam library, installs games with one click and sets up everything they need in the background.</p>
+    <a class="download" href="https://github.com/playarchway/archway/releases">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+      Download for Mac
+    </a>
+    <span class="fine">Free and open source. For Apple silicon, tested on macOS 27.</span>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="pair">
+      <img src="../../Sources/Archway/Resources/Introduction/intro-card-library.jpg" alt="Game covers fanned out in front of the glowing arch">
+      <div>
+        <h2>Your library, in a real Mac app.</h2>
+        <p class="lede">Installed games sit up front, everything else you own on Steam waits below. Pick one, press Install, then Play. Steam’s window shows up once, to sign in, and stays out of sight after that.</p>
+      </div>
+    </div>
+    <div class="pair flip">
+      <img src="../../Sources/Archway/Resources/Introduction/intro-card-play.jpg" alt="">
+      <div>
+        <h2>Nothing to configure first.</h2>
+        <p class="lede">Wine, Windows Steam and Apple’s D3DMetal arrive on their own. Archway picks the settings for games it knows, and marks the rest as untested so you can try them anyway.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What happens on first start</h2>
+    <p class="lede">A short introduction runs while Archway gets ready. It takes a few minutes, once.</p>
+    <ol class="setup">
+      <li><strong>Checks for Rosetta</strong>Games are built for Intel chips; Rosetta translates them.</li>
+      <li><strong>Downloads its runtime</strong>About 145 MB, with the checksum verified.</li>
+      <li><strong>Creates a Windows environment</strong>A self-contained bottle in Application Support.</li>
+      <li><strong>Installs Windows Steam</strong>Silently, so you only see it to sign in.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Early, and honest about it</h2>
+    <div class="honest">
+      <div>
+        <h3>Works today</h3>
+        <ul>
+          <li>Brick by Brick: Tidy Up the Small Town! is tested end to end</li>
+          <li>Other Steam games can be tried, marked as untested</li>
+          <li>Your own .exe files from your Mac</li>
+          <li>Remove Archway deletes its data, bottles and games</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Not the goal</h3>
+        <ul>
+          <li>Every Windows game, especially big AAA titles</li>
+          <li>Games that need kernel anti-cheat</li>
+          <li>Being a store or replacing Steam</li>
+          <li>Intel Macs</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Install less. Play more.</h2>
+    <p class="lede">Archway never asks for your Steam password. You sign in on Steam’s own pages.</p>
+    <a class="download" href="https://github.com/playarchway/archway/releases">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+      Download for Mac
+    </a>
+    <span class="fine">Or build it yourself from <a href="https://github.com/playarchway/archway">the source on GitHub</a>.</span>
+  </section>
+</main>
+
+<footer>
+  <p>Archway is licensed under GPL-3.0 and is not affiliated with Apple, Valve or CodeWeavers. Steam is a trademark of Valve Corporation.</p>
+  <nav><a href="https://github.com/playarchway/archway">GitHub</a><a href="https://github.com/playarchway/archway/blob/main/docs/VISION.md">Vision</a><a href="https://github.com/playarchway/archway/blob/main/CONTRIBUTING.md">Contribute</a></nav>
+</footer>
+</body>
+</html>

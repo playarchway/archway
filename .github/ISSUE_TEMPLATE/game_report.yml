@@ -1,0 +1,86 @@
+name: Game report
+description: Tell us how a game runs in Archway, whether it works or not.
+title: "[Game]: "
+labels:
+  - game-report
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! A game counts as tested only after it installs, plays, saves, and reloads its save after a restart.
+
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      description: Its name and Steam app ID (the number in its store URL).
+      placeholder: "Brick by Brick: Tidy Up the Small Town! (5228920)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works completely
+        - Playable with problems
+        - Starts, but isn't playable
+        - Doesn't start
+        - Doesn't install
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: What worked
+      options:
+        - label: Installs
+        - label: Starts
+        - label: Plays (graphics, sound, input)
+        - label: Saves
+        - label: Reloads the save after quitting and restarting
+
+  - type: dropdown
+    id: graphics
+    attributes:
+      label: Graphics
+      description: Set under *Advanced…* on the game's page.
+      options:
+        - D3DMetal (default)
+        - DXVK
+        - WineD3D
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: What happened
+      description: Problems you noticed, and anything you changed to make it work.
+
+  - type: input
+    id: version
+    attributes:
+      label: Archway version
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: MacBook Pro M4, macOS 27.0.1
+    validations:
+      required: true
+
+  - type: upload
+    id: log
+    attributes:
+      label: Log
+      description: From *Advanced… → Export Log* on the game's page. Remove anything personal first.
+    validations:
+      required: false
+      accept: ".log,.txt,.zip,.png,.jpg,.mov,.mp4"

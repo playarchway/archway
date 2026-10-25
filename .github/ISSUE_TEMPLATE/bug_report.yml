@@ -1,0 +1,86 @@
+name: Bug report
+description: Something in Archway is broken, crashes, or behaves unexpectedly.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One problem per issue, please. For a game that doesn't run, use the **Game report** instead.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find this one.
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - First start and setup
+        - Library and Steam account
+        - Installing or uninstalling games
+        - Starting or playing games
+        - Settings and storage
+        - Command line tool
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a game's page
+        2. Click Install
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Archway version
+      description: From About Archway, or the commit you built.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: MacBook Pro M4, macOS 27.0.1
+    validations:
+      required: true
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Screenshots, recordings, or logs
+      description: A game's log is under *Advanced… → Export Log*. Remove anything personal first.
+    validations:
+      required: false
+      accept: ".png,.jpg,.jpeg,.gif,.mp4,.mov,.log,.txt,.zip"

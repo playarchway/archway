@@ -954,3 +954,60 @@ private func runtimeArchive(in directory: URL) throws -> (archive: URL, sha256: 
     #expect(release.url.scheme == "https")
     #expect(release.url.lastPathComponent == "archway-wine-\(release.version).tar.xz")
 }
+
+private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
+    let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
+    let steam = paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam")
+    try FileManager.default.createDirectory(at: steam.appendingPathComponent("config"), withIntermediateDirectories: true)
+    try Data("MZ".utf8).write(to: steam.appendingPathComponent("steam.exe"))
+    return (Orchestrator(paths: paths, configuration: Configuration(wine: "/usr/bin/true")), steam)
+}
+
+@Test func queuesSteamInstallAsUpdateRequiredManifestOnce() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (orchestrator, steam) = try steamOrchestrator(in: root)
+
+    #expect(try orchestrator.queueSteamInstall(appID: 48000, name: "LIMBO™: \"Edition\""))
+    let manifest = steam.appendingPathComponent("steamapps/appmanifest_48000.acf")
+    let text = try String(contentsOf: manifest, encoding: .utf8)
+    #expect(GameProcesses.value(of: "StateFlags", inManifest: text) == "1026")
+    #expect(GameProcesses.value(of: "installdir", inManifest: text) == "LIMBO Edition")
+    #expect(text.contains(#""LIMBO™: \"Edition\"""#))
+    // An existing manifest belongs to Steam and stays untouched.
+    #expect(try !orchestrator.queueSteamInstall(appID: 48000, name: "Other"))
+    #expect(orchestrator.steamInstallProgress(appID: 48000) == nil)
+
+    try Data(#""AppState" { "BytesToStage" "16384" "BytesStaged" "0" }"#.utf8).write(to: manifest)
+    #expect(orchestrator.steamInstallProgress(appID: 48000) == 0)
+    let downloading = steam.appendingPathComponent("steamapps/downloading/48000")
+    try FileManager.default.createDirectory(at: downloading, withIntermediateDirectories: true)
+    try Data(repeating: 1, count: 8192).write(to: downloading.appendingPathComponent("chunk"))
+    #expect(orchestrator.steamInstallProgress(appID: 48000) == 0.5)
+}
+
+@Test func detectsRememberedSteamSignIn() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (orchestrator, steam) = try steamOrchestrator(in: root)
+    #expect(!orchestrator.steamIsSignedIn())
+    let users = steam.appendingPathComponent("config/loginusers.vdf")
+    try Data("\"users\"\n{\n\t\"1\"\n\t{\n\t\t\"RememberPassword\"\t\t\"0\"\n\t}\n}\n".utf8).write(to: users)
+    #expect(!orchestrator.steamIsSignedIn())
+    try Data("\"users\"\n{\n\t\"1\"\n\t{\n\t\t\"RememberPassword\"\t\t\"1\"\n\t}\n}\n".utf8).write(to: users)
+    #expect(orchestrator.steamIsSignedIn())
+}
+
+@Test func silentSteamRequestsKeepSteamsWindowClosed() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let (orchestrator, _) = try steamOrchestrator(in: root)
+    try orchestrator.paths.ensureDirectories()
+    try JSONEncoder().encode(BottleMarker(state: .ready)).write(to: orchestrator.paths.bottle.appendingPathComponent(".archway-bottle.json"))
+    try Data("registry".utf8).write(to: orchestrator.paths.bottle.appendingPathComponent("system.reg"))
+
+    #expect(try orchestrator.steamOpen(webHelperShim: false, silent: true, environment: [:]).arguments.contains("-silent"))
+    #expect(try !orchestrator.steamOpen(webHelperShim: false, environment: [:]).arguments.contains("-silent"))
+    let launch = try orchestrator.gameLaunch(appID: 48000, webHelperShim: false, silent: true, environment: [:]).arguments
+    #expect(Array(launch.suffix(3)) == ["-silent", "-applaunch", "48000"])
+}

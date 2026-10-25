@@ -477,32 +477,12 @@
         }
       }
     },
-    "Install via Steam": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Über Steam installieren"
-          }
-        }
-      }
-    },
     "Installed": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Installiert"
-          }
-        }
-      }
-    },
-    "Installing in Steam…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird in Steam installiert …"
           }
         }
       }
@@ -1646,6 +1626,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verknüpfe Steam, um deine Spiele zu sehen."
+          }
+        }
+      }
+    },
+    "Install": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installieren"
+          }
+        }
+      }
+    },
+    "Installing… %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird installiert … %@"
+          }
+        }
+      }
+    },
+    "Preparing Download…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download wird vorbereitet …"
+          }
+        }
+      }
+    },
+    "Sign in once in the Steam window. The download starts right after.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich einmal im Steam-Fenster an. Der Download startet direkt danach."
+          }
+        }
+      }
+    },
+    "The download starts when you quit the running game.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Download startet, sobald du das laufende Spiel beendest."
+          }
+        }
+      }
+    },
+    "Open Steam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam öffnen"
+          }
+        }
+      }
+    },
+    "Archway opens Steam only when a game needs it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway öffnet Steam nur, wenn ein Spiel es braucht."
+          }
+        }
+      }
+    },
+    "Game Libraries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielbibliotheken"
           }
         }
       }

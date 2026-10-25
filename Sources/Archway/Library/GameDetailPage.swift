@@ -200,6 +200,13 @@ struct GameDetailPage: View {
                 Text("Available once Archway has finished setting up.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            } else if let note = runner.installNotes[game.id] {
+                Label(note == .signIn
+                      ? String(localized: "Sign in once in the Steam window. The download starts right after.")
+                      : String(localized: "The download starts when you quit the running game."),
+                      systemImage: note == .signIn ? "person.crop.circle.badge.exclamationmark" : "clock")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             } else if let error = runner.errors[game.id] {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
@@ -219,11 +226,18 @@ struct GameDetailPage: View {
                 Button { runner.install(game) } label: {
                     HStack(spacing: 10) {
                         if activity == .installing {
-                            ProgressView().controlSize(.small)
+                            if let progress = runner.installProgress[game.id] {
+                                ProgressView(value: progress).progressViewStyle(.circular).controlSize(.small)
+                                Text("Installing… \(progress.formatted(.percent.precision(.fractionLength(0))))")
+                                    .monospacedDigit()
+                            } else {
+                                ProgressView().controlSize(.small)
+                                Text("Preparing Download…")
+                            }
                         } else {
                             Image(systemName: "arrow.down.circle.fill")
+                            Text("Install")
                         }
-                        Text(activity == .installing ? "Installing in Steam…" : "Install via Steam")
                     }
                 }
                 .buttonStyle(HeroActionButtonStyle(isBusy: activity == .installing))

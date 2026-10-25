@@ -30,10 +30,28 @@ enum AppIcon: String, CaseIterable, Identifiable {
 
 /// Archway's own settings window (⌘,).
 struct AppSettingsView: View {
+    let runner: GameRunner?
+    let setup: SetupModel?
     @AppStorage(AppIcon.defaultsKey) private var icon = AppIcon.glow
 
     var body: some View {
         Form {
+            Section {
+                LabeledContent {
+                    Button("Open Steam") { runner?.openSteam() }
+                        .disabled(setup?.isReady != true)
+                } label: {
+                    Text("Steam")
+                    Text(setup?.isReady == true
+                         ? String(localized: "Archway opens Steam only when a game needs it.")
+                         : String(localized: "Available once Archway has finished setting up."))
+                }
+                LabeledContent("GOG, Epic Games, itch.io") {
+                    Text("Coming Soon").foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Game Libraries")
+            }
             Section("App Icon") {
                 HStack(spacing: 20) {
                     ForEach(AppIcon.allCases) { option in

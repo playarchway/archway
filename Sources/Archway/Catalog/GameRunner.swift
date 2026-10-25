@@ -26,6 +26,15 @@ final class GameRunner {
     /// Windows Steam runs in the default bottle.
     private(set) var isSteamRunning = false
     private(set) var errors: [Int: String] = [:]
+    /// Download progress of installing games, from 0 to 1, once Steam has sized the download.
+    private(set) var installProgress: [Int: Double] = [:]
+    /// Games that wait for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
+    private(set) var installNotes: [Int: InstallNote] = [:]
+
+    enum InstallNote: Equatable {
+        case signIn
+        case waitsForGame
+    }
 
     private let store: LibraryStore
     private var imageNames: [Int: Set<String>] = [:]
@@ -119,18 +128,53 @@ final class GameRunner {
         }
     }
 
+    /// Queues the game for Steam and lets Steam download it in the background, without its window.
+    /// Steam reads new downloads when it starts, so a running Steam restarts, unless a game needs it.
     func install(_ game: LibraryGame) {
         guard !game.isLocal, activities[game.id] == nil else { return }
         errors[game.id] = nil
         activities[game.id] = .installing
         steamShutdown?.cancel()
+        let gameNeedsSteam = steamGameIsActive
         Task {
             do {
-                if await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
-                try await Task.detached { try Self.install(appID: game.id) }.value
+                let wasRunning = await Task.detached(operation: { Self.steamIsRunning() }).value
+                if !wasRunning { ownsSteam = true }
+                let signedIn = try await Task.detached {
+                    try Self.queueInstall(appID: game.id, name: game.title, restartSteam: wasRunning && !gameNeedsSteam)
+                }.value
+                if !signedIn { installNotes[game.id] = .signIn }
+                if wasRunning && gameNeedsSteam { installNotes[game.id] = .waitsForGame }
                 watch()
             } catch {
                 fail(game, error)
+            }
+        }
+    }
+
+    /// A game started through the default bottle's Steam is starting, running, or stopping.
+    private var steamGameIsActive: Bool {
+        activities.contains { id, activity in id > 0 && activity != .installing && launchedRuntimes[id] == .standard }
+    }
+
+    /// Once the game that kept Steam busy has ended, restart Steam so it reads the queued downloads.
+    private func resumeWaitingInstalls() {
+        guard !steamGameIsActive, installNotes.values.contains(.waitsForGame) else { return }
+        for (id, note) in installNotes where note == .waitsForGame { installNotes[id] = nil }
+        Task {
+            try? await Task.detached { try Self.restartSteamSilently() }.value
+            refreshSteamState()
+        }
+    }
+
+    /// Opens Windows Steam's own window, for everything Archway doesn't cover.
+    func openSteam() {
+        Task {
+            do {
+                try await Task.detached { try Self.openSteamWindow() }.value
+                refreshSteamState()
+            } catch {
+                NSSound.beep()
             }
         }
     }
@@ -200,10 +244,20 @@ final class GameRunner {
 
     private func poll() async {
         refreshSteamState()
-        if activities.values.contains(.installing) { store.refreshInstalled() }
+        if activities.values.contains(.installing) {
+            store.refreshInstalled()
+            resumeWaitingInstalls()
+        }
         for (id, activity) in activities {
             if activity == .installing {
-                if store.games.first(where: { $0.id == id })?.isInstalled == true { finish(id) }
+                if store.games.first(where: { $0.id == id })?.isInstalled == true {
+                    finish(id)
+                    scheduleSteamShutdown()
+                } else if let progress = await Task.detached(operation: { Self.installProgress(appID: id) }).value {
+                    // Steam moves the finished download out of its folder, so never step back.
+                    installProgress[id] = max(progress, installProgress[id] ?? 0)
+                    if installNotes[id] == .signIn { installNotes[id] = nil }
+                }
                 continue
             }
             guard let names = imageNames[id] else { continue }
@@ -246,6 +300,8 @@ final class GameRunner {
 
     private func finish(_ id: Int) {
         activities[id] = nil
+        installProgress[id] = nil
+        installNotes[id] = nil
         pendingFocus.remove(id)
         launchedRuntimes[id] = nil
         missedPolls[id] = nil
@@ -290,7 +346,8 @@ final class GameRunner {
         }
         if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
         let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive))
+        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive,
+                                                                 silent: true))
         return folder.map(GameProcesses.executableNames) ?? []
     }
 
@@ -328,10 +385,30 @@ final class GameRunner {
         try ProcessRunner.runSetup(orchestrator.wineserverWait(), timeout: 30)
     }
 
-    nonisolated private static func install(appID: Int) throws {
+    /// Writes the game's manifest and starts Steam silently, restarting it first if asked. Returns whether Steam
+    /// has a remembered sign-in; without one, Steam shows its login window and downloads afterwards.
+    nonisolated private static func queueInstall(appID: Int, name: String, restartSteam: Bool) throws -> Bool {
+        let orchestrator = try orchestrator()
+        try orchestrator.queueSteamInstall(appID: appID, name: name)
+        if restartSteam || !steamIsRunning() { try restartSteamSilently() }
+        return orchestrator.steamIsSignedIn()
+    }
+
+    nonisolated private static func restartSteamSilently() throws {
+        let orchestrator = try orchestrator()
+        try closeSteam()
+        let shimActive = try orchestrator.prepareSteam()
+        try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive, silent: true))
+    }
+
+    nonisolated private static func installProgress(appID: Int) -> Double? {
+        try? orchestrator().steamInstallProgress(appID: appID)
+    }
+
+    nonisolated private static func openSteamWindow() throws {
         let orchestrator = try orchestrator()
         let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.gameInstall(appID: UInt32(appID), webHelperShim: shimActive))
+        try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive))
     }
 
     nonisolated private static func message(for error: Error) -> String {

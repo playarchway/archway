@@ -48,6 +48,8 @@ struct ArchwayApp: App {
         .defaultSize(width: 1320, height: 840)
         .commands {
             CommandGroup(before: .appTermination) {
+                Button("Open Steam") { runner?.openSteam() }
+                    .disabled(setup?.isReady != true)
                 Button("Quit Steam") { runner?.quitSteam() }
                     .disabled(runner?.canQuitSteam != true)
                 Divider()
@@ -55,7 +57,7 @@ struct ArchwayApp: App {
         }
 
         Settings {
-            AppSettingsView()
+            AppSettingsView(runner: runner, setup: setup)
                 .preferredColorScheme(.dark)
         }
     }

@@ -2,7 +2,7 @@ name: Runtime
 
 # Builds Archway's Wine runtime (Wine, FreeType, Wine Mono, D3DMetal) and publishes it as a prerelease that the app
 # can download. Needs two things in this repository:
-# - secret WINE_REPO_TOKEN: read access to Leafline-Labs/archway-wine
+# - secret WINE_REPO_DEPLOY_KEY: private half of a read-only deploy key on Leafline-Labs/archway-wine
 # - a release tagged gptk-4.0-beta-3 holding Apple's Evaluation_environment_for_Windows_games_4.0_beta_3.dmg
 
 on:
@@ -29,7 +29,7 @@ jobs:
         with:
           repository: Leafline-Labs/archway-wine
           ref: ${{ inputs.wine_ref }}
-          token: ${{ secrets.WINE_REPO_TOKEN }}
+          ssh-key: ${{ secrets.WINE_REPO_DEPLOY_KEY }}
           path: wine
       - name: Install Rosetta and Bison
         # Wine is an x86_64 build; configure and the build run x86_64 tools.

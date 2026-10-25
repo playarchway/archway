@@ -56,11 +56,7 @@ private struct SetupDetails: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(SetupModel.Step.allCases, id: \.self) { step in
-                    StepRow(step: step)
-                }
-            }
+            SetupChecklist()
             footer
         }
         .padding(18)
@@ -87,6 +83,17 @@ private struct SetupDetails: View {
             }
         default:
             EmptyView()
+        }
+    }
+}
+
+/// The setup steps with their state, in the popover and in the introduction.
+struct SetupChecklist: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(SetupModel.Step.allCases, id: \.self) { step in
+                StepRow(step: step)
+            }
         }
     }
 }

@@ -13,6 +13,11 @@ struct LibraryView: View {
     @State private var isLinking = false
     @State private var linkError: String?
     @State private var showsImporter = false
+    @AppStorage("hasSeenIntroduction") private var hasSeenIntroduction = false
+    /// ARCHWAY_INTRO_PAGE=<0-3> shows the introduction at that page, for design screenshots.
+    private let introPage = ProcessInfo.processInfo.environment["ARCHWAY_INTRO_PAGE"]
+        .flatMap(Int.init).flatMap(IntroductionView.Page.init(rawValue:))
+    @State private var dismissedPreviewIntro = false
     @Namespace private var hero
 
     private var filtered: [LibraryGame] {
@@ -45,8 +50,21 @@ struct LibraryView: View {
             }
         }
         .background { AmbientBackground(game: openGame ?? focusedGame) }
+        .overlay {
+            if showsIntroduction {
+                IntroductionView(hasSteamAccount: store.hasAccount, startPage: introPage ?? .welcome) { linkSteam in
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        hasSeenIntroduction = true
+                        dismissedPreviewIntro = true
+                    }
+                    if linkSteam { showsSteamLogin = true }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 1.02)))
+            }
+        }
+        .toolbar(showsIntroduction ? .hidden : .automatic, for: .windowToolbar)
         // The game page and the empty start page carry their own large headings.
-        .navigationTitle(openGame == nil && !store.games.isEmpty ? String(localized: "Library") : "")
+        .navigationTitle(openGame == nil && !store.games.isEmpty && !showsIntroduction ? String(localized: "Library") : "")
         .navigationSubtitle(subtitle)
         .toolbar { toolbar }
         // Steam's playtime may have moved since the library loaded, for example after playing on another device.
@@ -80,8 +98,12 @@ struct LibraryView: View {
         .preferredColorScheme(.dark)
     }
 
+    private var showsIntroduction: Bool {
+        introPage != nil ? !dismissedPreviewIntro : !hasSeenIntroduction
+    }
+
     private var subtitle: String {
-        guard openGame == nil else { return "" }
+        guard openGame == nil, !showsIntroduction else { return "" }
         if store.phase == .loading { return String(localized: "Updating…") }
         let count = store.games.count
         return count == 0 ? "" : String(localized: "\(count) games")

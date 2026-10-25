@@ -70,6 +70,16 @@ final class SetupModel {
         }
     }
 
+    /// How much of the whole setup is done, from 0 to 1, counting the current download.
+    var fractionDone: Double {
+        let steps = Double(Step.allCases.count)
+        switch phase {
+        case .ready: return 1
+        case .checking, .needsRosetta: return 0
+        case .working(let step), .failed(let step, _): return (Double(step.rawValue) + (progress ?? 0)) / steps
+        }
+    }
+
     /// Whether a step is behind the current one, for the checklist.
     func isDone(_ step: Step) -> Bool {
         switch phase {

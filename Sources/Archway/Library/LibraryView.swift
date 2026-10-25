@@ -116,17 +116,12 @@ struct LibraryView: View {
             ProgressView("Loading your Steam library…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case (.failed(let error), true):
-            ContentUnavailableView {
-                Label("Library Unavailable", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(error.message)
-            } actions: {
-                Button("Try Again") { Task { await store.refresh() } }
-                Button("Link Steam…") { showsSteamLogin = true }
-            }
+            LibraryNoticeView(error: error, onRetry: { Task { await store.refresh() } },
+                              onLinkSteam: { showsSteamLogin = true })
         case (.ready, true):
             ContentUnavailableView("No Games", systemImage: "gamecontroller",
                                    description: Text("This Steam account has no games yet."))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         default:
             library
         }

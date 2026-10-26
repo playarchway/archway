@@ -33,7 +33,11 @@ struct AppSettingsView: View {
     let runner: GameRunner?
     let setup: SetupModel?
     let storage: StorageModel?
+    let compatibility: CompatibilityStore?
     @AppStorage(AppIcon.defaultsKey) private var icon = AppIcon.glow
+    @AppStorage("compatibilityCatalogURL") private var catalogURL = CompatibilityStore.defaultCatalogURL
+    @AppStorage("compatibilityReportURL") private var reportURL = CompatibilityStore.defaultReportURL
+    @AppStorage("disableCompatibilityFeedback") private var disableFeedback = false
     @State private var confirmsRemoval = false
 
     var body: some View {
@@ -95,6 +99,23 @@ struct AppSettingsView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
+            }
+            Section("Compatibility Reports") {
+                DisclosureGroup("Service settings") {
+                    TextField("Catalog HTTPS URL", text: $catalogURL)
+                    TextField("Submission HTTPS URL", text: $reportURL)
+                }
+                Toggle("Don’t ask for feedback after games", isOn: $disableFeedback)
+                HStack {
+                    Button("Refresh Catalog") { Task { await compatibility?.refreshCatalog() } }
+                    Spacer()
+                    if let count = compatibility?.pendingReports.count, count > 0 {
+                        Text("\(count) pending")
+                        Button("Retry Sending") { Task { await compatibility?.retryPending() } }
+                    }
+                }
+                Text("Only HTTPS endpoints are accepted. Reports are sent only after you choose Submit. A failed submission stays on this Mac until you retry.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

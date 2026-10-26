@@ -1806,6 +1806,676 @@
           }
         }
       }
+    },
+    "%@ · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        }
+      }
+    },
+    "%@: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        }
+      }
+    },
+    "%@: %lld · %@ · %@ · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %lld · %@ · %@ · %@"
+          }
+        }
+      }
+    },
+    "%lld pending": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausstehend"
+          }
+        }
+      }
+    },
+    "%lld report(s) from this Mac, shown separately": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Berichte von diesem Mac, separat angezeigt"
+          }
+        }
+      }
+    },
+    "%lld report(s) saved locally": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Berichte lokal gespeichert"
+          }
+        }
+      }
+    },
+    "Anything else? (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonst noch etwas? (optional)"
+          }
+        }
+      }
+    },
+    "App version": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Version"
+          }
+        }
+      }
+    },
+    "Archway version": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway-Version"
+          }
+        }
+      }
+    },
+    "Audio": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio"
+          }
+        }
+      }
+    },
+    "Catalog HTTPS URL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Katalog-HTTPS-URL"
+          }
+        }
+      }
+    },
+    "Chip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chip"
+          }
+        }
+      }
+    },
+    "Community Compatibility": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kompatibilität laut Community"
+          }
+        }
+      }
+    },
+    "Compatibility Reports": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kompatibilitätsberichte"
+          }
+        }
+      }
+    },
+    "Connection stability": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindungsstabilität"
+          }
+        }
+      }
+    },
+    "Couldn’t send the report. It remains saved locally for retry.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Bericht konnte nicht gesendet werden. Er bleibt für einen erneuten Versuch lokal gespeichert."
+          }
+        }
+      }
+    },
+    "Counts match this runtime, macOS, chip, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zahlen gelten für diese Laufzeit, macOS-Version, diesen Chip, Spiel-Build, Grafik-Backend und die gespeicherten Spieleinstellungen. Berichte von diesem Mac zählen erst, wenn sie im Community-Katalog enthalten sind."
+          }
+        }
+      }
+    },
+    "Crossplay": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crossplay"
+          }
+        }
+      }
+    },
+    "Direct3D 11": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direct3D 11"
+          }
+        }
+      }
+    },
+    "Direct3D 12": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direct3D 12"
+          }
+        }
+      }
+    },
+    "Don’t ask again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr fragen"
+          }
+        }
+      }
+    },
+    "Don’t ask for feedback after games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Spielen nicht mehr um Feedback bitten"
+          }
+        }
+      }
+    },
+    "Game Default": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielstandard"
+          }
+        }
+      }
+    },
+    "Game ID": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiel-ID"
+          }
+        }
+      }
+    },
+    "Game build": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiel-Build"
+          }
+        }
+      }
+    },
+    "Game launch arguments (one per line)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielstartargumente (eines pro Zeile)"
+          }
+        }
+      }
+    },
+    "Game start": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielstart"
+          }
+        }
+      }
+    },
+    "Graphics API": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafik-API"
+          }
+        }
+      }
+    },
+    "Graphics backend": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grafik-Backend"
+          }
+        }
+      }
+    },
+    "Host games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele hosten"
+          }
+        }
+      }
+    },
+    "How did %@ run?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie lief %@?"
+          }
+        }
+      }
+    },
+    "Invites": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladungen"
+          }
+        }
+      }
+    },
+    "Join games": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielen beitreten"
+          }
+        }
+      }
+    },
+    "Launch arguments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startargumente"
+          }
+        }
+      }
+    },
+    "Limited": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeschränkt"
+          }
+        }
+      }
+    },
+    "Multiplayer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrspieler"
+          }
+        }
+      }
+    },
+    "Multiplayer details (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details zum Mehrspielermodus (optional)"
+          }
+        }
+      }
+    },
+    "Network": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netzwerk"
+          }
+        }
+      }
+    },
+    "No community catalog cached yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Community-Katalog zwischengespeichert."
+          }
+        }
+      }
+    },
+    "No report endpoint is configured. Your report is saved locally.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Berichtsendpunkt konfiguriert. Dein Bericht ist lokal gespeichert."
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine"
+          }
+        }
+      }
+    },
+    "Not Tested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht getestet"
+          }
+        }
+      }
+    },
+    "Not Tested for this configuration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diese Konfiguration nicht getestet"
+          }
+        }
+      }
+    },
+    "Only HTTPS endpoints are accepted. Reports are sent only after you choose Submit. A failed submission stays on this Mac until you retry.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur HTTPS-Endpunkte werden akzeptiert. Berichte werden erst gesendet, wenn du „Bericht senden“ wählst. Ein fehlgeschlagener Bericht bleibt bis zum erneuten Versuch auf diesem Mac."
+          }
+        }
+      }
+    },
+    "Performance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leistung"
+          }
+        }
+      }
+    },
+    "Played": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespielt"
+          }
+        }
+      }
+    },
+    "Refresh Catalog": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Katalog aktualisieren"
+          }
+        }
+      }
+    },
+    "Report Last Session…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Spielsitzung melden …"
+          }
+        }
+      }
+    },
+    "Reports for other configurations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berichte für andere Konfigurationen"
+          }
+        }
+      }
+    },
+    "Retry Sending": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden erneut versuchen"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        }
+      }
+    },
+    "Saved for this game. Supported options depend on the game.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für dieses Spiel gespeichert. Unterstützte Optionen hängen vom Spiel ab."
+          }
+        }
+      }
+    },
+    "Send": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden"
+          }
+        }
+      }
+    },
+    "Service settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diensteinstellungen"
+          }
+        }
+      }
+    },
+    "Singleplayer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einzelspieler"
+          }
+        }
+      }
+    },
+    "Submission HTTPS URL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übermittlungs-HTTPS-URL"
+          }
+        }
+      }
+    },
+    "The graphics backend belongs to the shared Steam environment and cannot be changed for one game here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Grafik-Backend gehört zur gemeinsamen Steam-Umgebung und kann hier nicht für ein einzelnes Spiel geändert werden."
+          }
+        }
+      }
+    },
+    "Unplayable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht spielbar"
+          }
+        }
+      }
+    },
+    "Use up to 12 arguments, one per line, at most 100 characters each.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwende höchstens 12 Argumente, eines pro Zeile mit jeweils maximal 100 Zeichen."
+          }
+        }
+      }
+    },
+    "Voice chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachchat"
+          }
+        }
+      }
+    },
+    "What gets sent?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was wird gesendet?"
+          }
+        }
+      }
+    },
+    "What was the problem?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was war das Problem?"
+          }
+        }
+      }
+    },
+    "Works": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funktioniert"
+          }
+        }
+      }
+    },
+    "Your answer helps other Mac players with the same setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Antwort hilft anderen Mac-Spielern mit dem gleichen Setup."
+          }
+        }
+      }
+    },
+    "Your answers, this configuration, and the time of the report. No Steam account, game path, logs, or playtime.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Antworten, diese Konfiguration und der Zeitpunkt des Berichts. Kein Steam-Konto, kein Spielpfad, keine Logs, keine Spielzeit."
+          }
+        }
+      }
+    },
+    "macOS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS"
+          }
+        }
+      }
+    },
+    "Wine runtime": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine-Runtime"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

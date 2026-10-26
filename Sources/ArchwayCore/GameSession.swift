@@ -31,13 +31,13 @@ extension Orchestrator {
     }
 
     /// Starts a Windows program from anywhere on the Mac inside the owned bottle.
-    public func localGameLaunch(executable: URL, label: String,
+    public func localGameLaunch(executable: URL, label: String, gameArguments: [String] = [],
                                 environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         guard bottleIsInitialized() else { throw ArchwayError.missingBottle }
         guard FileManager.default.isReadableFile(atPath: executable.path) else {
             throw ArchwayError.invalidPath("The game file is missing: \(executable.path)")
         }
-        return try windowsRequest(executable, arguments: [], label: label, environment: environment)
+        return try windowsRequest(executable, arguments: gameArguments, label: label, environment: environment)
     }
 
     /// Asks Windows programs with this image name to close; `force` ends them immediately.

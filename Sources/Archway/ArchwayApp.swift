@@ -6,6 +6,7 @@ import ArchwayCore
 struct ArchwayApp: App {
     @State private var store: LibraryStore?
     @State private var runner: GameRunner?
+    @State private var compatibility: CompatibilityStore?
     @State private var setup: SetupModel?
     @State private var storage: StorageModel?
     private let startupError: String?
@@ -14,14 +15,17 @@ struct ArchwayApp: App {
         do {
             let paths = try AppPaths.app()
             let store = LibraryStore(paths: paths)
+            let compatibility = CompatibilityStore(paths: paths)
             _store = State(initialValue: store)
-            _runner = State(initialValue: GameRunner(store: store))
+            _compatibility = State(initialValue: compatibility)
+            _runner = State(initialValue: GameRunner(store: store, compatibility: compatibility))
             _setup = State(initialValue: SetupModel(paths: paths))
             _storage = State(initialValue: StorageModel(paths: paths))
             startupError = nil
         } catch {
             _store = State(initialValue: nil)
             _runner = State(initialValue: nil)
+            _compatibility = State(initialValue: nil)
             _setup = State(initialValue: nil)
             _storage = State(initialValue: nil)
             startupError = String(localized: "Archway couldn't prepare its data. Check the data folders in Application Support and close any Wine session using the old folder. For details, run archway migrate-data in Terminal.")
@@ -34,11 +38,13 @@ struct ArchwayApp: App {
 
     var body: some Scene {
         WindowGroup("Archway") {
-            if let store, let runner, let setup {
+            if let store, let runner, let setup, let compatibility {
                 LibraryView(store: store)
                     .environment(runner)
+                    .environment(compatibility)
                     .environment(setup)
                     .task { setup.start() }
+                    .task { await compatibility.refreshCatalog() }
             } else {
                 ContentUnavailableView {
                     Label("Unable to open Archway data", systemImage: "externaldrive.badge.exclamationmark")
@@ -60,7 +66,7 @@ struct ArchwayApp: App {
         }
 
         Settings {
-            AppSettingsView(runner: runner, setup: setup, storage: storage)
+            AppSettingsView(runner: runner, setup: setup, storage: storage, compatibility: compatibility)
                 .preferredColorScheme(.dark)
         }
     }

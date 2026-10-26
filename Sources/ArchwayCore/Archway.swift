@@ -483,7 +483,7 @@ public struct Orchestrator {
 
     /// `silent` keeps Steam's own window closed when Steam starts for the game.
     public func gameLaunch(appID: UInt32 = firstAppID, graphicsAPI: GameGraphicsAPI? = nil, webHelperShim: Bool = true,
-                           silent: Bool = false,
+                           silent: Bool = false, gameArguments additionalGameArguments: [String] = [],
                            environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         guard graphicsAPI == nil || appID == Self.firstAppID else {
             throw ArchwayError.invalidPath("--graphics-api is currently supported only for Brick by Brick (5228920).")
@@ -495,7 +495,7 @@ public struct Orchestrator {
         }
         let steam = try requiredSteam()
         let shimArguments = webHelperShim ? SteamWebHelperShim.launchArguments : []
-        let gameArguments = graphicsAPI.map { [$0.unityArgument] } ?? []
+        let gameArguments = (graphicsAPI.map { [$0.unityArgument] } ?? []) + additionalGameArguments
         return try windowsRequest(steam, arguments: shimArguments + (silent ? ["-silent"] : [])
                                       + ["-applaunch", String(appID)] + gameArguments,
                                   label: "game-launch-\(appID)", environment: environment)

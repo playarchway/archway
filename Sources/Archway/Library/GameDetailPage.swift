@@ -1,4 +1,5 @@
 import SwiftUI
+import ArchwayCore
 
 /// One game's page: the game itself, whether it runs, and your progress. Technical settings stay behind "Erweitert".
 struct GameDetailPage: View {
@@ -23,6 +24,7 @@ struct GameDetailPage: View {
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
     @Environment(\.openURL) private var openURL
     @Environment(GameRunner.self) private var runner
+    @Environment(CompatibilityStore.self) private var compatibility
     @Environment(SetupModel.self) private var setup
 
     var body: some View {
@@ -38,6 +40,7 @@ struct GameDetailPage: View {
 
                     VStack(alignment: .leading, spacing: 18) {
                         yourGame
+                        compatibilityCard
                         facts
                         features
                     }
@@ -290,6 +293,9 @@ struct GameDetailPage: View {
                     Divider()
                 }
                 Button("Advanced…") { showsAdvanced = true }.disabled(game.isUnsupported)
+                if !game.isLocal, runner.lastObservedSessions[game.id] != nil {
+                    Button("Report Last Session…") { runner.showFeedback(for: game.id) }
+                }
                 if let onRemove {
                     Button("Remove from Archway", role: .destructive, action: onRemove)
                 }
@@ -373,6 +379,85 @@ struct GameDetailPage: View {
         }
     }
 
+    private var compatibilityCard: some View {
+        InfoCard(title: "Community Compatibility") {
+            if compatibility.catalog == nil {
+                Text("No community catalog cached yet.").font(.callout).foregroundStyle(.secondary)
+            } else {
+                ForEach(CompatibilityMode.allCases, id: \.self) { mode in
+                    let aggregates = compatibility.aggregates(for: game.id, mode: mode)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(mode == .singleplayer ? "Singleplayer" : "Multiplayer").font(.callout.weight(.medium))
+                        if let aggregate = aggregates.first {
+                            ForEach(CompatibilityOutcome.allCases, id: \.self) { outcome in
+                                if let count = aggregate.counts[outcome], count > 0 {
+                                    InfoRow(LocalizedStringKey(outcome.label), String(count))
+                                }
+                            }
+                            if mode == .multiplayer {
+                                ForEach(MultiplayerFeature.allCases, id: \.self) { feature in
+                                    if let counts = aggregate.features[feature], !counts.isEmpty {
+                                        let summary = CompatibilityOutcome.allCases.compactMap { outcome in
+                                            counts[outcome].map { "\(outcome.label): \($0)" }
+                                        }.joined(separator: ", ")
+                                        Text("\(feature.label): \(summary)").font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("Not Tested for this configuration").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                let currentContext = compatibility.context(for: game.id)
+                let other = compatibility.catalog?.aggregates.filter { $0.gameID == game.id &&
+                    $0.context != currentContext } ?? []
+                if !other.isEmpty {
+                    Text("Reports for other configurations")
+                        .font(.callout.weight(.medium))
+                    ForEach(Array(other.prefix(5).enumerated()), id: \.offset) { _, aggregate in
+                        DisclosureGroup {
+                            ForEach(CompatibilityOutcome.allCases, id: \.self) { outcome in
+                                if let count = aggregate.counts[outcome], count > 0 {
+                                    InfoRow(LocalizedStringKey(outcome.label), String(count))
+                                }
+                            }
+                            InfoRow("Wine runtime", aggregate.context.runtimeVersion)
+                            InfoRow("App version", aggregate.context.appVersion)
+                            InfoRow("macOS", aggregate.context.macOSVersion)
+                            InfoRow("Game build", aggregate.context.gameVersion)
+                            InfoRow("Graphics backend", aggregate.context.graphicsBackend)
+                            InfoRow("Launch arguments", aggregate.context.profile.launchArguments.joined(separator: " "))
+                        } label: {
+                            Text("\(aggregate.mode == .singleplayer ? String(localized: "Singleplayer") : String(localized: "Multiplayer")) · \(aggregate.context.chip)")
+                                .font(.caption)
+                        }
+                    }
+                }
+                Text("Counts match this runtime, macOS, chip, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            let own = compatibility.submittedReports.filter { $0.gameID == game.id }.count
+            if own > 0 {
+                Text("\(own) report(s) from this Mac, shown separately")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(compatibility.submittedReports.filter { $0.gameID == game.id }.suffix(3)) { report in
+                    Text("\(report.mode == .singleplayer ? String(localized: "Singleplayer") : String(localized: "Multiplayer")): \(report.outcome.label)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            let pendingCount = compatibility.pendingReports.filter { $0.gameID == game.id }.count
+            if pendingCount > 0 {
+                Text("\(pendingCount) report(s) saved locally")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Retry Sending") { Task { await compatibility.retryPending() } }.buttonStyle(.link)
+            }
+            if let error = compatibility.lastSubmissionError {
+                Text(error).font(.caption).foregroundStyle(.orange)
+            }
+        }
+    }
+
     @ViewBuilder private var facts: some View {
         if let details {
             InfoCard(title: "Details") {
@@ -398,10 +483,6 @@ struct GameDetailPage: View {
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(.white.opacity(0.08), in: Capsule())
                     }
-                }
-                if features.contains(where: { $0.contains("Online") }) {
-                    Text("Online multiplayer hasn’t been tested with Archway yet.")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -446,12 +527,12 @@ struct HeroActionButtonStyle: ButtonStyle {
     static let height: CGFloat = 48
     var isBusy = false
 
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         HoverableCapsule(configuration: configuration, isBusy: isBusy)
     }
 
     private struct HoverableCapsule: View {
-        let configuration: Configuration
+        let configuration: ButtonStyleConfiguration
         let isBusy: Bool
         @State private var isHovered = false
 
@@ -508,12 +589,12 @@ private struct LaunchGlow: View {
 struct CircleIconButtonStyle: ButtonStyle {
     var size: CGFloat = HeroActionButtonStyle.height
 
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         HoverableCircle(configuration: configuration, size: size)
     }
 
     private struct HoverableCircle: View {
-        let configuration: Configuration
+        let configuration: ButtonStyleConfiguration
         let size: CGFloat
         @State private var isHovered = false
         @Environment(\.isEnabled) private var isEnabled
@@ -670,13 +751,17 @@ private struct ScreenshotViewer: View {
 /// The technical choices for one game, out of the way of the normal page.
 private struct AdvancedSettingsSheet: View {
     let game: LibraryGame
-    @State private var backend: String
+    @State private var launchArguments: String
+    @State private var graphicsAPI: GameGraphicsAPIChoice
+    @State private var saveError: String?
     @Environment(\.dismiss) private var dismiss
     @Environment(GameRunner.self) private var runner
+    @Environment(CompatibilityStore.self) private var compatibility
 
     init(game: LibraryGame) {
         self.game = game
-        _backend = State(initialValue: game.backend)
+        _launchArguments = State(initialValue: "")
+        _graphicsAPI = State(initialValue: .gameDefault)
     }
 
     private var logURL: URL? { runner.logURL(for: game) }
@@ -684,11 +769,20 @@ private struct AdvancedSettingsSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Advanced Settings").font(.title3.weight(.semibold))
-            Text("Only change these if the game doesn’t start properly.")
+            Text("Saved for this game. Supported options depend on the game.")
                 .font(.callout).foregroundStyle(.secondary)
             Form {
-                Picker("Graphics", selection: $backend) {
-                    ForEach(["D3DMetal", "DXVK", "WineD3D"], id: \.self) { Text($0) }
+                LabeledContent("Graphics backend", value: compatibility.context(for: game.id).graphicsBackend)
+                Text("The graphics backend belongs to the shared Steam environment and cannot be changed for one game here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                TextField("Game launch arguments (one per line)", text: $launchArguments, axis: .vertical)
+                    .lineLimit(3...7)
+                if game.id == 5_228_920 {
+                    Picker("Graphics API", selection: $graphicsAPI) {
+                        Text("Game Default").tag(GameGraphicsAPIChoice.gameDefault)
+                        Text("Direct3D 11").tag(GameGraphicsAPIChoice.d3d11)
+                        Text("Direct3D 12").tag(GameGraphicsAPIChoice.d3d12)
+                    }
                 }
                 LabeledContent("Last Launch") {
                     Button("Export Log…", action: exportLog).disabled(logURL == nil)
@@ -696,13 +790,29 @@ private struct AdvancedSettingsSheet: View {
             }
             .formStyle(.grouped)
             HStack {
-                Button("Restore Defaults") { backend = game.backend }
+                Button("Restore Defaults") { launchArguments = ""; graphicsAPI = .gameDefault }
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }
+            if let saveError { Text(saveError).font(.caption).foregroundStyle(.orange) }
         }
         .padding(20)
-        .frame(width: 480)
+        .frame(width: 520)
+        .onAppear {
+            let profile = compatibility.profile(for: game.id)
+            launchArguments = profile.launchArguments.joined(separator: "\n")
+            graphicsAPI = profile.graphicsAPI
+        }
+    }
+
+    private func save() {
+        let arguments = launchArguments.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        do {
+            try compatibility.save(GameRuntimeProfile(launchArguments: arguments, graphicsAPI: graphicsAPI), for: game.id)
+            dismiss()
+        } catch {
+            saveError = String(localized: "Use up to 12 arguments, one per line, at most 100 characters each.")
+        }
     }
 
     private func exportLog() {

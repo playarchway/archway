@@ -8,6 +8,21 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 # release-please keeps the version in version.txt.
 version="$(tr -d '[:space:]' < version.txt)"
+api_base_url="${ARCHWAY_API_BASE_URL:-https://archway-compatibility.vercel.app}"
+host_label='[[:alnum:]]([[:alnum:]-]{0,61}[[:alnum:]])?'
+if [[ ! "$api_base_url" =~ ^https://$host_label(\.$host_label)*(:[0-9]{1,5})?/?$ ]]; then
+    echo "ARCHWAY_API_BASE_URL must be an HTTPS origin without a path, credentials, query, or fragment" >&2
+    exit 1
+fi
+authority="${api_base_url#https://}"
+if [[ "$authority" == *:* ]]; then
+    port="${authority##*:}"
+    port="${port%/}"
+    if (( 10#$port < 1 || 10#$port > 65535 )); then
+        echo "ARCHWAY_API_BASE_URL port must be between 1 and 65535" >&2
+        exit 1
+    fi
+fi
 
 swift build --product ArchwayApp -c "$configuration"
 bin="$(swift build --product ArchwayApp -c "$configuration" --show-bin-path)"
@@ -50,6 +65,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+plutil -insert ArchwayAPIBaseURL -string "$api_base_url" "$app/Contents/Info.plist"
 
 codesign --force --sign - "$app" >/dev/null
 echo "$app"

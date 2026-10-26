@@ -25,6 +25,14 @@ final class GameRunner {
     /// Games that wait for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
     private(set) var installNotes: [Int: InstallNote] = [:]
     private(set) var uninstalling: Set<Int> = []
+    private(set) var completedSession: CompletedGameSession?
+    private(set) var lastObservedSessions: [Int: CompletedGameSession] = [:]
+
+    struct CompletedGameSession: Identifiable {
+        let id = UUID()
+        let game: LibraryGame
+        let context: CompatibilityContext
+    }
 
     enum InstallNote: Equatable {
         case signIn
@@ -32,9 +40,12 @@ final class GameRunner {
     }
 
     private let store: LibraryStore
+    private let compatibility: CompatibilityStore
     private var imageNames: [Int: Set<String>] = [:]
     private var startedAt: [Int: Date] = [:]
     private var missedPolls: [Int: Int] = [:]
+    private var manuallyStopped: Set<Int> = []
+    private var launchContexts: [Int: CompatibilityContext] = [:]
     /// Games whose window should come to the front once it appears.
     private var pendingFocus: Set<Int> = []
     private var watcher: Task<Void, Never>?
@@ -48,8 +59,9 @@ final class GameRunner {
     /// Steam uploads playtime and cloud saves after a game exits; give it time before closing it.
     private static let steamShutdownDelay: Duration = .seconds(15)
 
-    init(store: LibraryStore) {
+    init(store: LibraryStore, compatibility: CompatibilityStore) {
         self.store = store
+        self.compatibility = compatibility
         // Games could once pick a separate alpha runtime; there is only one now.
         UserDefaults.standard.removeObject(forKey: "gameRuntimes")
         refreshSteamState()
@@ -71,13 +83,15 @@ final class GameRunner {
         errors[game.id] = nil
         activities[game.id] = .starting
         startedAt[game.id] = .now
+        let profile = compatibility.profile(for: game.id)
+        launchContexts[game.id] = compatibility.context(for: game.id, profile: profile)
         pendingFocus.insert(game.id)
         let usesSteam = !game.isLocal
         if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
                 if usesSteam, await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
-                imageNames[game.id] = try await Task.detached { try Self.launch(game) }.value
+                imageNames[game.id] = try await Task.detached { try Self.launch(game, profile: profile) }.value
                 watch()
             } catch {
                 fail(game, error)
@@ -88,6 +102,7 @@ final class GameRunner {
     func stop(_ game: LibraryGame) {
         guard case .running = activities[game.id], let names = imageNames[game.id] else { return }
         activities[game.id] = .stopping
+        manuallyStopped.insert(game.id)
         Task {
             do {
                 try await Task.detached { try Self.stop(imageNames: names) }.value
@@ -273,6 +288,17 @@ final class GameRunner {
                 missedPolls[id] = isRunning ? 0 : (missedPolls[id] ?? 0) + 1
                 if (missedPolls[id] ?? 0) >= 2 {
                     if let since = startedAt[id] { store.recordSession(gameID: id, from: since, to: .now) }
+                    if let game = store.games.first(where: { $0.id == id }), let context = launchContexts[id] {
+                        let session = CompletedGameSession(game: game, context: context)
+                        lastObservedSessions[id] = session
+                        let promptKey = "compatibilityPrompted:\(id):\(context.runtimeVersion):\(context.graphicsBackend):\(context.profile.launchArguments.joined(separator: "|")): \(context.profile.graphicsAPI.rawValue)"
+                        if !game.isLocal, activity != .stopping, !manuallyStopped.contains(id), completedSession == nil,
+                           !UserDefaults.standard.bool(forKey: "disableCompatibilityFeedback"),
+                           !UserDefaults.standard.bool(forKey: promptKey) {
+                            completedSession = session
+                            UserDefaults.standard.set(true, forKey: promptKey)
+                        }
+                    }
                     finish(id)
                     if id > 0 { scheduleSteamShutdown() }
                 }
@@ -300,6 +326,20 @@ final class GameRunner {
         pendingFocus.remove(id)
         missedPolls[id] = nil
         startedAt[id] = nil
+        manuallyStopped.remove(id)
+        launchContexts[id] = nil
+    }
+
+    func dismissCompletedSession() { completedSession = nil }
+
+    func showFeedback(for gameID: Int) {
+        guard completedSession == nil else { return }
+        completedSession = lastObservedSessions[gameID]
+    }
+
+    /// Shows the feedback sheet for a game without playing it, for design screenshots.
+    func previewFeedback(for game: LibraryGame) {
+        completedSession = CompletedGameSession(game: game, context: compatibility.context(for: game.id))
     }
 
     private func fail(_ game: LibraryGame, _ error: Error) {
@@ -321,10 +361,12 @@ final class GameRunner {
     }
 
     /// Starts the game and returns the image names that identify its processes.
-    nonisolated private static func launch(_ game: LibraryGame) throws -> Set<String> {
+    nonisolated private static func launch(_ game: LibraryGame, profile: GameRuntimeProfile) throws -> Set<String> {
+        let arguments = try profile.arguments(for: game.id)
         if let path = game.executablePath {
             let executable = URL(fileURLWithPath: path)
-            try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: logLabel(for: game)))
+            try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: logLabel(for: game),
+                                                                            gameArguments: arguments))
             return [executable.lastPathComponent.lowercased()]
         }
         let orchestrator = try orchestrator()
@@ -332,7 +374,7 @@ final class GameRunner {
         if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
         let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive,
-                                                                 silent: true))
+                                                                 silent: true, gameArguments: arguments))
         return folder.map(GameProcesses.executableNames) ?? []
     }
 

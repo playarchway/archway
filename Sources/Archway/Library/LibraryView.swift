@@ -18,6 +18,8 @@ struct LibraryView: View {
     private let introPage = ProcessInfo.processInfo.environment["ARCHWAY_INTRO_PAGE"]
         .flatMap(Int.init).flatMap(IntroductionView.Page.init(rawValue:))
     @State private var dismissedPreviewIntro = false
+    @Environment(GameRunner.self) private var runner
+    @Environment(CompatibilityStore.self) private var compatibility
     @Namespace private var hero
 
     private var filtered: [LibraryGame] {
@@ -83,22 +85,36 @@ struct LibraryView: View {
                 Task { await finishSteamLink() }
             }
         }
+        .sheet(item: Binding(get: { runner.completedSession }, set: { if $0 == nil { runner.dismissCompletedSession() } })) { session in
+            CompatibilityFeedbackSheet(session: session, compatibility: compatibility) {
+                runner.dismissCompletedSession()
+            }
+        }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.init(filenameExtension: "exe")!]) { result in
             if case .success(let url) = result { store.addLocalGame(executable: url) }
         }
         // Also picks up a Steam session that already exists, for example from an earlier sign-in.
         .task { await store.refresh() }
-        // ARCHWAY_PREVIEW_GAME=<app id> opens that game's page once the library has loaded, for design screenshots.
-        .onChange(of: store.games.count, initial: true) {
-            guard openGame == nil, let id = ProcessInfo.processInfo.environment["ARCHWAY_PREVIEW_GAME"].flatMap(Int.init),
-                  let game = store.games.first(where: { $0.id == id }) else { return }
-            openHeroID = "preview-\(id)"
-            openGame = game
-        }
+        // ARCHWAY_PREVIEW_GAME=<app id> opens that game's page once the library has loaded, and
+        // ARCHWAY_PREVIEW_FEEDBACK=<app id> shows its feedback sheet, for design screenshots.
+        .onChange(of: store.games.count, initial: true) { openPreviews() }
         // Let the backdrop run under the title bar so the window reads as one surface.
         .toolbarBackground(.hidden, for: .windowToolbar)
         .tint(.archwayAccent)
         .preferredColorScheme(.dark)
+    }
+
+    private func openPreviews() {
+        let environment = ProcessInfo.processInfo.environment
+        if openGame == nil, let id = environment["ARCHWAY_PREVIEW_GAME"].flatMap(Int.init),
+           let game = store.games.first(where: { $0.id == id }) {
+            openHeroID = "preview-\(id)"
+            openGame = game
+        }
+        if let id = environment["ARCHWAY_PREVIEW_FEEDBACK"].flatMap(Int.init),
+           let game = store.games.first(where: { $0.id == id }) {
+            runner.previewFeedback(for: game)
+        }
     }
 
     private var showsIntroduction: Bool {

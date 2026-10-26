@@ -1,0 +1,21 @@
+{
+  "name": "archway-compatibility",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "bun scripts/smoke.ts",
+    "migrate": "bun scripts/migrate.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "moderate": "bun scripts/moderate.ts",
+    "prune": "bun scripts/prune.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.5"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

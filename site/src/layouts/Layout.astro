@@ -1,0 +1,57 @@
+---
+import "@fontsource-variable/geist";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.png" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --night: #000;
+    --line: #241c13;
+    --ember: #ffb547;
+    --glow: #ffe3a3;
+    --ash: #a39684;
+    --bone: #f3ebde;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    background: var(--night);
+    color: var(--bone);
+  }
+  body {
+    margin: 0;
+    font: 400 1.0625rem/1.6 "Geist Variable", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: inherit;
+  }
+  :focus-visible {
+    outline: 2px solid var(--glow);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+</style>

@@ -1,0 +1,245 @@
+---
+import { getImage } from "astro:assets";
+import Layout from "../layouts/Layout.astro";
+import { RELEASES_URL } from "../lib/releases";
+import icon from "../../../Sources/Archway/Resources/AppIcon.png";
+import heroArt from "../assets/hero.jpg";
+
+const brand = await getImage({ src: icon, width: 64, format: "webp" });
+const hero = await getImage({ src: heroArt, width: 1536, format: "webp" });
+
+const GITHUB_URL = "https://github.com/playarchway/archway";
+---
+
+<Layout
+  title="Archway: Windows games on your Mac"
+  description="Archway is a free, open-source Mac app for the Windows games you already own on Steam."
+>
+  <header class="bar">
+    <a class="brand" href="/"><img src={brand.src} width="28" height="28" alt="" />Archway</a>
+    <a href={GITHUB_URL}>GitHub</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="scene">
+        <img src={hero.src} width="1536" height="1024" alt="A glowing glass arch in a dark room, a sunset village inside" />
+      </div>
+
+      <div class="copy">
+        <h1>Archway</h1>
+        <p class="tagline">Your Windows games, on your Mac.</p>
+        <p>A free Mac app for the games you already own on Steam. Pick one and play.</p>
+        <a class="download" id="download" href={RELEASES_URL}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14" />
+          </svg>
+          Download for Mac
+        </a>
+        <span class="meta"><span id="version"></span>Apple silicon · macOS 27</span>
+      </div>
+    </section>
+
+    <ul class="facts">
+      <li><strong>Play what you own</strong>Your Steam library, and your own .exe files.</li>
+      <li><strong>A real Mac app</strong>Covers, one button, Steam out of sight.</li>
+      <li><strong>Free and open source</strong>Removing it takes everything it added.</li>
+    </ul>
+  </main>
+
+  <footer>
+    <p>
+      Archway is early: not every game runs yet, and games with kernel anti-cheat don’t. Licensed under GPL-3.0. Not
+      affiliated with Apple, Valve or CodeWeavers.
+    </p>
+    <a href={GITHUB_URL}>Source on GitHub</a>
+  </footer>
+</Layout>
+
+<script>
+  import { latestDownload } from "../lib/releases";
+
+  const button = document.querySelector<HTMLAnchorElement>("#download");
+  const version = document.querySelector<HTMLSpanElement>("#version");
+
+  // Until the first app release exists, or if GitHub doesn't answer, the button keeps pointing at the releases page.
+  latestDownload()
+    .then((download) => {
+      if (!download || !button || !version) return;
+      button.href = download.url;
+      version.textContent = `Version ${download.version} · `;
+    })
+    .catch(() => {});
+</script>
+
+<style>
+  .bar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    font-size: 0.95rem;
+    color: var(--ash);
+  }
+  .bar a {
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .bar a:hover {
+    color: var(--bone);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    color: var(--bone);
+  }
+
+  /* Hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 1.5rem 8rem;
+    overflow: hidden;
+  }
+  .scene {
+    position: relative;
+    width: 100vw;
+    height: clamp(22rem, 62svh, 44rem);
+    mask-image: linear-gradient(#000 70%, transparent);
+  }
+  .scene img {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: 100%;
+    width: auto;
+    translate: -50% 0;
+    mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  }
+  .copy {
+    position: relative;
+    max-width: 44rem;
+    margin-top: -6rem;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(3.5rem, 9vw, 6.5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    background: linear-gradient(var(--bone) 40%, var(--glow));
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 28px rgba(240, 130, 18, 0.45));
+  }
+  .copy .tagline {
+    margin: 1rem auto 0.75rem;
+    max-width: none;
+    color: var(--bone);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+  .copy p {
+    margin: 0 auto 2rem;
+    max-width: 30rem;
+    color: var(--ash);
+    font-size: 1.125rem;
+    text-wrap: balance;
+  }
+  .download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.9rem 1.6rem;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #1d1000;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 50px rgba(255, 181, 71, 0.35);
+    transition:
+      background 0.2s,
+      translate 0.3s var(--ease);
+  }
+  .download:hover {
+    background: var(--glow);
+    translate: 0 -2px;
+  }
+  .download svg {
+    width: 18px;
+    height: 18px;
+  }
+  .meta {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--ash);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Facts */
+  .facts {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 6rem;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    color: var(--ash);
+    font-size: 0.975rem;
+  }
+  .facts li {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  .facts strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--bone);
+    font-weight: 600;
+  }
+
+  footer {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    color: #786d5e;
+    font-size: 0.85rem;
+  }
+  footer p {
+    margin: 0;
+    max-width: 40rem;
+  }
+
+  @media (max-width: 760px) {
+    .bar {
+      padding: 1rem 1.25rem;
+    }
+    .scene {
+      height: 26rem;
+    }
+    .copy {
+      margin-top: -4rem;
+    }
+    .facts {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    footer {
+      flex-direction: column;
+    }
+  }
+</style>

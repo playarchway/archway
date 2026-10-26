@@ -7,6 +7,11 @@ on:
 # Runners come from the repository variables MACOS_RUNNER and LINUX_RUNNER, for example Blacksmith labels;
 # without them, the jobs use GitHub's own runners.
 
+# Releases are signed with a Developer ID and notarized when these secrets are set (without them, the app is
+# signed ad hoc): APPLE_CERTIFICATE_P12 (the base64-encoded .p12 of the Developer ID Application certificate),
+# APPLE_CERTIFICATE_PASSWORD, and an App Store Connect API key: APPLE_API_KEY (the .p8's contents),
+# APPLE_API_KEY_ID and APPLE_API_ISSUER.
+
 # Release Please runs as Archway Bot when its app ID (variable ARCHWAY_BOT_APP_ID) and key (secret
 # ARCHWAY_BOT_PRIVATE_KEY) are set: workflows don't start for pull requests that GITHUB_TOKEN opens.
 permissions:
@@ -40,8 +45,48 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
+      - name: Import the signing certificate
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          if [[ -z "$CERTIFICATE" ]]; then
+            echo "No signing certificate; the app is signed ad hoc."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
+          if [[ -z "$identity" ]]; then
+            echo "The certificate holds no Developer ID Application identity." >&2
+            exit 1
+          fi
+          echo "ARCHWAY_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
       - name: Build Archway.app
         run: scripts/build-app.sh release
+      - name: Notarize
+        if: env.ARCHWAY_SIGN_IDENTITY != ''
+        env:
+          API_KEY: ${{ secrets.APPLE_API_KEY }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          key="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$API_KEY" > "$key"
+          ditto -c -k --keepParent .build/Archway.app "$RUNNER_TEMP/Archway-notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/Archway-notarize.zip" \
+            --key "$key" --key-id "$API_KEY_ID" --issuer "$API_ISSUER" --wait
+          rm "$key"
+          xcrun stapler staple .build/Archway.app
+          spctl --assess --type exec -vv .build/Archway.app
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}

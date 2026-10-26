@@ -67,5 +67,11 @@ cat > "$app/Contents/Info.plist" <<PLIST
 PLIST
 plutil -insert ArchwayAPIBaseURL -string "$api_base_url" "$app/Contents/Info.plist"
 
-codesign --force --sign - "$app" >/dev/null
+# Builds for download are signed with a Developer ID and the hardened runtime, so they can be notarized
+# (ARCHWAY_SIGN_IDENTITY, for example "Developer ID Application: …"). Everything else is signed ad hoc.
+if [[ -n "${ARCHWAY_SIGN_IDENTITY:-}" ]]; then
+    codesign --force --options runtime --timestamp --sign "$ARCHWAY_SIGN_IDENTITY" "$app" >/dev/null
+else
+    codesign --force --sign - "$app" >/dev/null
+fi
 echo "$app"

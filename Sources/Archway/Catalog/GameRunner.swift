@@ -372,8 +372,7 @@ final class GameRunner {
 
     /// Reads the configuration each time, since setup and settings can change it while Archway runs.
     nonisolated private func orchestrator() throws -> Orchestrator {
-        guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
-        return Orchestrator(paths: paths, configuration: configuration)
+        try Orchestrator(paths: paths)
     }
 
     /// Matches the label of the request that starts the game.

@@ -2,18 +2,6 @@ import Foundation
 import Observation
 import ArchwayCore
 
-extension AppPaths {
-    /// Archway's data directory. ARCHWAY_DATA_DIR points the app at another one, for example to try a first start.
-    /// Moves legacy data first, so call it once at launch and pass the result on.
-    static func app() throws -> AppPaths {
-        if let custom = ProcessInfo.processInfo.environment["ARCHWAY_DATA_DIR"] {
-            return try AppPaths(dataDirectory: URL(fileURLWithPath: custom))
-        }
-        try DataMigration.migrateIfNeeded()
-        return try AppPaths()
-    }
-}
-
 /// Sets up everything Archway needs on first start, in the background: Rosetta, the Wine runtime,
 /// the Windows bottle, and Windows Steam. Each step checks first, so a later start only verifies.
 @MainActor
@@ -108,7 +96,7 @@ final class SetupModel {
             step = .bottle
             phase = .working(step)
             let paths = paths
-            try await Task.detached { try Self.orchestrator(paths).initializeBottle() }.value
+            try await Task.detached { try Orchestrator(paths: paths).initializeBottle() }.value
             step = .steam
             phase = .working(step)
             try await installSteamIfNeeded()
@@ -138,11 +126,11 @@ final class SetupModel {
 
     private func installSteamIfNeeded() async throws {
         let paths = paths
-        guard try Self.orchestrator(paths).steamExecutable() == nil else { return }
+        guard try Orchestrator(paths: paths).steamExecutable() == nil else { return }
         let installer = try await download(SteamSetup.installerURL, as: "SteamSetup.exe")
         defer { try? FileManager.default.removeItem(at: installer.deletingLastPathComponent()) }
         progress = nil
-        try await Task.detached { try SteamSetup.install(installer, with: Self.orchestrator(paths)) }.value
+        try await Task.detached { try SteamSetup.install(installer, with: Orchestrator(paths: paths)) }.value
     }
 
     private func download(_ url: URL, as name: String? = nil) async throws -> URL {
@@ -150,61 +138,5 @@ final class SetupModel {
         return try await Download.run(url, name: name ?? url.lastPathComponent) { fraction in
             Task { @MainActor in self.progress = fraction }
         }
-    }
-
-    nonisolated private static func orchestrator(_ paths: AppPaths) throws -> Orchestrator {
-        guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
-        return Orchestrator(paths: paths, configuration: configuration)
-    }
-}
-
-/// A file download that reports its progress. The file lands in its own temporary folder under `name`.
-private final class Download: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    private let name: String
-    private let onProgress: @Sendable (Double) -> Void
-    private var continuation: CheckedContinuation<URL, Error>?
-
-    private init(name: String, onProgress: @escaping @Sendable (Double) -> Void) {
-        self.name = name
-        self.onProgress = onProgress
-    }
-
-    static func run(_ url: URL, name: String, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL {
-        let download = Download(name: name, onProgress: onProgress)
-        let session = URLSession(configuration: .default, delegate: download, delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
-        return try await withCheckedThrowingContinuation { continuation in
-            download.continuation = continuation
-            session.downloadTask(with: url).resume()
-        }
-    }
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
-                    totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        guard totalBytesExpectedToWrite > 0 else { return }
-        onProgress(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite))
-    }
-
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        // The system deletes `location` after this returns, so move it now.
-        do {
-            if let response = downloadTask.response as? HTTPURLResponse, !(200..<300).contains(response.statusCode) {
-                throw URLError(.badServerResponse)
-            }
-            let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            let file = folder.appendingPathComponent(name)
-            try FileManager.default.moveItem(at: location, to: file)
-            continuation?.resume(returning: file)
-        } catch {
-            continuation?.resume(throwing: error)
-        }
-        continuation = nil
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let error else { return }
-        continuation?.resume(throwing: error)
-        continuation = nil
     }
 }

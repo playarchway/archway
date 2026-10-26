@@ -40,6 +40,12 @@ public struct Orchestrator {
         self.configuration = configuration
     }
 
+    /// With the saved configuration; throws `missingConfiguration` before Archway is configured.
+    public init(paths: AppPaths) throws {
+        guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
+        self.init(paths: paths, configuration: configuration)
+    }
+
     public static func appID(_ raw: String) throws -> UInt32 {
         guard let id = UInt32(raw), id > 0 else { throw ArchwayError.invalidAppID(raw) }
         return id

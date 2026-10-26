@@ -103,8 +103,9 @@ final class LibraryStore {
         } else if let index = localGames.firstIndex(where: { $0.id == gameID }) {
             localGames[index].playtimeMinutes += minutes
             localGames[index].lastPlayedAt = end
+            return
         }
-        guard gameID > 0, hasAccount else { return }
+        guard hasAccount else { return }
         sessionRefresh?.cancel()
         sessionRefresh = Task {
             try? await Task.sleep(for: .seconds(15))

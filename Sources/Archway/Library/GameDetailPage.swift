@@ -216,7 +216,7 @@ struct GameDetailPage: View {
                 Text("Available once Archway has finished setting up.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-            } else if let note = runner.installNotes[game.id] {
+            } else if let note = runner.session(for: game)?.installNote {
                 Label(note == .signIn
                       ? String(localized: "Sign in once in the Steam window. The download starts right after.")
                       : String(localized: "The download starts when you quit the running game."),
@@ -242,9 +242,9 @@ struct GameDetailPage: View {
                 Button { runner.install(game) } label: {
                     HStack(spacing: 10) {
                         if activity == .installing {
-                            switch runner.installPhases[game.id] {
+                            switch runner.session(for: game)?.installPhase {
                             case .downloading?:
-                                let progress = runner.installProgress[game.id] ?? 0
+                                let progress = runner.session(for: game)?.installProgress ?? 0
                                 ProgressView(value: progress).progressViewStyle(.circular).controlSize(.small)
                                 Text("Downloading… \(progress.formatted(.percent.precision(.fractionLength(0))))")
                                     .monospacedDigit()

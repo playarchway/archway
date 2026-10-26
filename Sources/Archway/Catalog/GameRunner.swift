@@ -14,16 +14,32 @@ final class GameRunner {
         case installing
     }
 
-    private(set) var activities: [Int: Activity] = [:]
+    /// What Archway follows for one game, from starting or installing it until that ends.
+    struct Session {
+        var activity: Activity
+        /// Local games run on their own; everything else goes through the default bottle's Steam.
+        let usesSteam: Bool
+        var startedAt = Date.now
+        /// The image names that identify the game's processes, once it was launched.
+        var imageNames: Set<String>?
+        /// The game and its setup, for the question how it ran.
+        var context: CompatibilityContext?
+        /// The window comes to the front once it appears.
+        var wantsFocus = false
+        var stoppedByUser = false
+        var missedPolls = 0
+        /// Download progress from 0 to 1, once Steam has sized the download.
+        var installProgress: Double?
+        /// What Steam is doing for the install, once it has picked the game up.
+        var installPhase: Orchestrator.SteamInstallPhase?
+        var installNote: InstallNote?
+    }
+
+    private(set) var sessions: [Int: Session] = [:]
     /// Windows Steam runs in the default bottle.
     private(set) var isSteamRunning = false
+    /// Stays after the session ends, until the next attempt.
     private(set) var errors: [Int: String] = [:]
-    /// Download progress of installing games, from 0 to 1, once Steam has sized the download.
-    private(set) var installProgress: [Int: Double] = [:]
-    /// What Steam is doing for each installing game, once it has picked the game up.
-    private(set) var installPhases: [Int: Orchestrator.SteamInstallPhase] = [:]
-    /// Games that wait for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
-    private(set) var installNotes: [Int: InstallNote] = [:]
     private(set) var uninstalling: Set<Int> = []
     private(set) var completedSession: CompletedGameSession?
     private(set) var lastObservedSessions: [Int: CompletedGameSession] = [:]
@@ -34,6 +50,7 @@ final class GameRunner {
         let context: CompatibilityContext
     }
 
+    /// Why an install waits for Windows Steam: for its sign-in, or for a running game to end before Steam restarts.
     enum InstallNote: Equatable {
         case signIn
         case waitsForGame
@@ -42,13 +59,6 @@ final class GameRunner {
     nonisolated private let paths: AppPaths
     private let store: LibraryStore
     private let compatibility: CompatibilityStore
-    private var imageNames: [Int: Set<String>] = [:]
-    private var startedAt: [Int: Date] = [:]
-    private var missedPolls: [Int: Int] = [:]
-    private var manuallyStopped: Set<Int> = []
-    private var launchContexts: [Int: CompatibilityContext] = [:]
-    /// Games whose window should come to the front once it appears.
-    private var pendingFocus: Set<Int> = []
     private var watcher: Task<Void, Never>?
     /// Archway started Steam, so it also closes it once the game is over.
     private var ownsSteam = false
@@ -76,24 +86,23 @@ final class GameRunner {
         }
     }
 
-    func activity(for game: LibraryGame) -> Activity? { activities[game.id] }
+    func activity(for game: LibraryGame) -> Activity? { sessions[game.id]?.activity }
+    func session(for game: LibraryGame) -> Session? { sessions[game.id] }
 
     // MARK: Actions
 
     func play(_ game: LibraryGame) {
-        guard activities[game.id] == nil else { return }
+        guard sessions[game.id] == nil else { return }
         errors[game.id] = nil
-        activities[game.id] = .starting
-        startedAt[game.id] = .now
         let profile = compatibility.profile(for: game.id)
-        launchContexts[game.id] = compatibility.context(for: game.id, profile: profile)
-        pendingFocus.insert(game.id)
         let usesSteam = !game.isLocal
+        sessions[game.id] = Session(activity: .starting, usesSteam: usesSteam,
+                                    context: compatibility.context(for: game.id, profile: profile), wantsFocus: true)
         if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
                 if usesSteam, await !Task.detached(operation: { self.steamIsRunning() }).value { ownsSteam = true }
-                imageNames[game.id] = try await Task.detached { try self.launch(game, profile: profile) }.value
+                sessions[game.id]?.imageNames = try await Task.detached { try self.launch(game, profile: profile) }.value
                 watch()
             } catch {
                 fail(game, error)
@@ -102,9 +111,9 @@ final class GameRunner {
     }
 
     func stop(_ game: LibraryGame) {
-        guard case .running = activities[game.id], let names = imageNames[game.id] else { return }
-        activities[game.id] = .stopping
-        manuallyStopped.insert(game.id)
+        guard case .running = sessions[game.id]?.activity, let names = sessions[game.id]?.imageNames else { return }
+        sessions[game.id]?.activity = .stopping
+        sessions[game.id]?.stoppedByUser = true
         Task {
             do {
                 try await Task.detached { try self.stop(imageNames: names) }.value
@@ -117,9 +126,9 @@ final class GameRunner {
     /// Queues the game for Steam and lets Steam download it in the background, without its window.
     /// Steam reads new downloads when it starts, so a running Steam restarts, unless a game needs it.
     func install(_ game: LibraryGame) {
-        guard !game.isLocal, activities[game.id] == nil else { return }
+        guard !game.isLocal, sessions[game.id] == nil else { return }
         errors[game.id] = nil
-        activities[game.id] = .installing
+        sessions[game.id] = Session(activity: .installing, usesSteam: true)
         steamShutdown?.cancel()
         let gameNeedsSteam = steamGameIsActive
         Task {
@@ -129,8 +138,8 @@ final class GameRunner {
                 let signedIn = try await Task.detached {
                     try self.queueInstall(appID: game.id, name: game.title, restartSteam: wasRunning && !gameNeedsSteam)
                 }.value
-                if !signedIn { installNotes[game.id] = .signIn }
-                if wasRunning && gameNeedsSteam { installNotes[game.id] = .waitsForGame }
+                if !signedIn { sessions[game.id]?.installNote = .signIn }
+                if wasRunning && gameNeedsSteam { sessions[game.id]?.installNote = .waitsForGame }
                 watch()
             } catch {
                 fail(game, error)
@@ -140,7 +149,7 @@ final class GameRunner {
 
     /// Removes the game from the bottle. Steam closes first, so it doesn't restore what is being deleted.
     func uninstall(_ game: LibraryGame) {
-        guard !game.isLocal, activities[game.id] == nil, !uninstalling.contains(game.id), !steamGameIsActive else { return }
+        guard !game.isLocal, sessions[game.id] == nil, !uninstalling.contains(game.id), !steamGameIsActive else { return }
         errors[game.id] = nil
         uninstalling.insert(game.id)
         steamShutdown?.cancel()
@@ -165,13 +174,14 @@ final class GameRunner {
 
     /// A game started through the default bottle's Steam is starting, running, or stopping.
     private var steamGameIsActive: Bool {
-        activities.contains { id, activity in id > 0 && activity != .installing }
+        sessions.values.contains { $0.usesSteam && $0.activity != .installing }
     }
 
     /// Once the game that kept Steam busy has ended, restart Steam so it reads the queued downloads.
     private func resumeWaitingInstalls() {
-        guard !steamGameIsActive, installNotes.values.contains(.waitsForGame) else { return }
-        for (id, note) in installNotes where note == .waitsForGame { installNotes[id] = nil }
+        let waiting = sessions.filter { $0.value.installNote == .waitsForGame }.keys
+        guard !steamGameIsActive, !waiting.isEmpty else { return }
+        for id in waiting { sessions[id]?.installNote = nil }
         Task {
             try? await Task.detached { try self.restartSteamSilently() }.value
             await refreshSteamState()
@@ -199,7 +209,7 @@ final class GameRunner {
 
     /// Not while a game that needs it runs or installs.
     var canQuitSteam: Bool {
-        isSteamRunning && !activities.keys.contains { $0 > 0 }
+        isSteamRunning && !sessions.values.contains(where: \.usesSteam)
     }
 
     private func shutDownSteam() async {
@@ -243,7 +253,7 @@ final class GameRunner {
     private func watch() {
         guard watcher == nil else { return }
         watcher = Task {
-            while !activities.isEmpty, !Task.isCancelled {
+            while !sessions.isEmpty, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 await poll()
             }
@@ -253,83 +263,93 @@ final class GameRunner {
 
     private func poll() async {
         await refreshSteamState()
-        if activities.values.contains(.installing) {
+        if sessions.values.contains(where: { $0.activity == .installing }) {
             await store.refreshInstalled()
             resumeWaitingInstalls()
         }
-        for (id, activity) in activities {
-            if activity == .installing {
-                if store.games.first(where: { $0.id == id })?.isInstalled == true {
-                    finish(id)
-                    scheduleSteamShutdown()
-                } else {
-                    let (phase, progress) = await Task.detached(operation: { self.installState(appID: id) }).value
-                    installPhases[id] = phase
-                    // Steam moves the finished download out of its folder, so never step back.
-                    if let progress { installProgress[id] = max(progress, installProgress[id] ?? 0) }
-                    if phase != nil, installNotes[id] == .signIn { installNotes[id] = nil }
-                }
-                continue
-            }
-            guard let names = imageNames[id] else { continue }
-            let processes = await Task.detached { GameProcesses.running(imageNames: names) }.value
-            let isRunning = !processes.isEmpty
-            if isRunning, pendingFocus.contains(id) { bringToFront(id, processes) }
-            switch activity {
-            case .starting where isRunning:
-                activities[id] = .running(since: .now)
-                startedAt[id] = .now
-            case .starting:
-                if Date().timeIntervalSince(startedAt[id] ?? .now) > Self.startTimeout {
-                    finish(id)
-                    errors[id] = String(localized: "The game didn’t start. You’ll find the log under “Advanced”.")
-                }
-            case .running, .stopping:
-                // A game can restart itself (launchers, updates); only treat two misses in a row as an exit.
-                missedPolls[id] = isRunning ? 0 : (missedPolls[id] ?? 0) + 1
-                if (missedPolls[id] ?? 0) >= 2 {
-                    if let since = startedAt[id] { store.recordSession(gameID: id, from: since, to: .now) }
-                    if let game = store.games.first(where: { $0.id == id }), let context = launchContexts[id] {
-                        let session = CompletedGameSession(game: game, context: context)
-                        lastObservedSessions[id] = session
-                        let promptKey = "compatibilityPrompted:\(id):\(context.runtimeVersion):\(context.graphicsBackend):\(context.profile.launchArguments.joined(separator: "|")): \(context.profile.graphicsAPI.rawValue)"
-                        if !game.isLocal, activity != .stopping, !manuallyStopped.contains(id), completedSession == nil,
-                           !UserDefaults.standard.bool(forKey: "disableCompatibilityFeedback"),
-                           !UserDefaults.standard.bool(forKey: promptKey) {
-                            completedSession = session
-                            UserDefaults.standard.set(true, forKey: promptKey)
-                        }
-                    }
-                    finish(id)
-                    if id > 0 { scheduleSteamShutdown() }
-                }
-            case .installing:
-                break
+        for (id, session) in sessions {
+            if session.activity == .installing {
+                await pollInstall(id)
+            } else {
+                await pollGame(id, session)
             }
         }
     }
 
-    /// Activates the game once its window exists. Only while Archway is in front, so a game that takes
-    /// long to start never pulls the player out of another app.
-    private func bringToFront(_ id: Int, _ processes: [GameProcesses.Running]) {
-        guard NSApp.isActive else { pendingFocus.remove(id); return }
-        let apps = processes.compactMap { NSRunningApplication(processIdentifier: $0.pid) }
-        guard let app = apps.first(where: { $0.activationPolicy == .regular }) else { return }
-        NSApp.yieldActivation(to: app)
-        if app.activate() { pendingFocus.remove(id) }
+    private func pollInstall(_ id: Int) async {
+        if store.games.first(where: { $0.id == id })?.isInstalled == true {
+            finish(id)
+            scheduleSteamShutdown()
+            return
+        }
+        let (phase, progress) = await Task.detached(operation: { self.installState(appID: id) }).value
+        guard var session = sessions[id] else { return }
+        session.installPhase = phase
+        // Steam moves the finished download out of its folder, so never step back.
+        if let progress { session.installProgress = max(progress, session.installProgress ?? 0) }
+        if phase != nil, session.installNote == .signIn { session.installNote = nil }
+        sessions[id] = session
     }
 
-    private func finish(_ id: Int) {
-        activities[id] = nil
-        installProgress[id] = nil
-        installPhases[id] = nil
-        installNotes[id] = nil
-        pendingFocus.remove(id)
-        missedPolls[id] = nil
-        startedAt[id] = nil
-        manuallyStopped.remove(id)
-        launchContexts[id] = nil
+    private func pollGame(_ id: Int, _ session: Session) async {
+        guard let names = session.imageNames else { return }
+        let processes = await Task.detached { GameProcesses.running(imageNames: names) }.value
+        guard var session = sessions[id] else { return }
+        let isRunning = !processes.isEmpty
+        if isRunning, session.wantsFocus { session.wantsFocus = !bringToFront(processes) }
+        switch session.activity {
+        case .starting where isRunning:
+            session.activity = .running(since: .now)
+            session.startedAt = .now
+        case .starting:
+            if Date().timeIntervalSince(session.startedAt) > Self.startTimeout {
+                finish(id)
+                errors[id] = String(localized: "The game didn’t start. You’ll find the log under “Advanced”.")
+                return
+            }
+        case .running, .stopping:
+            // A game can restart itself (launchers, updates); only treat two misses in a row as an exit.
+            session.missedPolls = isRunning ? 0 : session.missedPolls + 1
+            if session.missedPolls >= 2 {
+                ended(id, session)
+                return
+            }
+        case .installing:
+            break
+        }
+        sessions[id] = session
     }
+
+    /// Records the playtime and, once per setup, asks how the game ran, unless the player stopped it.
+    private func ended(_ id: Int, _ session: Session) {
+        store.recordSession(gameID: id, from: session.startedAt, to: .now)
+        if let game = store.games.first(where: { $0.id == id }), let context = session.context {
+            let completed = CompletedGameSession(game: game, context: context)
+            lastObservedSessions[id] = completed
+            // The stray ": " stays; changing the key would ask again for every setup already answered.
+            let promptKey = "compatibilityPrompted:\(id):\(context.runtimeVersion):\(context.graphicsBackend):\(context.profile.launchArguments.joined(separator: "|")): \(context.profile.graphicsAPI.rawValue)"
+            if session.usesSteam, session.activity != .stopping, !session.stoppedByUser, completedSession == nil,
+               !UserDefaults.standard.bool(forKey: "disableCompatibilityFeedback"),
+               !UserDefaults.standard.bool(forKey: promptKey) {
+                completedSession = completed
+                UserDefaults.standard.set(true, forKey: promptKey)
+            }
+        }
+        finish(id)
+        if session.usesSteam { scheduleSteamShutdown() }
+    }
+
+    /// Activates the game once its window exists. Only while Archway is in front, so a game that takes
+    /// long to start never pulls the player out of another app. Returns whether it is done trying.
+    private func bringToFront(_ processes: [GameProcesses.Running]) -> Bool {
+        guard NSApp.isActive else { return true }
+        let apps = processes.compactMap { NSRunningApplication(processIdentifier: $0.pid) }
+        guard let app = apps.first(where: { $0.activationPolicy == .regular }) else { return false }
+        NSApp.yieldActivation(to: app)
+        return app.activate()
+    }
+
+    private func finish(_ id: Int) { sessions[id] = nil }
 
     func dismissCompletedSession() { completedSession = nil }
 

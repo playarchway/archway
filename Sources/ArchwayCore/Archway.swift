@@ -33,8 +33,8 @@ public struct AppPaths: Sendable {
     public var bottle: URL { dataDirectory.appendingPathComponent("bottles/steam-5228920") }
     public var logs: URL { dataDirectory.appendingPathComponent("logs") }
 
+    /// Without a directory, the default under Application Support. Run `DataMigration` first for that one.
     public init(dataDirectory: URL? = nil) throws {
-        if dataDirectory == nil { try DataMigration.migrateIfNeeded() }
         let selected = dataDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Archway")
         guard selected.isFileURL, selected.path.hasPrefix("/"), selected.path != "/" else {

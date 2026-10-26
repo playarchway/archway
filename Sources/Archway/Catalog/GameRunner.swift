@@ -39,6 +39,7 @@ final class GameRunner {
         case waitsForGame
     }
 
+    nonisolated private let paths: AppPaths
     private let store: LibraryStore
     private let compatibility: CompatibilityStore
     private var imageNames: [Int: Set<String>] = [:]
@@ -59,18 +60,19 @@ final class GameRunner {
     /// Steam uploads playtime and cloud saves after a game exits; give it time before closing it.
     private static let steamShutdownDelay: Duration = .seconds(15)
 
-    init(store: LibraryStore, compatibility: CompatibilityStore) {
+    init(paths: AppPaths, store: LibraryStore, compatibility: CompatibilityStore) {
+        self.paths = paths
         self.store = store
         self.compatibility = compatibility
         // Games could once pick a separate alpha runtime; there is only one now.
         UserDefaults.standard.removeObject(forKey: "gameRuntimes")
-        refreshSteamState()
+        Task { await refreshSteamState() }
         // Steam keeps running when Archway quits otherwise, and restarts its window when only that is closed.
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { if self.ownsSteam { try? Self.requestSteamShutdown() } }
+            MainActor.assumeIsolated { if self.ownsSteam { try? self.requestSteamShutdown() } }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { self.refreshSteamState() }
+            Task { @MainActor in await self.refreshSteamState() }
         }
     }
 
@@ -90,8 +92,8 @@ final class GameRunner {
         if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
-                if usesSteam, await !Task.detached(operation: { Self.steamIsRunning() }).value { ownsSteam = true }
-                imageNames[game.id] = try await Task.detached { try Self.launch(game, profile: profile) }.value
+                if usesSteam, await !Task.detached(operation: { self.steamIsRunning() }).value { ownsSteam = true }
+                imageNames[game.id] = try await Task.detached { try self.launch(game, profile: profile) }.value
                 watch()
             } catch {
                 fail(game, error)
@@ -105,7 +107,7 @@ final class GameRunner {
         manuallyStopped.insert(game.id)
         Task {
             do {
-                try await Task.detached { try Self.stop(imageNames: names) }.value
+                try await Task.detached { try self.stop(imageNames: names) }.value
             } catch {
                 fail(game, error)
             }
@@ -122,10 +124,10 @@ final class GameRunner {
         let gameNeedsSteam = steamGameIsActive
         Task {
             do {
-                let wasRunning = await Task.detached(operation: { Self.steamIsRunning() }).value
+                let wasRunning = await Task.detached(operation: { self.steamIsRunning() }).value
                 if !wasRunning { ownsSteam = true }
                 let signedIn = try await Task.detached {
-                    try Self.queueInstall(appID: game.id, name: game.title, restartSteam: wasRunning && !gameNeedsSteam)
+                    try self.queueInstall(appID: game.id, name: game.title, restartSteam: wasRunning && !gameNeedsSteam)
                 }.value
                 if !signedIn { installNotes[game.id] = .signIn }
                 if wasRunning && gameNeedsSteam { installNotes[game.id] = .waitsForGame }
@@ -145,16 +147,16 @@ final class GameRunner {
         Task {
             do {
                 try await Task.detached {
-                    try Self.closeSteam()
-                    try Self.orchestrator().uninstallSteamGame(appID: game.id)
+                    try self.closeSteam()
+                    try self.orchestrator().uninstallSteamGame(appID: game.id)
                 }.value
                 ownsSteam = false
             } catch {
                 errors[game.id] = Self.message(for: error)
             }
             uninstalling.remove(game.id)
-            refreshSteamState()
-            store.refreshInstalled()
+            await refreshSteamState()
+            await store.refreshInstalled()
         }
     }
 
@@ -171,8 +173,8 @@ final class GameRunner {
         guard !steamGameIsActive, installNotes.values.contains(.waitsForGame) else { return }
         for (id, note) in installNotes where note == .waitsForGame { installNotes[id] = nil }
         Task {
-            try? await Task.detached { try Self.restartSteamSilently() }.value
-            refreshSteamState()
+            try? await Task.detached { try self.restartSteamSilently() }.value
+            await refreshSteamState()
         }
     }
 
@@ -180,8 +182,8 @@ final class GameRunner {
     func openSteam() {
         Task {
             do {
-                try await Task.detached { try Self.openSteamWindow() }.value
-                refreshSteamState()
+                try await Task.detached { try self.openSteamWindow() }.value
+                await refreshSteamState()
             } catch {
                 NSSound.beep()
             }
@@ -202,8 +204,8 @@ final class GameRunner {
 
     private func shutDownSteam() async {
         ownsSteam = false
-        try? await Task.detached { try Self.closeSteam() }.value
-        refreshSteamState()
+        try? await Task.detached { try self.closeSteam() }.value
+        await refreshSteamState()
     }
 
     /// After the last game that needed Steam, close it again if Archway started it.
@@ -217,21 +219,20 @@ final class GameRunner {
         }
     }
 
-    private func refreshSteamState() {
-        isSteamRunning = Self.steamIsRunning()
+    private func refreshSteamState() async {
+        isSteamRunning = await Task.detached { self.steamIsRunning() }.value
     }
 
     func showFolder(_ game: LibraryGame) {
         if let path = game.executablePath {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-        } else if let folder = try? Self.orchestrator().steamInstallDirectory(appID: game.id) {
+        } else if let folder = try? self.orchestrator().steamInstallDirectory(appID: game.id) {
             NSWorkspace.shared.open(folder)
         }
     }
 
     /// The log of the game's last start, if there is one.
     func logURL(for game: LibraryGame) -> URL? {
-        guard let paths = try? AppPaths.app() else { return nil }
         let url = paths.logs.appendingPathComponent("\(Self.logLabel(for: game)).log")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
@@ -251,9 +252,9 @@ final class GameRunner {
     }
 
     private func poll() async {
-        refreshSteamState()
+        await refreshSteamState()
         if activities.values.contains(.installing) {
-            store.refreshInstalled()
+            await store.refreshInstalled()
             resumeWaitingInstalls()
         }
         for (id, activity) in activities {
@@ -262,7 +263,7 @@ final class GameRunner {
                     finish(id)
                     scheduleSteamShutdown()
                 } else {
-                    let (phase, progress) = await Task.detached(operation: { Self.installState(appID: id) }).value
+                    let (phase, progress) = await Task.detached(operation: { self.installState(appID: id) }).value
                     installPhases[id] = phase
                     // Steam moves the finished download out of its folder, so never step back.
                     if let progress { installProgress[id] = max(progress, installProgress[id] ?? 0) }
@@ -349,8 +350,8 @@ final class GameRunner {
 
     // MARK: Work off the main thread
 
-    nonisolated private static func orchestrator() throws -> Orchestrator {
-        let paths = try AppPaths.app()
+    /// Reads the configuration each time, since setup and settings can change it while Archway runs.
+    nonisolated private func orchestrator() throws -> Orchestrator {
         guard let configuration = try ConfigStore(paths: paths).load() else { throw ArchwayError.missingConfiguration }
         return Orchestrator(paths: paths, configuration: configuration)
     }
@@ -361,11 +362,11 @@ final class GameRunner {
     }
 
     /// Starts the game and returns the image names that identify its processes.
-    nonisolated private static func launch(_ game: LibraryGame, profile: GameRuntimeProfile) throws -> Set<String> {
+    nonisolated private func launch(_ game: LibraryGame, profile: GameRuntimeProfile) throws -> Set<String> {
         let arguments = try profile.arguments(for: game.id)
         if let path = game.executablePath {
             let executable = URL(fileURLWithPath: path)
-            try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: logLabel(for: game),
+            try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: Self.logLabel(for: game),
                                                                             gameArguments: arguments))
             return [executable.lastPathComponent.lowercased()]
         }
@@ -379,7 +380,7 @@ final class GameRunner {
     }
 
     /// Asks the game to close, then ends it if it is still there after a few seconds.
-    nonisolated private static func stop(imageNames: Set<String>) throws {
+    nonisolated private func stop(imageNames: Set<String>) throws {
         let orchestrator = try orchestrator()
         for name in imageNames where !GameProcesses.running(imageNames: [name]).isEmpty {
             try ProcessRunner.runSetup(orchestrator.stopRequest(imageName: name, force: false), timeout: 30)
@@ -391,16 +392,16 @@ final class GameRunner {
         }
     }
 
-    nonisolated private static func steamIsRunning() -> Bool {
+    nonisolated private func steamIsRunning() -> Bool {
         (try? orchestrator().wineserverIsRunning()) == true
     }
 
-    nonisolated private static func requestSteamShutdown() throws {
+    nonisolated private func requestSteamShutdown() throws {
         try ProcessRunner.sendGUIRequest(orchestrator().steamShutdown())
     }
 
     /// Asks Steam to exit and waits for the bottle's wineserver, like `archway close-steam`.
-    nonisolated private static func closeSteam() throws {
+    nonisolated private func closeSteam() throws {
         guard steamIsRunning() else { return }
         let orchestrator = try orchestrator()
         try ProcessRunner.sendGUIRequest(orchestrator.steamShutdown())
@@ -409,26 +410,26 @@ final class GameRunner {
 
     /// Writes the game's manifest and starts Steam silently, restarting it first if asked. Returns whether Steam
     /// has a remembered sign-in; without one, Steam shows its login window and downloads afterwards.
-    nonisolated private static func queueInstall(appID: Int, name: String, restartSteam: Bool) throws -> Bool {
+    nonisolated private func queueInstall(appID: Int, name: String, restartSteam: Bool) throws -> Bool {
         let orchestrator = try orchestrator()
         try orchestrator.queueSteamInstall(appID: appID, name: name)
         if restartSteam || !steamIsRunning() { try restartSteamSilently() }
         return orchestrator.steamIsSignedIn()
     }
 
-    nonisolated private static func restartSteamSilently() throws {
+    nonisolated private func restartSteamSilently() throws {
         let orchestrator = try orchestrator()
         try closeSteam()
         let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive, silent: true))
     }
 
-    nonisolated private static func installState(appID: Int) -> (Orchestrator.SteamInstallPhase?, Double?) {
+    nonisolated private func installState(appID: Int) -> (Orchestrator.SteamInstallPhase?, Double?) {
         guard let orchestrator = try? orchestrator() else { return (nil, nil) }
         return (orchestrator.steamInstallPhase(appID: appID), orchestrator.steamInstallProgress(appID: appID))
     }
 
-    nonisolated private static func openSteamWindow() throws {
+    nonisolated private func openSteamWindow() throws {
         let orchestrator = try orchestrator()
         let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive))

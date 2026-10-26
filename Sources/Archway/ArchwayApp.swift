@@ -18,7 +18,7 @@ struct ArchwayApp: App {
             let compatibility = CompatibilityStore(paths: paths)
             _store = State(initialValue: store)
             _compatibility = State(initialValue: compatibility)
-            _runner = State(initialValue: GameRunner(store: store, compatibility: compatibility))
+            _runner = State(initialValue: GameRunner(paths: paths, store: store, compatibility: compatibility))
             _setup = State(initialValue: SetupModel(paths: paths))
             _storage = State(initialValue: StorageModel(paths: paths))
             startupError = nil

@@ -171,6 +171,7 @@ private func run() throws {
         print(try DataMigration.migrateIfNeeded() ? "Archway data migrated." : "No legacy data to migrate.")
         return
     }
+    if dataDir == nil { try DataMigration.migrateIfNeeded() }
     let paths = try AppPaths(dataDirectory: dataDir)
     let store = ConfigStore(paths: paths)
 

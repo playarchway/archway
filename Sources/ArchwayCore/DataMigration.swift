@@ -10,6 +10,7 @@ public enum DataMigration {
     private static let stagingName = ".archway-migration"
 
     /// Returns true when the legacy root was moved. Pass a temporary support directory in tests.
+    @discardableResult
     public static func migrateIfNeeded(
         applicationSupportDirectory: URL? = nil,
         wineIsRunning: ((URL) throws -> Bool)? = nil

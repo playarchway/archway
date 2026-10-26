@@ -36,6 +36,7 @@ final class LibraryStore {
 
     private let paths: AppPaths
     private var cacheURL: URL { paths.dataDirectory.appendingPathComponent("steam-library-cache.json") }
+    private var steamapps: URL { paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps") }
     private var localGamesURL: URL { paths.dataDirectory.appendingPathComponent("local-games.json") }
 
     init(paths: AppPaths) {
@@ -59,7 +60,8 @@ final class LibraryStore {
         do {
             let owned = try await SteamWebAPI(accessToken: token).ownedGames(steamID: steamID)
             if steamID != SteamSession.steamID { SteamSession.steamID = steamID }
-            apply(owned, fetchedAt: .now)
+            let steamapps = steamapps
+            apply(owned, installed: await Task.detached { Self.installedAppIDs(in: steamapps) }.value, fetchedAt: .now)
             saveCache(owned)
             phase = .ready
         } catch let error as SteamCatalogError {
@@ -78,8 +80,9 @@ final class LibraryStore {
     }
 
     /// Re-reads which Steam games are installed in the bottle, for example while Steam is installing one.
-    func refreshInstalled() {
-        let installed = installedAppIDs()
+    func refreshInstalled() async {
+        let steamapps = steamapps
+        let installed = await Task.detached { Self.installedAppIDs(in: steamapps) }.value
         for index in steamGames.indices {
             steamGames[index].isInstalled = installed.contains(steamGames[index].id)
         }
@@ -113,8 +116,7 @@ final class LibraryStore {
         game.lastPlayedAt = max(game.lastPlayedAt ?? .distantPast, totals.lastPlayedAt)
     }
 
-    private func apply(_ owned: [SteamWebAPI.OwnedGame], fetchedAt: Date) {
-        let installed = installedAppIDs()
+    private func apply(_ owned: [SteamWebAPI.OwnedGame], installed: Set<Int>, fetchedAt: Date) {
         steamGames = owned.map { game in
             let profile = Self.profiles[game.appid]
             var entry = LibraryGame(
@@ -132,8 +134,7 @@ final class LibraryStore {
     }
 
     /// Steam marks a fully installed game with `StateFlags` 4 in its app manifest.
-    private func installedAppIDs() -> Set<Int> {
-        let steamapps = paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps")
+    nonisolated private static func installedAppIDs(in steamapps: URL) -> Set<Int> {
         guard let files = try? FileManager.default.contentsOfDirectory(atPath: steamapps.path) else { return [] }
         var ids = Set<Int>()
         for file in files where file.hasPrefix("appmanifest_") && file.hasSuffix(".acf") {
@@ -205,7 +206,7 @@ final class LibraryStore {
             phase = hasAccount ? .loading : .needsAccount
             return
         }
-        apply(cache.games, fetchedAt: cache.fetchedAt)
+        apply(cache.games, installed: Self.installedAppIDs(in: steamapps), fetchedAt: cache.fetchedAt)
         phase = .ready
     }
 

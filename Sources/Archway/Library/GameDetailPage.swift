@@ -1,7 +1,7 @@
 import SwiftUI
 import ArchwayCore
 
-/// One game's page: the game itself, whether it runs, and your progress. Technical settings stay behind "Erweitert".
+/// One game's page: the game itself, whether it runs, and your progress. Technical settings stay behind "Advanced".
 struct GameDetailPage: View {
     let game: LibraryGame
     let heroNamespace: Namespace.ID
@@ -18,6 +18,8 @@ struct GameDetailPage: View {
     @State private var isDrifting = false
     /// Opening a game blooms its artwork outward from the cover.
     @State private var isRevealed = false
+    /// The bloom's blurred mask is costly, so it goes once the artwork is fully revealed.
+    @State private var isRevealComplete = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsAdvanced = false
     @State private var confirmsUninstall = false
@@ -60,7 +62,9 @@ struct GameDetailPage: View {
         // so opening a game never passes through black.
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85).delay(0.18)) { hasAppeared = true }
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 1.1)) { isRevealed = true }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 1.1)) { isRevealed = true } completion: {
+                isRevealComplete = true
+            }
             if !reduceMotion {
                 withAnimation(.easeInOut(duration: 28).repeatForever(autoreverses: true)) { isDrifting = true }
             }
@@ -79,6 +83,30 @@ struct GameDetailPage: View {
         }
         .sheet(item: $enlargedScreenshot) { shot in
             ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
+        }
+    }
+
+    /// Fades the artwork out over its lower half so it melts into the page instead of ending at an edge.
+    private var heroFade: some View {
+        LinearGradient(stops: [.init(color: .black, location: 0),
+                               .init(color: .black, location: 0.3),
+                               .init(color: .black.opacity(0.8), location: 0.5),
+                               .init(color: .black.opacity(0.45), location: 0.7),
+                               .init(color: .black.opacity(0.15), location: 0.87),
+                               .init(color: .clear, location: 1)],
+                       startPoint: .top, endPoint: .bottom)
+    }
+
+    /// Grows from the cover until it covers the whole artwork.
+    private var revealBloom: some View {
+        GeometryReader { proxy in
+            // The cover sits bottom left in the centered content column.
+            let cover = CGPoint(x: max(0, (proxy.size.width - 1180) / 2) + 40 + 150, y: proxy.size.height - 78)
+            Circle()
+                .frame(width: 4000, height: 4000)
+                .scaleEffect(isRevealed ? 1 : 0.04)
+                .blur(radius: 80)
+                .position(cover)
         }
     }
 
@@ -121,26 +149,8 @@ struct GameDetailPage: View {
             .overlay {
                 LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.35)], startPoint: .top, endPoint: .bottom)
             }
-            // Fade the artwork out over its lower half so it melts into the page instead of ending at an edge.
             .mask {
-                LinearGradient(stops: [.init(color: .black, location: 0),
-                                       .init(color: .black, location: 0.3),
-                                       .init(color: .black.opacity(0.8), location: 0.5),
-                                       .init(color: .black.opacity(0.45), location: 0.7),
-                                       .init(color: .black.opacity(0.15), location: 0.87),
-                                       .init(color: .clear, location: 1)],
-                               startPoint: .top, endPoint: .bottom)
-            }
-            .mask {
-                GeometryReader { proxy in
-                    // The cover sits bottom left in the centered content column.
-                    let cover = CGPoint(x: max(0, (proxy.size.width - 1180) / 2) + 40 + 150, y: proxy.size.height - 78)
-                    Circle()
-                        .frame(width: 4000, height: 4000)
-                        .scaleEffect(isRevealed ? 1 : 0.04)
-                        .blur(radius: 80)
-                        .position(cover)
-                }
+                if isRevealComplete { heroFade } else { heroFade.mask { revealBloom } }
             }
             .overlay {
                 if launchStage == .launching {

@@ -21,12 +21,14 @@ final class LibraryStore {
     private static let defaultBackend = "D3DMetal"
 
     private(set) var phase: Phase = .loading
-    private(set) var steamGames: [LibraryGame] = []
-    private(set) var localGames: [LibraryGame] = []
+    private(set) var steamGames: [LibraryGame] = [] { didSet { sortGames() } }
+    private(set) var localGames: [LibraryGame] = [] { didSet { sortGames() } }
     private(set) var lastUpdated: Date?
+    /// Every game by title, kept in step with both sources so views don't sort on each render.
+    private(set) var games: [LibraryGame] = []
 
-    var games: [LibraryGame] {
-        (steamGames + localGames).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    private func sortGames() {
+        games = (steamGames + localGames).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
     /// Totals from sessions Archway saw end, until Steam reports them. Steam takes a moment after a session,
@@ -83,9 +85,13 @@ final class LibraryStore {
     func refreshInstalled() async {
         let steamapps = steamapps
         let installed = await Task.detached { Self.installedAppIDs(in: steamapps) }.value
-        for index in steamGames.indices {
-            steamGames[index].isInstalled = installed.contains(steamGames[index].id)
+        // One assignment, and only on a change, so polling doesn't redraw the library.
+        let updated = steamGames.map { game in
+            var game = game
+            game.isInstalled = installed.contains(game.id)
+            return game
         }
+        if updated != steamGames { steamGames = updated }
     }
 
     /// Counts a finished session right away, then asks Steam for its own numbers.

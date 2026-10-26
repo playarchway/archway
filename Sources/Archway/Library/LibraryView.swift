@@ -23,15 +23,16 @@ struct LibraryView: View {
     @Namespace private var hero
 
     private var filtered: [LibraryGame] {
-        store.games.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }
+        search.isEmpty ? store.games : store.games.filter { $0.title.localizedCaseInsensitiveContains(search) }
     }
 
-    private var shelves: [(title: String, games: [LibraryGame], isLarge: Bool)] {
+    private func shelves(of filtered: [LibraryGame]) -> [(title: String, games: [LibraryGame], isLarge: Bool)] {
         // Only what can be played right away: the last few played games large, then every other installed game.
         let installed = filtered.filter { $0.isInstalled && !$0.isLocal }
-        let recent = Array(installed.filter { $0.lastPlayedAt != nil }.sorted { $0.lastPlayedAt! > $1.lastPlayedAt! }.prefix(5))
+        let recent = Array(installed.filter { $0.lastPlayedAt != nil }
+            .sorted { ($0.lastPlayedAt ?? .distantPast) > ($1.lastPlayedAt ?? .distantPast) }.prefix(5))
+        // The store already sorts by title.
         let others = installed.filter { game in !recent.contains { $0.id == game.id } }
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         return [
             (String(localized: "Continue Playing"), recent, true),
             (String(localized: "Installed"), others, false),
@@ -169,7 +170,9 @@ struct LibraryView: View {
     }
 
     private var library: some View {
-        ScrollView {
+        let filtered = filtered
+        let shelves = shelves(of: filtered)
+        return ScrollView {
             VStack(alignment: .leading, spacing: 30) {
                 if case .failed(let error) = store.phase { staleBanner(error) }
 

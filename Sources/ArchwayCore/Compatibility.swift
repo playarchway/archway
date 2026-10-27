@@ -51,6 +51,14 @@ public struct CompatibilityContext: Codable, Hashable, Sendable {
         self.graphicsBackend = graphicsBackend
         self.profile = profile
     }
+
+    /// Whether reports from `other` describe this setup. The app version, the chip, and macOS updates
+    /// within a major version rarely change how a game runs, so they don't split the counts.
+    public func isComparable(to other: CompatibilityContext) -> Bool {
+        runtimeVersion == other.runtimeVersion && graphicsBackend == other.graphicsBackend &&
+            gameVersion == other.gameVersion && profile == other.profile &&
+            macOSVersion.split(separator: ".").first == other.macOSVersion.split(separator: ".").first
+    }
 }
 
 public enum CompatibilityMode: String, Codable, CaseIterable, Sendable { case singleplayer, multiplayer }
@@ -185,6 +193,43 @@ public struct CompatibilityCatalog: Codable, Sendable {
         self.schemaVersion = 1
         self.generatedAt = generatedAt
         self.aggregates = aggregates
+    }
+
+    /// A single report doesn't make a game tested.
+    public static let minimumReports = 3
+
+    /// Games that most singleplayer reports call working, from at least `minimumReports` reports. Once a runtime
+    /// has that many reports of its own, only those count, so a runtime that breaks a game shows it.
+    public func workingGameIDs(runtimeVersion: String) -> Set<Int> {
+        var all: [Int: (works: Int, total: Int)] = [:]
+        var current: [Int: (works: Int, total: Int)] = [:]
+        for aggregate in aggregates where aggregate.mode == .singleplayer {
+            let works = aggregate.counts[.works] ?? 0
+            let total = aggregate.counts.filter { $0.key != .notTested }.values.reduce(0, +)
+            all[aggregate.gameID, default: (0, 0)].works += works
+            all[aggregate.gameID, default: (0, 0)].total += total
+            if aggregate.context.runtimeVersion == runtimeVersion {
+                current[aggregate.gameID, default: (0, 0)].works += works
+                current[aggregate.gameID, default: (0, 0)].total += total
+            }
+        }
+        return Set(all.compactMap { id, counts in
+            let decisive = current[id].flatMap { $0.total >= Self.minimumReports ? $0 : nil } ?? counts
+            return decisive.total >= Self.minimumReports && decisive.works * 2 > decisive.total ? id : nil
+        })
+    }
+
+    /// The counts of every aggregate comparable to `context`, summed, or nil without any.
+    public func summary(gameID: Int, mode: CompatibilityMode, context: CompatibilityContext) -> CompatibilityAggregate? {
+        let matching = aggregates.filter { $0.gameID == gameID && $0.mode == mode && context.isComparable(to: $0.context) }
+        guard !matching.isEmpty else { return nil }
+        var counts: [CompatibilityOutcome: Int] = [:]
+        var features: [MultiplayerFeature: [CompatibilityOutcome: Int]] = [:]
+        for aggregate in matching {
+            counts.merge(aggregate.counts, uniquingKeysWith: +)
+            for (feature, outcomes) in aggregate.features { features[feature, default: [:]].merge(outcomes, uniquingKeysWith: +) }
+        }
+        return CompatibilityAggregate(gameID: gameID, mode: mode, context: context, counts: counts, features: features)
     }
 }
 

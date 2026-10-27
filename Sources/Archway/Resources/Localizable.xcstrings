@@ -2027,12 +2027,12 @@
         }
       }
     },
-    "Counts match this runtime, macOS, chip, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.": {
+    "Counts match this runtime, macOS version, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Zahlen gelten für diese Laufzeit, macOS-Version, diesen Chip, Spiel-Build, Grafik-Backend und die gespeicherten Spieleinstellungen. Berichte von diesem Mac zählen erst, wenn sie im Community-Katalog enthalten sind."
+            "value": "Die Zahlen gelten für diese Laufzeit, macOS-Version, diesen Spiel-Build, das Grafik-Backend und die gespeicherten Spieleinstellungen. Berichte von diesem Mac zählen erst, wenn sie im Community-Katalog enthalten sind."
           }
         }
       }

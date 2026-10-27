@@ -2,7 +2,7 @@
 
 Archway is a free, open-source macOS app for playing Windows games on Apple silicon Macs. It shows your Steam library, installs and starts games with one click, and sets up everything they need, Wine, Windows Steam, and Apple's D3DMetal, in the background.
 
-**Status:** early. Archway runs on macOS 27 on Apple silicon. A game shows as tested once most players report it working; all others are marked untested. There is no public release yet, so build it from source. See the [vision](docs/VISION.md) for where it is heading.
+**Status:** early. Archway runs on macOS 27 on Apple silicon. A game shows as tested once at least three players have reported on it and most say it works; all others are marked untested. There is no public release yet, so build it from source. See the [vision](docs/VISION.md) for where it is heading.
 
 ## What it does
 

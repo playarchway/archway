@@ -11,8 +11,8 @@ final class CompatibilityStore {
     static let defaultCatalogURL = defaultEndpoints.catalog
     static let defaultReportURL = defaultEndpoints.reports
     private(set) var profiles: [Int: GameRuntimeProfile]
-    private(set) var catalog: CompatibilityCatalog? { didSet { workingGameIDs = Self.workingGames(in: catalog) } }
-    /// Games most players report as working on their own, in any setup.
+    private(set) var catalog: CompatibilityCatalog? { didSet { updateWorkingGames() } }
+    /// Games the community reports working on their own; see `CompatibilityCatalog.workingGameIDs`.
     private(set) var workingGameIDs: Set<Int> = []
     private(set) var pendingReports: [CompatibilityReport]
     private(set) var submittedReports: [CompatibilityReport]
@@ -28,7 +28,18 @@ final class CompatibilityStore {
         catalog = disk.loadCatalog()
         pendingReports = disk.loadPending()
         submittedReports = disk.loadHistory()
-        workingGameIDs = Self.workingGames(in: catalog)
+        updateWorkingGames()
+    }
+
+    private func updateWorkingGames() {
+        let runtime = Self.runtimeVersion(try? ConfigStore(paths: paths).load())
+        workingGameIDs = catalog?.workingGameIDs(runtimeVersion: runtime) ?? []
+    }
+
+    /// The version of the configured runtime package, from its directory name.
+    private static func runtimeVersion(_ configuration: Configuration?) -> String {
+        configuration?.wine.components(separatedBy: "/").first { $0.hasPrefix("archway-wine-") }
+            .map { String($0.dropFirst("archway-wine-".count)) } ?? "Unknown"
     }
 
     func profile(for gameID: Int) -> GameRuntimeProfile { profiles[gameID] ?? GameRuntimeProfile() }
@@ -43,8 +54,7 @@ final class CompatibilityStore {
 
     func context(for gameID: Int, profile: GameRuntimeProfile? = nil) -> CompatibilityContext {
         let configuration = try? ConfigStore(paths: paths).load()
-        let runtime = configuration?.wine.components(separatedBy: "/").first { $0.hasPrefix("archway-wine-") }
-            .map { String($0.dropFirst("archway-wine-".count)) } ?? "Unknown"
+        let runtime = Self.runtimeVersion(configuration)
         let backend = configuration?.selectedGraphicsBackend.rawValue ?? "Unknown"
         let manifest = paths.steamApps.appendingPathComponent("appmanifest_\(gameID).acf")
         let manifestText = try? String(contentsOf: manifest, encoding: .utf8)
@@ -65,17 +75,6 @@ final class CompatibilityStore {
         !game.isLocal && workingGameIDs.contains(game.id) ? .tested : game.compatibility
     }
 
-    private static func workingGames(in catalog: CompatibilityCatalog?) -> Set<Int> {
-        var counts: [Int: (works: Int, total: Int)] = [:]
-        for aggregate in catalog?.aggregates ?? [] where aggregate.mode == .singleplayer {
-            let works = aggregate.counts[.works] ?? 0
-            let total = aggregate.counts.filter { $0.key != .notTested }.values.reduce(0, +)
-            counts[aggregate.gameID, default: (0, 0)].works += works
-            counts[aggregate.gameID, default: (0, 0)].total += total
-        }
-        return Set(counts.filter { $0.value.works > 0 && $0.value.works * 2 > $0.value.total }.keys)
-    }
-
     private static func machineIdentifier() -> String {
         var size = 0
         guard sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0) == 0, size > 1, size <= 256 else {
@@ -86,19 +85,9 @@ final class CompatibilityStore {
         return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 
-    func aggregates(for gameID: Int, mode: CompatibilityMode) -> [CompatibilityAggregate] {
-        guard let catalog else { return [] }
-        let current = context(for: gameID)
-        return catalog.aggregates.filter { aggregate in
-            aggregate.gameID == gameID && aggregate.mode == mode &&
-            aggregate.context.runtimeVersion == current.runtimeVersion &&
-            aggregate.context.appVersion == current.appVersion &&
-            aggregate.context.macOSVersion == current.macOSVersion &&
-            aggregate.context.chip == current.chip &&
-            aggregate.context.gameVersion == current.gameVersion &&
-            aggregate.context.graphicsBackend == current.graphicsBackend &&
-            aggregate.context.profile == current.profile
-        }
+    /// The community's counts for this game in a setup like this Mac's.
+    func summary(for gameID: Int, mode: CompatibilityMode) -> CompatibilityAggregate? {
+        catalog?.summary(gameID: gameID, mode: mode, context: context(for: gameID))
     }
 
     func refreshCatalog() async {

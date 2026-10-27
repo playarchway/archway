@@ -395,10 +395,10 @@ struct GameDetailPage: View {
                 Text("No community catalog cached yet.").font(.callout).foregroundStyle(.secondary)
             } else {
                 ForEach(CompatibilityMode.allCases, id: \.self) { mode in
-                    let aggregates = compatibility.aggregates(for: game.id, mode: mode)
+                    let summary = compatibility.summary(for: game.id, mode: mode)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(mode == .singleplayer ? "Singleplayer" : "Multiplayer").font(.callout.weight(.medium))
-                        if let aggregate = aggregates.first {
+                        if let aggregate = summary {
                             ForEach(CompatibilityOutcome.allCases, id: \.self) { outcome in
                                 if let count = aggregate.counts[outcome], count > 0 {
                                     InfoRow(LocalizedStringKey(outcome.label), String(count))
@@ -421,7 +421,7 @@ struct GameDetailPage: View {
                 }
                 let currentContext = compatibility.context(for: game.id)
                 let other = compatibility.catalog?.aggregates.filter { $0.gameID == game.id &&
-                    $0.context != currentContext } ?? []
+                    !currentContext.isComparable(to: $0.context) } ?? []
                 if !other.isEmpty {
                     Text("Reports for other configurations")
                         .font(.callout.weight(.medium))
@@ -444,7 +444,7 @@ struct GameDetailPage: View {
                         }
                     }
                 }
-                Text("Counts match this runtime, macOS, chip, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.")
+                Text("Counts match this runtime, macOS version, game build, graphics backend, and saved game settings. Reports from this Mac are not counted until the community catalog includes them.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             let own = compatibility.submittedReports.filter { $0.gameID == game.id }.count

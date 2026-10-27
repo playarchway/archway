@@ -50,3 +50,41 @@ import Testing
     let counts = try #require(aggregateObject["counts"] as? [String: Int])
     #expect(counts["limited"] == 2)
 }
+
+private func context(runtime: String = "11.20", macOS: String = "27.0.1", chip: String = "Apple M4",
+                     app: String = "1.0") -> CompatibilityContext {
+    CompatibilityContext(runtimeVersion: runtime, appVersion: app, macOSVersion: macOS, chip: chip,
+                         gameVersion: "42", graphicsBackend: "d3dmetal", profile: GameRuntimeProfile())
+}
+
+private func aggregate(_ gameID: Int, _ context: CompatibilityContext,
+                       _ counts: [CompatibilityOutcome: Int]) -> CompatibilityAggregate {
+    CompatibilityAggregate(gameID: gameID, mode: .singleplayer, context: context, counts: counts)
+}
+
+@Test func gamesNeedSeveralReportsAndTheCurrentRuntimeDecides() {
+    let catalog = CompatibilityCatalog(generatedAt: Date(), aggregates: [
+        aggregate(1, context(), [.works: 1]),
+        aggregate(2, context(), [.works: 2, .limited: 1]),
+        aggregate(3, context(runtime: "11.18"), [.works: 5]),
+        aggregate(3, context(), [.unplayable: 3]),
+        aggregate(4, context(runtime: "11.18"), [.works: 5]),
+        aggregate(4, context(), [.unplayable: 1]),
+    ])
+
+    #expect(catalog.workingGameIDs(runtimeVersion: "11.20") == [2, 4])
+}
+
+@Test func summaryCombinesComparableSetups() {
+    let current = context()
+    let catalog = CompatibilityCatalog(generatedAt: Date(), aggregates: [
+        aggregate(1, context(macOS: "27.1", chip: "Apple M4 Pro", app: "1.1"), [.works: 2]),
+        aggregate(1, context(), [.works: 1, .limited: 1]),
+        aggregate(1, context(macOS: "26.4"), [.unplayable: 4]),
+        aggregate(1, context(runtime: "11.18"), [.unplayable: 4]),
+    ])
+
+    let summary = catalog.summary(gameID: 1, mode: .singleplayer, context: current)
+    #expect(summary?.counts == [.works: 3, .limited: 1])
+    #expect(catalog.summary(gameID: 1, mode: .multiplayer, context: current) == nil)
+}

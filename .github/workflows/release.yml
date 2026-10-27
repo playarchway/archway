@@ -87,11 +87,38 @@ jobs:
           rm "$key"
           xcrun stapler staple .build/Archway.app
           spctl --assess --type exec -vv .build/Archway.app
+      # The app finds updates in the newest release's appcast.xml (Sparkle). Its signature needs the private half
+      # of the key in build-app.sh, from the secret SPARKLE_PRIVATE_KEY; without it, the release has no appcast.
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
           VERSION: ${{ needs.release-please.outputs.version }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          ditto -c -k --keepParent .build/Archway.app "Archway-$VERSION.zip"
-          gh release upload "$TAG" "Archway-$VERSION.zip"
+          archive="Archway-$VERSION.zip"
+          ditto -c -k --keepParent .build/Archway.app "$archive"
+          assets=("$archive")
+          if [[ -n "$SPARKLE_PRIVATE_KEY" ]]; then
+            signature="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | .build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file - "$archive")"
+            notes="$(gh release view "$TAG" --json body --jq .body | gh api markdown -F text=@-)"
+            cat > appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Archway</title>
+              <item>
+                <title>Archway $VERSION</title>
+                <pubDate>$(date -R)</pubDate>
+                <sparkle:version>$VERSION</sparkle:version>
+                <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <description><![CDATA[$notes]]></description>
+                <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/$archive" type="application/octet-stream" $signature/>
+              </item>
+            </channel>
+          </rss>
+          XML
+            assets+=(appcast.xml)
+          fi
+          gh release upload "$TAG" "${assets[@]}"

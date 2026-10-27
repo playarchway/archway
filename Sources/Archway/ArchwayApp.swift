@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Sparkle
 import ArchwayCore
 
 @main
@@ -10,6 +11,9 @@ struct ArchwayApp: App {
     @State private var setup: SetupModel?
     @State private var storage: StorageModel?
     private let startupError: String?
+    /// Sparkle checks the appcast from Info.plist; the bare SwiftPM binary has none and doesn't update itself.
+    private let updater = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") == nil ? nil
+        : SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     init() {
         do {
@@ -56,6 +60,10 @@ struct ArchwayApp: App {
         }
         .defaultSize(width: 1320, height: 840)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updater?.checkForUpdates(nil) }
+                    .disabled(updater == nil)
+            }
             CommandGroup(before: .appTermination) {
                 Button("Open Steam") { runner?.openSteam() }
                     .disabled(setup?.isReady != true)

@@ -41,12 +41,11 @@ Compatibility depends on the game, its engine and graphics API, and the versions
 
 ## Roadmap
 
-**Now:** the Steam library with installed and tested states, background setup, silent Steam installs, launching, and per-game graphics settings, validated end to end with a first Steam game.
+**Now:** the Steam library with installed and tested states, background setup, silent Steam installs, launching, per-game graphics settings, community compatibility reports, and signed and notarized releases, validated end to end with a first Steam game.
 
 **Next:**
 
 - More tested games with different engines and graphics APIs, each with a stored profile.
-- Signed and notarized releases.
 - GOG, itch.io, and local installers.
 - Managing dependencies that games commonly need, where licenses allow it.
 

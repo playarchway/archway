@@ -74,8 +74,6 @@ final class GameRunner {
         self.paths = paths
         self.store = store
         self.compatibility = compatibility
-        // Games could once pick a separate alpha runtime; there is only one now.
-        UserDefaults.standard.removeObject(forKey: "gameRuntimes")
         Task { await refreshSteamState() }
         // Steam keeps running when Archway quits otherwise, and restarts its window when only that is closed.
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in

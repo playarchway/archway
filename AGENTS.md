@@ -2,13 +2,13 @@
 
 ## Wine sessions
 
-Several agents may run Wine on the same Mac at the same time. Each session is one wineserver per prefix, and every one of its processes shows up in the Dock as "wine" with the Windows program's icon. Stock Wine (checked on 11.18) cannot show another Dock name: all processes run the same `lib/wine/x86_64-unix/wine` loader, and Wine starts child processes through that fixed path.
+Several agents may run Wine on the same Mac at the same time. Each session is one wineserver per prefix, and every one of its processes shows up in the Dock with the Windows program's icon. Archway's Wine names it after the program (its product name, file description or file name); stock Wine and older runtimes show "wine", because all processes run the same `lib/wine/x86_64-unix/wine` loader. Either way the Dock does not tell which prefix a process belongs to.
 
 Tell sessions apart by prefix instead:
 
 - Run `scripts/wine-sessions.sh` to list every running session with its prefix and Windows programs.
 - Work in a prefix of your own under the current default data directory (`archway locations` prints it). For experiments, clone an existing bottle (`cp -cRp`; APFS makes this nearly free) into a new `<purpose>-probe` directory and add it to the table below. Delete it, and its row, when you are done.
-- Stop only your own session: `archway close-steam` for the default bottle, otherwise `WINEPREFIX=<prefix> <runtime>/bin/wineserver -k`. Never stop Wine globally (`killall wine`, `pkill -f wine`, quitting every "wine" Dock icon); another agent's Steam or test may be running.
+- Stop only your own session: `archway close-steam` for the default bottle, otherwise `WINEPREFIX=<prefix> <runtime>/bin/wineserver -k`. Never stop Wine globally (`killall wine`, `pkill -f wine`, quitting every Wine Dock icon); another agent's Steam or test may be running.
 - Ask the user before stopping a session in a prefix you do not own.
 
 | Prefix (under the current default data directory) | Owner and purpose |

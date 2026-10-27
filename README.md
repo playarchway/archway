@@ -11,6 +11,7 @@ Archway is a free, open-source macOS app for playing Windows games on Apple sili
 - **Installing and playing without Steam's window.** Archway queues a game for Steam and runs Steam with `-silent`, so it downloads in the background while the install button shows the progress. Steam's own window appears only to sign in once, or when you open it from the menu or the settings.
 - **Uninstall and clean removal.** Uninstall games from their page. Because macOS runs nothing when an app moves to the Trash, the settings show how much space Archway takes and offer *Remove Archway*, which deletes its data, bottles, and games and then moves the app to the Trash.
 - **Your own Windows games:** add an `.exe` from your Mac.
+- **Updates** through [Sparkle](https://sparkle-project.org): Archway checks for new releases and installs them on request. When a release brings a new Wine runtime, Archway downloads it in the background, switches once Steam isn't running, and removes the old one.
 
 ## Build and run
 

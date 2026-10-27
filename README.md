@@ -53,6 +53,8 @@ Bug reports, game test results, and pull requests are welcome; see [CONTRIBUTING
 
 Archway is licensed under the [GNU General Public License v3.0](LICENSE).
 
+The app includes [Sparkle](https://sparkle-project.org) for its updates, under the MIT License; its notice is in the app bundle under `Contents/Resources/Licenses`.
+
 The runtime package that Archway downloads contains third-party software under its own terms:
 
 - **Wine** ([archway-wine](https://github.com/playarchway/archway-wine)): GNU LGPL 2.1 or later.

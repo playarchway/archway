@@ -37,6 +37,9 @@ install_name_tool -add_rpath @executable_path/../Frameworks "$app/Contents/MacOS
 # Sparkle's XPC services only serve sandboxed apps, and Archway isn't one.
 ditto "$bin/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 rm -rf "$app/Contents/Frameworks/Sparkle.framework/XPCServices" "$app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
+# Sparkle's MIT license asks for its notice in every copy.
+mkdir -p "$app/Contents/Resources/Licenses"
+cp .build/artifacts/sparkle/Sparkle/LICENSE "$app/Contents/Resources/Licenses/Sparkle-LICENSE.txt"
 cp -R "$bin"/Archway_*.bundle "$app/Contents/Resources/"
 # SwiftUI looks up its strings in the main bundle. Not every SwiftPM toolchain compiles string catalogs,
 # so compile it here.

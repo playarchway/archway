@@ -1,11 +1,9 @@
 #!/bin/sh
 # Lists running Wine sessions: one wineserver per prefix, with its Windows programs.
-# Every Wine process appears as "wine" in the Dock, so use this to tell sessions apart.
+# The Dock names Wine processes after their programs, not their prefixes, so use this to tell sessions apart.
 set -eu
 
 root="${ARCHWAY_DATA_DIR:-$HOME/Library/Application Support/Archway}"
-# Include the former root while a migration is pending, so this audit can see orphan loaders.
-legacy_root="$HOME/Library/Application Support/Overcross"
 sessions=0
 
 for server in $(pgrep -f '/wineserver$' || true); do
@@ -13,7 +11,7 @@ for server in $(pgrep -f '/wineserver$' || true); do
     dir=$(lsof -a -p "$server" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')
     [ -n "$dir" ] || continue
     inode=$(printf '%d' "0x${dir##*-}")
-    prefix=$(find "$root" "$legacy_root" -maxdepth 4 -name system.reg -print 2>/dev/null | while IFS= read -r reg; do
+    prefix=$(find "$root" -maxdepth 4 -name system.reg -print 2>/dev/null | while IFS= read -r reg; do
         candidate=$(dirname "$reg")
         [ "$(stat -f %i "$candidate")" = "$inode" ] && printf '%s\n' "$candidate"
     done | head -n 1)
@@ -30,7 +28,7 @@ done
 
 # BSD ps axeww includes WINEPREFIX for loaders whose wineserver already exited. Inspect it
 # in memory and print only the PID, prefix, and program name; never print the environment.
-orphan_sessions=$(/usr/bin/python3 - "$root" "$legacy_root" <<'PY'
+orphan_sessions=$(/usr/bin/python3 - "$root" <<'PY'
 import re
 import subprocess
 import sys

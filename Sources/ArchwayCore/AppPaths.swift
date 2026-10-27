@@ -9,7 +9,7 @@ public struct AppPaths: Sendable {
     public var steamApps: URL { bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps") }
     public var logs: URL { dataDirectory.appendingPathComponent("logs") }
 
-    /// Without a directory, the default under Application Support. Run `DataMigration` first for that one.
+    /// Without a directory, the default under Application Support.
     public init(dataDirectory: URL? = nil) throws {
         let selected = dataDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Archway")

@@ -32,7 +32,7 @@ struct ArchwayApp: App {
             _compatibility = State(initialValue: nil)
             _setup = State(initialValue: nil)
             _storage = State(initialValue: nil)
-            startupError = String(localized: "Archway couldn't prepare its data. Check the data folders in Application Support and close any Wine session using the old folder. For details, run archway migrate-data in Terminal.")
+            startupError = String(localized: "Archway couldn't open its data folder in Application Support.")
         }
         // Started through SwiftPM without an app bundle; make it a regular foreground app.
         NSApplication.shared.setActivationPolicy(.regular)

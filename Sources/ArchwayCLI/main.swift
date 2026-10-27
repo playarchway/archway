@@ -10,7 +10,6 @@ Commands:
   help                                      Show this help
   doctor                                    Read-only setup checks
   locations                                 Show configuration, bottle, and log paths
-  migrate-data                              Move legacy default data to Archway after Wine is stopped
   configure --wine PATH [--wineserver PATH] [--library-dir PATH] [--backend builtin|dxvk|d3dmetal] [--dxvk-config PATH --vulkan-icd PATH] [--d3dmetal-dir PATH] Save runtime paths
   check-d3dmetal --redist-lib PATH         Validate a local Apple GPTK redist/lib directory
   stage-d3dmetal --redist-lib PATH --runtime-root PATH [--allow-unverified-runtime]  Stage into an owned Wine clone
@@ -165,13 +164,6 @@ private func run() throws {
     var arguments = Array(CommandLine.arguments.dropFirst())
     let dataDir = try takeOption("--data-dir", from: &arguments).map { try PathValidator.absoluteFile($0) }
     let command = arguments.isEmpty ? "help" : arguments.removeFirst()
-    if command == "migrate-data" {
-        try requireNoExtras(arguments)
-        guard dataDir == nil else { throw ArchwayError.invalidPath("migrate-data only applies to the default data directory.") }
-        print(try DataMigration.migrateIfNeeded() ? "Archway data migrated." : "No legacy data to migrate.")
-        return
-    }
-    if dataDir == nil { try DataMigration.migrateIfNeeded() }
     let paths = try AppPaths(dataDirectory: dataDir)
     let store = ConfigStore(paths: paths)
 

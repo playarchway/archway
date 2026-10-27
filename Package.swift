@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Archway",
     defaultLocalization: "en",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],
     products: [
         .library(name: "ArchwayCore", targets: ["ArchwayCore"]),
         .executable(name: "archway", targets: ["ArchwayCLI"]),

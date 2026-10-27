@@ -112,7 +112,7 @@ jobs:
                 <pubDate>$(date -R)</pubDate>
                 <sparkle:version>$VERSION</sparkle:version>
                 <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
                 <description><![CDATA[$notes]]></description>
                 <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/$archive" type="application/octet-stream" $signature/>
               </item>

@@ -14,7 +14,7 @@ Archway is a free, open-source macOS app for playing Windows games on Apple sili
 
 ## Build and run
 
-You need macOS 14 or later on Apple silicon (Archway is developed and tested on macOS 27) and Swift 6.4, from Xcode or the Command Line Tools.
+You need macOS 15 or later on Apple silicon, which Apple's D3DMetal requires (Archway is developed and tested on macOS 27), and Swift 6.4, from Xcode or the Command Line Tools.
 
 ```sh
 scripts/build-app.sh            # builds .build/Archway.app (add `release` for an optimized build)

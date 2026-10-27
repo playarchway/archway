@@ -66,7 +66,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>
     <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
-    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>

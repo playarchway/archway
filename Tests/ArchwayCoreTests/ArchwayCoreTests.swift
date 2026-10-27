@@ -899,3 +899,16 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     #expect(FileManager.default.fileExists(atPath: foreign.path))
     #expect(ArchwayRemoval.filesToDelete(dataDirectory: data, library: library, bundleIdentifier: nil) == [data])
 }
+
+@Test func exportedLogsHideTheMacUserName() {
+    let log = #"""
+    wine: /Users/max/Library/Application Support/Archway/bottles/steam
+    err: C:\users\max\AppData\Local; Z:\Users\MAX\Desktop
+    path "/Users/max" and /Users/maxine/Documents
+    """#
+    #expect(LogRedaction.redact(log, userName: "max") == #"""
+    wine: /Users/user/Library/Application Support/Archway/bottles/steam
+    err: C:\users\user\AppData\Local; Z:\Users\user\Desktop
+    path "/Users/user" and /Users/maxine/Documents
+    """#)
+}

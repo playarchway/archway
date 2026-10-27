@@ -80,7 +80,7 @@ body:
     id: log
     attributes:
       label: Log
-      description: From *Advanced… → Export Log* on the game's page. Remove anything personal first.
+      description: From *Advanced… → Export Log* on the game's page. The export replaces your Mac user name; remove anything else personal first.
     validations:
       required: false
       accept: ".log,.txt,.zip,.png,.jpg,.mov,.mp4"

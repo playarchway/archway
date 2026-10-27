@@ -73,7 +73,8 @@ struct AdvancedSettingsSheet: View {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "Archway \(game.title).log"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
-        try? FileManager.default.removeItem(at: destination)
-        try? FileManager.default.copyItem(at: logURL, to: destination)
+        guard let data = try? Data(contentsOf: logURL) else { return }
+        let log = LogRedaction.redact(String(decoding: data, as: UTF8.self))
+        try? Data(log.utf8).write(to: destination, options: .atomic)
     }
 }

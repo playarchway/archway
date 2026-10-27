@@ -27,6 +27,8 @@ final class SetupModel {
         case working(Step)
         /// Rosetta needs an administrator password, so the user starts its installation.
         case needsRosetta
+        /// A new runtime is ready, but Steam still runs on the old one; the user quits it.
+        case needsSteamQuit
         case failed(Step, String)
         case ready
     }
@@ -34,6 +36,8 @@ final class SetupModel {
     private(set) var phase: Phase = .checking
     /// How far the current download is, from 0 to 1.
     private(set) var progress: Double?
+    /// The runtime package that replaces an earlier release's, while Archway switches to it.
+    private(set) var runtimeUpdate: RuntimeRelease?
     var isReady: Bool { phase == .ready }
 
     private let paths: AppPaths
@@ -63,12 +67,28 @@ final class SetupModel {
         }
     }
 
+    /// Asks Steam to exit, waits for its Wine server, then finishes the runtime update.
+    func quitSteam() {
+        guard phase == .needsSteamQuit else { return }
+        phase = .working(.runtime)
+        let paths = paths
+        Task {
+            try? await Task.detached {
+                let orchestrator = try Orchestrator(paths: paths)
+                try ProcessRunner.sendGUIRequest(orchestrator.steamShutdown())
+                try ProcessRunner.runSetup(orchestrator.wineserverWait(), timeout: 30)
+            }.value
+            start()
+        }
+    }
+
     /// How much of the whole setup is done, from 0 to 1, counting the current download.
     var fractionDone: Double {
         let steps = Double(Step.allCases.count)
         switch phase {
         case .ready: return 1
         case .checking, .needsRosetta: return 0
+        case .needsSteamQuit: return (Double(Step.runtime.rawValue) + 1) / steps
         case .working(let step), .failed(let step, _): return (Double(step.rawValue) + (progress ?? 0)) / steps
         }
     }
@@ -78,6 +98,7 @@ final class SetupModel {
         switch phase {
         case .ready: true
         case .working(let current), .failed(let current, _): step < current
+        case .needsSteamQuit: step < .runtime
         case .needsRosetta, .checking: false
         }
     }
@@ -92,7 +113,10 @@ final class SetupModel {
             }
             step = .runtime
             phase = .working(step)
-            try await installRuntimeIfNeeded()
+            guard try await installRuntimeIfNeeded() else {
+                phase = .needsSteamQuit
+                return
+            }
             step = .bottle
             phase = .working(step)
             let paths = paths
@@ -100,6 +124,7 @@ final class SetupModel {
             step = .steam
             phase = .working(step)
             try await installSteamIfNeeded()
+            runtimeUpdate = nil
             phase = .ready
         } catch {
             phase = .failed(step, error.localizedDescription)
@@ -107,12 +132,22 @@ final class SetupModel {
         progress = nil
     }
 
-    /// Keeps a runtime that is already configured, for example from the command line.
-    private func installRuntimeIfNeeded() async throws {
+    /// Keeps a runtime set up by hand, for example from the command line. A runtime package of an earlier
+    /// release gives way to this release's, and is removed once the bottle runs on the new one. Returns false
+    /// while Steam still runs on the old package.
+    private func installRuntimeIfNeeded() async throws -> Bool {
         let paths = paths
-        if let configuration = try ConfigStore(paths: paths).load(),
-           FileManager.default.isExecutableFile(atPath: configuration.wine) { return }
+        let store = ConfigStore(paths: paths)
         let release = try RuntimeRelease.bundled()
+        let previous = try store.load().flatMap { FileManager.default.isExecutableFile(atPath: $0.wine) ? $0 : nil }
+        if let previous {
+            guard RuntimeRelease.isPackaged(previous, in: paths) else { return true }
+            guard previous.wine != release.configuration(in: paths).wine else {
+                try? release.removeOtherPackages(in: paths)
+                return true
+            }
+            runtimeUpdate = release
+        }
         if !release.isInstalled(in: paths) {
             // ARCHWAY_RUNTIME_ARCHIVE uses a local package instead, while the runtime isn't published.
             let override = ProcessInfo.processInfo.environment["ARCHWAY_RUNTIME_ARCHIVE"].map(URL.init(fileURLWithPath:))
@@ -121,7 +156,24 @@ final class SetupModel {
             progress = nil
             try await Task.detached { try release.install(archive: archive, in: paths) }.value
         }
-        try ConfigStore(paths: paths).save(release.configuration(in: paths))
+        guard let previous else {
+            try store.save(release.configuration(in: paths))
+            return true
+        }
+        let old = Orchestrator(paths: paths, configuration: previous)
+        if old.wineserverIsRunning() { return false }
+        try store.save(release.configuration(in: paths))
+        if old.bottleIsInitialized() {
+            do {
+                try await Task.detached { try Orchestrator(paths: paths).updateBottle() }.value
+            } catch {
+                // Back to the old package, which stays until an update works.
+                try? store.save(previous)
+                throw error
+            }
+        }
+        try? release.removeOtherPackages(in: paths)
+        return true
     }
 
     private func installSteamIfNeeded() async throws {

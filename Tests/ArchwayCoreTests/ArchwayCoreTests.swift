@@ -954,6 +954,34 @@ private func runtimeArchive(in directory: URL) throws -> (archive: URL, sha256: 
     #expect(release.url.lastPathComponent == "archway-wine-\(release.version).tar.xz")
 }
 
+@Test func tellsRuntimePackagesFromHandConfiguredWine() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
+    let release = RuntimeRelease(version: "1.0-test", url: URL(string: "https://example.com/r.tar.xz")!, sha256: "", size: 0)
+
+    #expect(RuntimeRelease.isPackaged(release.configuration(in: paths), in: paths))
+    let other = paths.dataDirectory.appendingPathComponent("runtime-overlays/whisky/Wine/bin/wine").path
+    #expect(!RuntimeRelease.isPackaged(Configuration(wine: other), in: paths))
+    #expect(!RuntimeRelease.isPackaged(Configuration(wine: "/opt/wine/bin/wine"), in: paths))
+}
+
+@Test func removesOtherRuntimePackagesOnly() throws {
+    let root = try temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
+    let release = RuntimeRelease(version: "2.0-test", url: URL(string: "https://example.com/r.tar.xz")!, sha256: "", size: 0)
+    let overlays = paths.dataDirectory.appendingPathComponent("runtime-overlays")
+    let names = ["archway-wine-1.0-test", ".archway-wine-1.5-test.partial", "archway-wine-2.0-test", "whisky"]
+    for name in names {
+        try FileManager.default.createDirectory(at: overlays.appendingPathComponent(name), withIntermediateDirectories: true)
+    }
+
+    try release.removeOtherPackages(in: paths)
+
+    #expect(try FileManager.default.contentsOfDirectory(atPath: overlays.path).sorted() == ["archway-wine-2.0-test", "whisky"])
+}
+
 private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     let paths = try AppPaths(dataDirectory: root.appendingPathComponent("data"))
     let steam = paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam")

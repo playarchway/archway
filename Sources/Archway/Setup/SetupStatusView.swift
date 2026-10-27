@@ -24,13 +24,16 @@ struct SetupStatusButton: View {
 
     private var needsAttention: Bool {
         switch setup.phase {
-        case .needsRosetta, .failed: true
+        case .needsRosetta, .needsSteamQuit, .failed: true
         default: false
         }
     }
 
     private var title: String {
-        needsAttention ? String(localized: "Setup Paused") : String(localized: "Setting Up…")
+        if setup.runtimeUpdate != nil {
+            return needsAttention ? String(localized: "Update Paused") : String(localized: "Updating…")
+        }
+        return needsAttention ? String(localized: "Setup Paused") : String(localized: "Setting Up…")
     }
 
     @ViewBuilder private var indicator: some View {
@@ -50,11 +53,19 @@ private struct SetupDetails: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Setting Up Archway").font(.headline)
-                Text("Archway prepares Windows support in the background. You can keep browsing your library.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let update = setup.runtimeUpdate {
+                    Text("Updating Windows Support").font(.headline)
+                    Text("Archway installs a new version of its Windows runtime, a \(ByteCountFormatter.string(fromByteCount: update.size, countStyle: .file)) download. You can keep browsing your library.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Setting Up Archway").font(.headline)
+                    Text("Archway prepares Windows support in the background. You can keep browsing your library.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             SetupChecklist()
             footer
@@ -71,6 +82,14 @@ private struct SetupDetails: View {
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("Install Rosetta") { setup.installRosetta() }
+                    .buttonStyle(.borderedProminent)
+            }
+        case .needsSteamQuit:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Windows Steam still runs on the old runtime. Quit it, and any game running in it, to finish the update.")
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Quit Steam") { setup.quitSteam() }
                     .buttonStyle(.borderedProminent)
             }
         case .failed(_, let message):
@@ -124,6 +143,7 @@ private struct StepRow: View {
         switch setup.phase {
         case .working(let current), .failed(let current, _): current == step
         case .needsRosetta: step == .rosetta
+        case .needsSteamQuit: step == .runtime
         default: false
         }
     }
@@ -135,6 +155,8 @@ private struct StepRow: View {
         } else if case .failed(let current, _) = setup.phase, current == step {
             Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
         } else if case .needsRosetta = setup.phase, step == .rosetta {
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+        } else if case .needsSteamQuit = setup.phase, step == .runtime {
             Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
         } else if isCurrent {
             ProgressView().controlSize(.mini)

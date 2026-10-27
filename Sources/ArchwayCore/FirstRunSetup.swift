@@ -24,10 +24,34 @@ public struct RuntimeRelease: Codable, Equatable, Sendable {
     }
 
     public func directory(in paths: AppPaths) -> URL {
-        paths.dataDirectory.appendingPathComponent("runtime-overlays/archway-wine-\(version)")
+        Self.overlays(in: paths).appendingPathComponent("archway-wine-\(version)")
     }
 
     public func wineRoot(in paths: AppPaths) -> URL { directory(in: paths).appendingPathComponent("Wine") }
+
+    /// Whether a configuration runs a runtime package Archway installed, rather than a Wine set up by hand.
+    public static func isPackaged(_ configuration: Configuration, in paths: AppPaths) -> Bool {
+        let directory = URL(fileURLWithPath: configuration.wine).standardizedFileURL
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return directory.deletingLastPathComponent().path == overlays(in: paths).standardizedFileURL.path
+            && directory.lastPathComponent.hasPrefix("archway-wine-")
+    }
+
+    /// Removes the runtime packages of earlier releases and unfinished installs, once this release runs.
+    public func removeOtherPackages(in paths: AppPaths) throws {
+        let fm = FileManager.default
+        let overlays = Self.overlays(in: paths)
+        guard fm.fileExists(atPath: overlays.path) else { return }
+        let current = directory(in: paths).lastPathComponent
+        for name in try fm.contentsOfDirectory(atPath: overlays.path) where name != current
+            && (name.hasPrefix("archway-wine-") || name.hasPrefix(".archway-wine-") && name.hasSuffix(".partial")) {
+            try fm.removeItem(at: overlays.appendingPathComponent(name))
+        }
+    }
+
+    private static func overlays(in paths: AppPaths) -> URL {
+        paths.dataDirectory.appendingPathComponent("runtime-overlays")
+    }
 
     public func isInstalled(in paths: AppPaths) -> Bool {
         FileManager.default.isExecutableFile(atPath: wineRoot(in: paths).appendingPathComponent("bin/wine").path)
@@ -124,5 +148,10 @@ extension Orchestrator {
         try prepareBottleInitialization()
         try ProcessRunner.runSetup(request, timeout: 300)
         try markBottleReady()
+    }
+
+    /// Brings the bottle up to date with a new runtime before Steam starts on it.
+    public func updateBottle() throws {
+        try ProcessRunner.runSetup(request(arguments: ["wineboot", "-u"], label: "bottle-update"), timeout: 300)
     }
 }

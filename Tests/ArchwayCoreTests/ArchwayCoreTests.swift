@@ -19,11 +19,11 @@ private func migrationJSON(_ file: URL) throws -> [String: Any] {
     let old = support.appendingPathComponent("Overcross")
     let new = support.appendingPathComponent("Archway")
     let alpha = old.appendingPathComponent("archway-alpha")
-    let bottle = old.appendingPathComponent("bottles/steam-5228920")
-    let alphaBottle = alpha.appendingPathComponent("bottles/steam-5228920")
+    let bottle = old.appendingPathComponent("bottles/steam")
+    let alphaBottle = alpha.appendingPathComponent("bottles/steam")
     let backup = alpha.appendingPathComponent("runtime-overlays/upstream/Wine/.overcross-d3dmetal-backup")
     let defaultBackup = old.appendingPathComponent("runtime-overlays/winecx-gptk-4.7.3/payload/Libraries/Wine/.overcross-d3dmetal-backup")
-    let graphicsBackup = old.appendingPathComponent("graphics-backups/brick-by-brick")
+    let graphicsBackup = old.appendingPathComponent("graphics-backups/123")
     for directory in [bottle, alphaBottle, backup, defaultBackup, graphicsBackup] {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
@@ -76,7 +76,7 @@ private func migrationJSON(_ file: URL) throws -> [String: Any] {
     let games = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: new.appendingPathComponent("local-games.json"))) as? [[String: Any]])
     #expect(games.map { $0["path"] as? String } == [new.path + "/games/a.exe", "/tmp/external.exe", old.path + "-extra/game.exe"])
     #expect(try Data(contentsOf: new.appendingPathComponent("steam-library-cache.json")) == cache)
-    #expect(try Data(contentsOf: new.appendingPathComponent("graphics-backups/brick-by-brick/d3d11.dll")) == originalDLL)
+    #expect(try Data(contentsOf: new.appendingPathComponent("graphics-backups/123/d3d11.dll")) == originalDLL)
     #expect(try Data(contentsOf: new.appendingPathComponent("archway-alpha/runtime-overlays/upstream/Wine/.archway-d3dmetal-backup/state.json")) == relativeState)
     #expect(try Data(contentsOf: new.appendingPathComponent("runtime-overlays/winecx-gptk-4.7.3/payload/Libraries/Wine/.archway-d3dmetal-backup/state.json")) == relativeState)
     #expect(try FileManager.default.destinationOfSymbolicLink(atPath: new.appendingPathComponent("archway-alpha/runtime-overlays/upstream/Wine/bin/wine").path) == "/usr/bin/true")
@@ -126,7 +126,7 @@ private func migrationJSON(_ file: URL) throws -> [String: Any] {
     defer { try? FileManager.default.removeItem(at: support) }
     let old = support.appendingPathComponent("Overcross")
     let new = support.appendingPathComponent("Archway")
-    let bottle = old.appendingPathComponent("bottles/steam-5228920")
+    let bottle = old.appendingPathComponent("bottles/steam")
     try FileManager.default.createDirectory(at: bottle, withIntermediateDirectories: true)
     try Data("registry".utf8).write(to: bottle.appendingPathComponent("system.reg"))
     #expect(throws: Error.self) {
@@ -226,7 +226,7 @@ private func steam(_ paths: AppPaths) throws -> URL {
 private func ownedGame(_ paths: AppPaths) throws -> URL {
     try initializedBottle(paths)
     try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".archway-bottle.json"))
-    let game = paths.bottle.appendingPathComponent(GameGraphicsSidecars.gameRelativePath)
+    let game = paths.steamApps.appendingPathComponent("common/Example Game/Example.exe")
     try FileManager.default.createDirectory(at: game.deletingLastPathComponent(), withIntermediateDirectories: true)
     try Data("game".utf8).write(to: game)
     return game
@@ -373,7 +373,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let oldGI = try windowsDLL("dxgi.dll", in: gameDirectory, tag: 2)
     let old11Bytes = try Data(contentsOf: old11)
     let oldGIBytes = try Data(contentsOf: oldGI)
-    let manager = try GameGraphicsSidecars(paths: paths)
+    let manager = try GameGraphicsSidecars(paths: paths, gameDirectory: gameDirectory, backupName: "123")
     try manager.suspendForD3DMetal()
     #expect(try manager.installedBackend() == .d3dmetal)
     #expect(!FileManager.default.fileExists(atPath: old11.path))
@@ -393,59 +393,59 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(!FileManager.default.fileExists(atPath: manager.backupDirectory.path))
 }
 
-@Test func gameGraphicsSidecarsRollbackAndRejectEscapes() throws {
+@Test func gameGraphicsSidecarsFindNestedExecutablesAndRejectEscapes() throws {
     let directory = try temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
     let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("data"))
-    let game = try ownedGame(paths)
-    let gameDirectory = game.deletingLastPathComponent()
-    let old11 = try windowsDLL("d3d11.dll", in: gameDirectory, tag: 1)
-    let oldBytes = try Data(contentsOf: old11)
-    let package = directory.appendingPathComponent("package")
-    let new11 = try windowsDLL("d3d11.dll", in: package, tag: 2)
-    let newGI = try windowsDLL("dxgi.dll", in: package, tag: 3)
-    let manager = try GameGraphicsSidecars(paths: paths)
-    #expect(throws: Error.self) {
-        try manager.apply(["d3d11.dll": new11, "dxgi.dll": newGI], backend: .dxvk) { name in
-            if name == "dxgi.dll" { throw ArchwayError.invalidPath("injected copy failure") }
-        }
-    }
-    #expect(try Data(contentsOf: old11) == oldBytes)
-    #expect(!FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent("dxgi.dll").path))
-    #expect(try manager.installedBackend() == nil)
+    let gameDirectory = try ownedGame(paths).deletingLastPathComponent()
+    let binaries = gameDirectory.appendingPathComponent("Binaries")
+    try FileManager.default.createDirectory(at: binaries, withIntermediateDirectories: true)
+    try Data("game".utf8).write(to: binaries.appendingPathComponent("Shipping.exe"))
+    try Data("helper".utf8).write(to: binaries.appendingPathComponent("UnityCrashHandler64.exe"))
+    let nested = try windowsDLL("dxgi.dll", in: binaries, tag: 4)
+    let manager = try GameGraphicsSidecars(paths: paths, gameDirectory: gameDirectory, backupName: "123")
+    #expect(manager.executables.map(\.lastPathComponent) == ["Shipping.exe", "Example.exe"])
+    #expect(throws: Error.self) { try manager.requireD3DMetalReady() }
+    try manager.suspendForD3DMetal()
+    #expect(!FileManager.default.fileExists(atPath: nested.path))
+    #expect(FileManager.default.fileExists(atPath: manager.backupDirectory.appendingPathComponent("Binaries/dxgi.dll").path))
+    try manager.restore()
+    #expect(FileManager.default.fileExists(atPath: nested.path))
+
     let outside = directory.appendingPathComponent("outside.dll")
     try Data("outside".utf8).write(to: outside)
-    let linkedTarget = gameDirectory.appendingPathComponent("dxgi.dll")
+    let linkedTarget = gameDirectory.appendingPathComponent("d3d11.dll")
     try FileManager.default.createSymbolicLink(at: linkedTarget, withDestinationURL: outside)
-    #expect(throws: Error.self) { try manager.apply(["d3d11.dll": new11, "dxgi.dll": newGI], backend: .dxvk) }
+    #expect(throws: Error.self) { try manager.suspendForD3DMetal() }
     #expect(try Data(contentsOf: outside) == Data("outside".utf8))
-    try FileManager.default.removeItem(at: linkedTarget)
-    let linkedSource = package.appendingPathComponent("linked.dll")
-    try FileManager.default.createSymbolicLink(at: linkedSource, withDestinationURL: newGI)
-    #expect(throws: Error.self) { try manager.apply(["d3d11.dll": new11, "dxgi.dll": linkedSource], backend: .dxvk) }
-    let bad = package.appendingPathComponent("bad.dll")
-    try Data("not PE".utf8).write(to: bad)
-    #expect(throws: Error.self) { try manager.apply(["d3d11.dll": new11, "dxgi.dll": bad], backend: .dxvk) }
-    #expect(throws: Error.self) { try manager.apply(["d3d11.dll": new11, "dxgi.dll": newGI], backend: .d3dmetal) }
+    #expect(try manager.installedBackend() == nil)
+    for name in ["", "../escape", ".hidden", "a/b"] {
+        #expect(throws: Error.self) { try GameGraphicsSidecars(paths: paths, gameDirectory: gameDirectory, backupName: name) }
+    }
+    #expect(throws: Error.self) { try GameGraphicsSidecars(paths: paths, gameDirectory: directory, backupName: "123") }
 }
 
-@Test func d3dMetalGameGateRejectsDXVKAndNativeOverride() throws {
+@Test func d3dMetalGameGateRequiresBuiltinOverridesAfterMovingDLLs() throws {
     let directory = try temporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
     let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("data"))
     let game = try ownedGame(paths)
-    let profile = try GameGraphicsSidecars(paths: paths)
-    let registry = paths.bottle.appendingPathComponent("user.reg")
-    let section = "[Software\\\\Wine\\\\AppDefaults\\\\BrickByBrick.exe\\\\DllOverrides]\n"
-    try (section + "\"d3d11\"=\"native,builtin\"\n\"d3d12\"=\"builtin\"\n\"d3d12core\"=\"builtin\"\n\"dxgi\"=\"builtin\"\n")
-        .write(to: registry, atomically: true, encoding: .utf8)
-    #expect(throws: Error.self) { try profile.requireD3DMetalReady() }
-    try (section + "\"d3d11\"=\"builtin\"\n\"d3d12\"=\"builtin\"\n\"d3d12core\"=\"builtin\"\n\"dxgi\"=\"builtin\"\n")
-        .write(to: registry, atomically: true, encoding: .utf8)
-    let dxvk = try windowsDLL("d3d11.dll", in: game.deletingLastPathComponent(), tag: 3)
-    #expect(throws: Error.self) { try profile.requireD3DMetalReady() }
-    try FileManager.default.removeItem(at: dxvk)
+    let profile = try GameGraphicsSidecars(paths: paths, gameDirectory: game.deletingLastPathComponent(), backupName: "123")
+    // Nothing of its own beside the game: the runtime serves it as is.
     try profile.requireD3DMetalReady()
+    _ = try windowsDLL("d3d11.dll", in: game.deletingLastPathComponent(), tag: 3)
+    #expect(throws: Error.self) { try profile.requireD3DMetalReady() }
+    try profile.suspendForD3DMetal()
+    let registry = paths.bottle.appendingPathComponent("user.reg")
+    let section = "[Software\\\\Wine\\\\AppDefaults\\\\Example.exe\\\\DllOverrides]\n"
+    try (section + "\"d3d10\"=\"builtin\"\n\"d3d11\"=\"native,builtin\"\n\"d3d12\"=\"builtin\"\n\"d3d12core\"=\"builtin\"\n\"dxgi\"=\"builtin\"\n")
+        .write(to: registry, atomically: true, encoding: .utf8)
+    #expect(throws: Error.self) { try profile.requireD3DMetalReady() }
+    try (section + "\"d3d10\"=\"builtin\"\n\"d3d11\"=\"builtin\"\n\"d3d12\"=\"builtin\"\n\"d3d12core\"=\"builtin\"\n\"dxgi\"=\"builtin\"\n")
+        .write(to: registry, atomically: true, encoding: .utf8)
+    try profile.requireD3DMetalReady()
+    _ = try windowsDLL("d3d11.dll", in: game.deletingLastPathComponent(), tag: 5)
+    #expect(throws: Error.self) { try profile.requireD3DMetalReady() }
 }
 
 @Test func configurationRoundTripAndPathValidation() throws {
@@ -559,16 +559,15 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(silentInstaller.environment["WINEPREFIX"] == paths.bottle.path)
     #expect(silentInstaller.environment["WINEARCH"] == nil)
     let steamFile = try steam(paths)
-    #expect(try orchestrator.gameInstall(environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "steam://install/5228920"])
-    #expect(try orchestrator.gameInstall(webHelperShim: false, environment: source).arguments == [steamFile.path, "steam://install/5228920"])
-    #expect(try orchestrator.gameLaunch(environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "5228920"])
-    #expect(try orchestrator.gameLaunch(graphicsAPI: .d3d11, environment: source).arguments
-            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "5228920", "-force-d3d11"])
-    #expect(try orchestrator.gameLaunch(graphicsAPI: .d3d12, environment: source).arguments
-            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "5228920", "-force-d3d12"])
-    #expect(throws: Error.self) { try orchestrator.gameLaunch(appID: 123, graphicsAPI: .d3d12, environment: source) }
+    #expect(try orchestrator.gameInstall(appID: 123, environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "steam://install/123"])
+    #expect(try orchestrator.gameInstall(appID: 123, webHelperShim: false, environment: source).arguments == [steamFile.path, "steam://install/123"])
+    #expect(try orchestrator.gameLaunch(appID: 123, environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123"])
+    #expect(try orchestrator.gameLaunch(appID: 123, graphicsAPI: .d3d11, environment: source).arguments
+            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123", "-force-d3d11"])
+    #expect(try orchestrator.gameLaunch(appID: 123, graphicsAPI: .d3d12, environment: source).arguments
+            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123", "-force-d3d12"])
     #expect(throws: Error.self) { try GameGraphicsAPI.parse("vulkan") }
-    #expect(try orchestrator.gameLaunch(webHelperShim: false, environment: source).arguments == [steamFile.path, "-applaunch", "5228920"])
+    #expect(try orchestrator.gameLaunch(appID: 123, webHelperShim: false, environment: source).arguments == [steamFile.path, "-applaunch", "123"])
     let defaultOpen = try orchestrator.steamOpen(environment: source)
     #expect(defaultOpen.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles"])
     #expect(try orchestrator.steamOpen(webHelperShim: false, environment: source).arguments == [steamFile.path])
@@ -601,9 +600,9 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(throws: Error.self) { try SteamWineRenderer.parse("vulkan") }
     #expect(throws: Error.self) { try SteamWineRenderer.parse("") }
     #expect(try orchestrator.steamShutdown(environment: source).arguments == [steamFile.path, "-shutdown"])
-    let overrides = try orchestrator.d3dMetalGameOverrides(environment: source)
+    let overrides = try orchestrator.d3dMetalGameOverrides(executables: ["Example.exe"], environment: source)
     #expect(overrides.map { $0.arguments[4] } == ["d3d10", "d3d11", "d3d12", "d3d12core", "dxgi"])
-    #expect(overrides.allSatisfy { $0.arguments.prefix(3) == ["reg", "add", #"HKCU\Software\Wine\AppDefaults\BrickByBrick.exe\DllOverrides"#]
+    #expect(overrides.allSatisfy { $0.arguments.prefix(3) == ["reg", "add", #"HKCU\Software\Wine\AppDefaults\Example.exe\DllOverrides"#]
         && $0.arguments.suffix(3) == ["/d", "builtin", "/f"] && $0.environment["WINEPREFIX"] == paths.bottle.path })
     let wait = try orchestrator.wineserverWait(environment: source)
     #expect(wait.executable == server)
@@ -625,8 +624,8 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
                         withLibraries.steamOpen(environment: source),
                         withLibraries.steamShutdown(environment: source),
                         withLibraries.wineserverWait(environment: source),
-                        withLibraries.gameInstall(environment: source),
-                        withLibraries.gameLaunch(environment: source)]
+                        withLibraries.gameInstall(appID: 123, environment: source),
+                        withLibraries.gameLaunch(appID: 123, environment: source)]
     for request in requests {
         #expect(request.environment["WINEPREFIX"] == paths.bottle.path)
         #expect(request.environment["DYLD_LIBRARY_PATH"] == support.path)
@@ -644,8 +643,8 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
                                 withGraphics.steamOpen(environment: source),
                                 withGraphics.steamShutdown(environment: source),
                                 withGraphics.wineserverWait(environment: source),
-                                withGraphics.gameInstall(environment: source),
-                                withGraphics.gameLaunch(environment: source)]
+                                withGraphics.gameInstall(appID: 123, environment: source),
+                                withGraphics.gameLaunch(appID: 123, environment: source)]
     for request in graphicsRequests {
         #expect(request.environment["WINEPREFIX"] == paths.bottle.path)
         #expect(request.environment["DXVK_CONFIG_FILE"] == dxvk.path)
@@ -658,7 +657,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     try D3DMetalRuntimeOverlay(paths: paths, runtimeRoot: metalRuntime,
                                redist: D3DMetalRedist(root: metal)).stage()
     _ = try ownedGame(paths)
-    let gameOverrides = "[Software\\\\Wine\\\\AppDefaults\\\\BrickByBrick.exe\\\\DllOverrides]\n"
+    let gameOverrides = "[Software\\\\Wine\\\\AppDefaults\\\\Example.exe\\\\DllOverrides]\n"
         + ["d3d11", "d3d12", "d3d12core", "dxgi"].map { "\"\($0)\"=\"builtin\"\n" }.joined()
     try gameOverrides.write(to: paths.bottle.appendingPathComponent("user.reg"), atomically: true, encoding: .utf8)
     let withMetal = Orchestrator(paths: paths,
@@ -670,8 +669,8 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
                              withMetal.steamOpen(environment: source),
                              withMetal.steamShutdown(environment: source),
                              withMetal.wineserverWait(environment: source),
-                             withMetal.gameInstall(environment: source),
-                             withMetal.gameLaunch(environment: source)]
+                             withMetal.gameInstall(appID: 123, environment: source),
+                             withMetal.gameLaunch(appID: 123, environment: source)]
     for request in metalRequests {
         #expect(request.environment["WINEPREFIX"] == paths.bottle.path)
         #expect(request.environment["DXVK_CONFIG_FILE"] == nil)
@@ -684,8 +683,8 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     }
     for request in [try orchestrator.steamOpen(environment: source),
                     try orchestrator.steamShutdown(environment: source),
-                    try orchestrator.gameInstall(environment: source),
-                    try orchestrator.gameLaunch(environment: source)] {
+                    try orchestrator.gameInstall(appID: 123, environment: source),
+                    try orchestrator.gameLaunch(appID: 123, environment: source)] {
         #expect(request.workingDirectory == steamFile.deletingLastPathComponent())
     }
 }
@@ -810,7 +809,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
 }
 
 @Test func appIDsAndProcessFailures() throws {
-    #expect(try Orchestrator.appID("5228920") == 5_228_920)
+    #expect(try Orchestrator.appID("123") == 123)
     for invalid in ["0", "-1", "4294967296", "abc"] {
         #expect(throws: Error.self) { try Orchestrator.appID(invalid) }
     }
@@ -873,14 +872,14 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
 @Test func gameProcessesMatchWindowsCommandLines() {
     let ps = """
       101 /Applications/T3 Code.app/Contents/MacOS/T3 Code
-      202 C:\\Program Files (x86)\\Steam\\steamapps\\common\\Brick by Brick Tidy Up the Small Town!\\BrickByBrick.exe -force-d3d11
-      303 BrickByBrick.exe NoDefaultCurrentDirectoryInExePath=1
+      202 C:\\Program Files (x86)\\Steam\\steamapps\\common\\Example Game: Deluxe Edition!\\Example.exe -force-d3d11
+      303 Example.exe NoDefaultCurrentDirectoryInExePath=1
       404 C:\\Program Files (x86)\\Steam\\steam.exe -noverifyfiles
       505 /Users/me/Games/Other.EXE
     """
-    let found = GameProcesses.parse(psOutput: ps, imageNames: ["brickbybrick.exe", "other.exe"])
-    #expect(found == [.init(pid: 202, imageName: "brickbybrick.exe"),
-                      .init(pid: 303, imageName: "brickbybrick.exe"),
+    let found = GameProcesses.parse(psOutput: ps, imageNames: ["example.exe", "other.exe"])
+    #expect(found == [.init(pid: 202, imageName: "example.exe"),
+                      .init(pid: 303, imageName: "example.exe"),
                       .init(pid: 505, imageName: "other.exe")])
     #expect(GameProcesses.imageName(inCommandLine: "no executable here") == nil)
 }
@@ -898,12 +897,12 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     let manifest = """
     "AppState"
     {
-        "appid"\t\t"5228920"
-        "installdir"\t\t"Brick by Brick Tidy Up the Small Town!"
+        "appid"\t\t"123"
+        "installdir"\t\t"Example Game: Deluxe Edition!"
         "StateFlags"\t\t"4"
     }
     """
-    #expect(GameProcesses.value(of: "installdir", inManifest: manifest) == "Brick by Brick Tidy Up the Small Town!")
+    #expect(GameProcesses.value(of: "installdir", inManifest: manifest) == "Example Game: Deluxe Edition!")
     #expect(GameProcesses.value(of: "missing", inManifest: manifest) == nil)
 }
 
@@ -1056,7 +1055,7 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     let id = "com.example.archway"
     let own = ["Caches/\(id)", "WebKit/\(id)", "HTTPStorages/\(id)"].map { library.appendingPathComponent($0) }
     let foreign = library.appendingPathComponent("Caches/com.example.other")
-    for folder in [data.appendingPathComponent("bottles/steam-5228920")] + own + [foreign] {
+    for folder in [data.appendingPathComponent("bottles/steam")] + own + [foreign] {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     }
 

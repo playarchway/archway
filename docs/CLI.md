@@ -20,12 +20,12 @@ swift run archway open-steam --without-webhelper-shim
 swift run archway close-steam
 swift run archway open-steam --disable-cef-gpu
 swift run archway open-steam --wine-renderer gl
-swift run archway install-game
-swift run archway launch-game
+swift run archway install-game --app-id APP_ID
+swift run archway launch-game --app-id APP_ID
 swift run archway locations
 ```
 
-`--wineserver` is optional for normal launches but required for `close-steam`. The default game ID is `5228920`; `install-game` and `launch-game` also accept `--app-id` with a positive 32-bit Steam ID. Add `--data-dir '/absolute/path'` to any command for an isolated local probe. `archway locations` prints the default data directory, `~/Library/Application Support/Archway`. It contains `config.json`, `bottles/steam-5228920`, and `logs/`. Archway uses only this bottle as `WINEPREFIX`. It does not modify the native macOS Steam installation.
+`--wineserver` is optional for normal launches but required for `close-steam`. `install-game` and `launch-game` take the game's Steam app ID with `--app-id`, a positive 32-bit integer. `launch-game --graphics-api d3d11|d3d12` passes Unity's `-force-d3d11` or `-force-d3d12`; games built with other engines ignore it. Add `--data-dir '/absolute/path'` to any command for an isolated local probe. `archway locations` prints the default data directory, `~/Library/Application Support/Archway`. It contains `config.json`, `bottles/steam`, and `logs/`. Archway uses only this bottle as `WINEPREFIX`. It does not modify the native macOS Steam installation.
 
 Some local Wine builds require a separate directory of support libraries. If your selected runtime needs one, add `--library-dir '/absolute/path/to/support-libs'` to `configure`. Archway validates and saves one existing directory, then sets `DYLD_LIBRARY_PATH` to that directory for its Wine and wineserver requests. Inherited DYLD variables remain excluded. This is an optional local runtime setting, not a validated runtime distribution.
 
@@ -51,15 +51,15 @@ D3DMetal translates Direct3D 11 and 12 to Metal. It needs a Wine runtime with Cr
 archway check-d3dmetal --redist-lib REDIST_LIB
 archway stage-d3dmetal --redist-lib REDIST_LIB --runtime-root DATA/runtime-overlays/RUNTIME/Wine
 archway configure --wine DATA/runtime-overlays/RUNTIME/Wine/bin/wine --wineserver DATA/runtime-overlays/RUNTIME/Wine/bin/wineserver --backend d3dmetal --d3dmetal-dir REDIST_LIB
-archway launch-game
+archway launch-game --app-id APP_ID
 archway restore-d3dmetal --redist-lib REDIST_LIB --runtime-root DATA/runtime-overlays/RUNTIME/Wine
 ```
 
 Only a runtime clone inside the data directory's `runtime-overlays/` can be staged. Staging copies `D3DMetal.framework` and `libd3dshared.dylib` into `lib/external`, replaces the runtime's `d3d11`, `d3d12`, `d3d12core`, and `dxgi` builtins, and keeps the originals in a backup directory for `restore-d3dmetal`. Normal staging requires the runtime's `WhiskyWineVersion.plist` (beside `Wine/`) to declare `gptkCapable`; `--allow-unverified-runtime` is for isolated probes only, and such a runtime cannot be configured for launches. `bin/wine` may be a symlink to the loader.
 
-With `--backend d3dmetal`, `launch-game` prepares Brick by Brick on first use: it moves game-local DXVK DLLs to `graphics-backups/brick-by-brick` and sets game-only Wine `DllOverrides` for `d3d10`, `d3d11`, `d3d12`, `d3d12core`, and `dxgi` to `builtin` for `BrickByBrick.exe`. Steam itself is not switched to D3DMetal by these overrides.
+Some games ship their own Direct3D DLLs (for example DXVK) beside their executables, which Wine would load instead of D3DMetal. With `--backend d3dmetal`, `launch-game` and the app check the installed game's folder and one level below before each start. If they find `d3d11.dll`, `d3d12.dll`, `d3d12core.dll`, or `dxgi.dll` beside a game executable, they move them to `graphics-backups/APP_ID` and set game-only Wine `DllOverrides` for `d3d10`, `d3d11`, `d3d12`, `d3d12core`, and `dxgi` to `builtin` for each of the game's executables. Games without such DLLs are left as they are. Steam itself is not switched to D3DMetal by these overrides.
 
-CrossOver-based runtimes use the Windows user name `crossover`, while Archway's runtime uses your Mac user name, so switching between them moves the bottle's profile between `drive_c/users/crossover` and `drive_c/users/<you>`. Copy the game's saves (for Brick by Brick, `AppData/LocalLow/PaperPixelGames`) once after switching. `DXVK` remains selectable with `--backend dxvk --dxvk-config FILE --vulkan-icd FILE`.
+CrossOver-based runtimes use the Windows user name `crossover`, while Archway's runtime uses your Mac user name, so switching between them moves the bottle's profile between `drive_c/users/crossover` and `drive_c/users/<you>`. Copy the game's saves (often under `AppData/LocalLow` or `AppData/Roaming`) once after switching. `DXVK` remains selectable with `--backend dxvk --dxvk-config FILE --vulkan-icd FILE`.
 
 `doctor` reads state without creating the data directory. `init-bottle` waits at most five minutes for `wine wineboot -u`, then up to 30 seconds for Wine's registry file, which may appear after the command exits. It marks the bottle as owned before setup and ready only after both checks pass. An incomplete owned setup can be retried. Archway refuses to adopt an existing unmarked Wine prefix. On setup timeout it signals only the process group it started; Wine may leave a separately daemonized wineserver, which Archway does not stop. Installer, Steam, and game commands dispatch a GUI request and write subprocess output to a log. Repeated requests truncate a log once it exceeds 10 MiB; an active GUI process may still grow its log beyond that size. A sent request does **not** prove installation, process lifetime, or playability. After Steam login and game installation, manually test actual play, save, quit, relaunch, and save reload. A game counts as tested only after that sequence passes.
 

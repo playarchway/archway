@@ -11,7 +11,9 @@ final class CompatibilityStore {
     static let defaultCatalogURL = defaultEndpoints.catalog
     static let defaultReportURL = defaultEndpoints.reports
     private(set) var profiles: [Int: GameRuntimeProfile]
-    private(set) var catalog: CompatibilityCatalog?
+    private(set) var catalog: CompatibilityCatalog? { didSet { workingGameIDs = Self.workingGames(in: catalog) } }
+    /// Games most players report as working on their own, in any setup.
+    private(set) var workingGameIDs: Set<Int> = []
     private(set) var pendingReports: [CompatibilityReport]
     private(set) var submittedReports: [CompatibilityReport]
     private(set) var lastSubmissionError: String?
@@ -22,16 +24,17 @@ final class CompatibilityStore {
     init(paths: AppPaths) {
         self.paths = paths
         disk = CompatibilityDiskStore(directory: paths.dataDirectory)
-        profiles = disk.loadProfiles().filter { (try? $0.value.arguments(for: $0.key)) != nil }
+        profiles = disk.loadProfiles().filter { (try? $0.value.arguments()) != nil }
         catalog = disk.loadCatalog()
         pendingReports = disk.loadPending()
         submittedReports = disk.loadHistory()
+        workingGameIDs = Self.workingGames(in: catalog)
     }
 
     func profile(for gameID: Int) -> GameRuntimeProfile { profiles[gameID] ?? GameRuntimeProfile() }
 
     func save(_ profile: GameRuntimeProfile, for gameID: Int) throws {
-        _ = try profile.arguments(for: gameID)
+        _ = try profile.arguments()
         var updated = profiles
         updated[gameID] = profile
         try disk.saveProfiles(updated)
@@ -43,7 +46,7 @@ final class CompatibilityStore {
         let runtime = configuration?.wine.components(separatedBy: "/").first { $0.hasPrefix("archway-wine-") }
             .map { String($0.dropFirst("archway-wine-".count)) } ?? "Unknown"
         let backend = configuration?.selectedGraphicsBackend.rawValue ?? "Unknown"
-        let manifest = paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps/appmanifest_\(gameID).acf")
+        let manifest = paths.steamApps.appendingPathComponent("appmanifest_\(gameID).acf")
         let manifestText = try? String(contentsOf: manifest, encoding: .utf8)
         let buildID = manifestText.flatMap { text -> String? in
             guard let range = text.range(of: #""buildid"\s+"([^"]+)""#, options: .regularExpression) else { return nil }
@@ -55,6 +58,22 @@ final class CompatibilityStore {
                                     macOSVersion: "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)",
                                     chip: Self.machineIdentifier(), gameVersion: buildID ?? "Unknown",
                                     graphicsBackend: backend, profile: profile ?? self.profile(for: gameID))
+    }
+
+    /// What the library shows for a game: Steam games count as tested once the community reports them working.
+    func status(for game: LibraryGame) -> LibraryGame.Compatibility {
+        !game.isLocal && workingGameIDs.contains(game.id) ? .tested : game.compatibility
+    }
+
+    private static func workingGames(in catalog: CompatibilityCatalog?) -> Set<Int> {
+        var counts: [Int: (works: Int, total: Int)] = [:]
+        for aggregate in catalog?.aggregates ?? [] where aggregate.mode == .singleplayer {
+            let works = aggregate.counts[.works] ?? 0
+            let total = aggregate.counts.filter { $0.key != .notTested }.values.reduce(0, +)
+            counts[aggregate.gameID, default: (0, 0)].works += works
+            counts[aggregate.gameID, default: (0, 0)].total += total
+        }
+        return Set(counts.filter { $0.value.works > 0 && $0.value.works * 2 > $0.value.total }.keys)
     }
 
     private static func machineIdentifier() -> String {

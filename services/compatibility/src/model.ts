@@ -47,17 +47,16 @@ function boundedText(value: unknown, max: number, empty = false): value is strin
 function member<T extends string>(value: unknown, members: readonly T[]): value is T {
   return typeof value === 'string' && members.includes(value as T);
 }
-function validProfile(value: unknown, gameID: number): value is Profile {
-  if (!record(value) || !keys(value, ['launchArguments', 'graphicsAPI']) ||
-      !Array.isArray(value.launchArguments) || value.launchArguments.length > 12 ||
-      !value.launchArguments.every((arg: unknown) => boundedText(arg, 100) && Buffer.byteLength(arg) <= 100) ||
-      !member(value.graphicsAPI, graphicsAPIs)) return false;
-  return gameID === 5228920 || value.graphicsAPI === 'gameDefault';
+function validProfile(value: unknown): value is Profile {
+  return record(value) && keys(value, ['launchArguments', 'graphicsAPI']) &&
+    Array.isArray(value.launchArguments) && value.launchArguments.length <= 12 &&
+    value.launchArguments.every((arg: unknown) => boundedText(arg, 100) && Buffer.byteLength(arg) <= 100) &&
+    member(value.graphicsAPI, graphicsAPIs);
 }
-function validContext(value: unknown, gameID: number): value is Context {
+function validContext(value: unknown): value is Context {
   const fields = ['runtimeVersion', 'appVersion', 'macOSVersion', 'chip', 'gameVersion', 'graphicsBackend'];
   return record(value) && keys(value, [...fields, 'profile']) &&
-    fields.every((field) => boundedText(value[field], 100)) && validProfile(value.profile, gameID);
+    fields.every((field) => boundedText(value[field], 100)) && validProfile(value.profile);
 }
 export function parseReport(value: unknown): Report | null {
   if (!record(value) || !keys(value,
@@ -71,7 +70,7 @@ export function parseReport(value: unknown): Report | null {
       (issue !== undefined && issue !== null && !member(issue, issues)) ||
       (note !== undefined && note !== null &&
         (typeof note !== 'string' || [...graphemes.segment(note)].length > 500 || note.includes('\0'))) ||
-      !validContext(context, gameID as number) || typeof createdAt !== 'number' || !Number.isFinite(createdAt)) return null;
+      !validContext(context) || typeof createdAt !== 'number' || !Number.isFinite(createdAt)) return null;
   const timestamp = FOUNDATION_EPOCH_MS + createdAt * 1000;
   if (timestamp < Date.now() - 366 * 86400_000 || timestamp > Date.now() + 86400_000) return null;
   return {

@@ -14,15 +14,14 @@ extension Orchestrator {
         try steamWebHelperShim(shim: SteamWebHelperShim.bundledShim()).remove()
     }
 
-    /// Removes Brick by Brick's app-local DXVK files and sets its builtin Direct3D overrides, so the staged
-    /// D3DMetal runtime serves the game. Idempotent; does nothing for other backends.
-    public func prepareD3DMetalGame() throws {
-        guard configuration.selectedGraphicsBackend == .d3dmetal else { return }
-        let sidecars = try GameGraphicsSidecars(paths: paths)
-        if (try? sidecars.requireD3DMetalReady()) != nil { return }
+    /// Moves an installed game's own Direct3D DLLs aside and sets its builtin Direct3D overrides, so the staged
+    /// D3DMetal runtime serves the game. Idempotent; does nothing for other backends or games without such DLLs.
+    public func prepareD3DMetalGame(appID: Int) throws {
+        guard configuration.selectedGraphicsBackend == .d3dmetal, let sidecars = try graphicsSidecars(appID: appID),
+              (try? sidecars.requireD3DMetalReady()) == nil else { return }
         if let backend = try sidecars.installedBackend(), backend != .d3dmetal { try sidecars.restore() }
         if try sidecars.installedBackend() == nil { try sidecars.suspendForD3DMetal() }
-        for request in try d3dMetalGameOverrides() {
+        for request in try d3dMetalGameOverrides(executables: sidecars.executables.map(\.lastPathComponent)) {
             try ProcessRunner.runSetup(request, timeout: 60)
         }
         // A running wineserver writes user.reg about every 30 seconds.
@@ -45,6 +44,12 @@ extension Orchestrator {
                             environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         try request(arguments: ["taskkill", "/IM", imageName] + (force ? ["/F"] : []),
                     label: "game-stop", environment: environment)
+    }
+
+    /// The installed game's Direct3D files; nil while the game isn't installed.
+    func graphicsSidecars(appID: Int) throws -> GameGraphicsSidecars? {
+        guard let directory = steamInstallDirectory(appID: appID) else { return nil }
+        return try GameGraphicsSidecars(paths: paths, gameDirectory: directory, backupName: String(appID))
     }
 
     public var steamAppsDirectory: URL? {
@@ -70,21 +75,28 @@ public enum GameProcesses {
     /// Helpers that sit beside many games but are not the game itself.
     private static let ignoredExecutables = ["crashhandler", "crashreport", "unins", "redist", "setup", "dxsetup", "vc_"]
 
-    /// The game's own executables in its folder and one level below, lowercased.
-    public static func executableNames(in directory: URL) -> Set<String> {
+    /// The game's own executables in its folder and one level below.
+    public static func executables(in directory: URL) -> [URL] {
         let fm = FileManager.default
-        var names = Set<String>()
+        var files: [URL] = []
         let top = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
-        for item in top {
+        for item in top.sorted(by: { $0.path < $1.path }) {
             if item.pathExtension.lowercased() == "exe" {
-                names.insert(item.lastPathComponent.lowercased())
+                files.append(item)
             } else if (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                for nested in (try? fm.contentsOfDirectory(atPath: item.path)) ?? [] where nested.lowercased().hasSuffix(".exe") {
-                    names.insert(nested.lowercased())
-                }
+                let nested = (try? fm.contentsOfDirectory(at: item, includingPropertiesForKeys: nil)) ?? []
+                files += nested.filter { $0.pathExtension.lowercased() == "exe" }.sorted { $0.path < $1.path }
             }
         }
-        return names.filter { name in !ignoredExecutables.contains { name.contains($0) } }
+        return files.filter { file in
+            let name = file.lastPathComponent.lowercased()
+            return !ignoredExecutables.contains { name.contains($0) }
+        }
+    }
+
+    /// The game's own executable names, lowercased, as they show in the process list.
+    public static func executableNames(in directory: URL) -> Set<String> {
+        Set(executables(in: directory).map { $0.lastPathComponent.lowercased() })
     }
 
     /// Processes whose command line starts with one of the image names.

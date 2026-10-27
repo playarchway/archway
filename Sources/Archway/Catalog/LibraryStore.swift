@@ -14,12 +14,6 @@ final class LibraryStore {
         case failed(SteamCatalogError)
     }
 
-    /// Games Archway has verified, with the graphics backend that worked.
-    private static let profiles: [Int: (compatibility: LibraryGame.Compatibility, backend: String)] = [
-        5_228_920: (.tested, "D3DMetal"),
-    ]
-    private static let defaultBackend = "D3DMetal"
-
     private(set) var phase: Phase = .loading
     private(set) var steamGames: [LibraryGame] = [] { didSet { sortGames() } }
     private(set) var localGames: [LibraryGame] = [] { didSet { sortGames() } }
@@ -38,7 +32,6 @@ final class LibraryStore {
 
     private let paths: AppPaths
     private var cacheURL: URL { paths.dataDirectory.appendingPathComponent("steam-library-cache.json") }
-    private var steamapps: URL { paths.bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps") }
     private var localGamesURL: URL { paths.dataDirectory.appendingPathComponent("local-games.json") }
 
     init(paths: AppPaths) {
@@ -62,7 +55,7 @@ final class LibraryStore {
         do {
             let owned = try await SteamWebAPI(accessToken: token).ownedGames(steamID: steamID)
             if steamID != SteamSession.steamID { SteamSession.steamID = steamID }
-            let steamapps = steamapps
+            let steamapps = paths.steamApps
             apply(owned, installed: await Task.detached { Self.installedAppIDs(in: steamapps) }.value, fetchedAt: .now)
             saveCache(owned)
             phase = .ready
@@ -83,7 +76,7 @@ final class LibraryStore {
 
     /// Re-reads which Steam games are installed in the bottle, for example while Steam is installing one.
     func refreshInstalled() async {
-        let steamapps = steamapps
+        let steamapps = paths.steamApps
         let installed = await Task.detached { Self.installedAppIDs(in: steamapps) }.value
         // One assignment, and only on a change, so polling doesn't redraw the library.
         let updated = steamGames.map { game in
@@ -125,15 +118,13 @@ final class LibraryStore {
 
     private func apply(_ owned: [SteamWebAPI.OwnedGame], installed: Set<Int>, fetchedAt: Date) {
         steamGames = owned.map { game in
-            let profile = Self.profiles[game.appid]
             var entry = LibraryGame(
                 id: game.appid,
                 title: game.name ?? "App \(game.appid)",
                 playtimeMinutes: game.playtimeForever,
                 lastPlayedAt: game.rtimeLastPlayed.flatMap { $0 > 0 ? Date(timeIntervalSince1970: TimeInterval($0)) : nil },
                 isInstalled: installed.contains(game.appid),
-                compatibility: profile?.compatibility ?? .untested,
-                backend: profile?.backend ?? Self.defaultBackend)
+                compatibility: .untested)
             applySessionTotals(to: &entry)
             return entry
         }
@@ -180,7 +171,7 @@ final class LibraryStore {
     private func localGame(_ entry: LocalEntry) -> LibraryGame {
         LibraryGame(id: entry.id, title: entry.title, playtimeMinutes: 0, lastPlayedAt: nil,
                     isInstalled: FileManager.default.fileExists(atPath: entry.path),
-                    compatibility: .experimental, backend: Self.defaultBackend, executablePath: entry.path)
+                    compatibility: .experimental, executablePath: entry.path)
     }
 
     private func loadLocalGames() {
@@ -213,7 +204,7 @@ final class LibraryStore {
             phase = hasAccount ? .loading : .needsAccount
             return
         }
-        apply(cache.games, installed: Self.installedAppIDs(in: steamapps), fetchedAt: cache.fetchedAt)
+        apply(cache.games, installed: Self.installedAppIDs(in: paths.steamApps), fetchedAt: cache.fetchedAt)
         phase = .ready
     }
 

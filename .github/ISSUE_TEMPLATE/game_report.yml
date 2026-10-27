@@ -14,7 +14,7 @@ body:
     attributes:
       label: Game
       description: Its name and Steam app ID (the number in its store URL).
-      placeholder: "Brick by Brick: Tidy Up the Small Town! (5228920)"
+      placeholder: "Game name (Steam app ID)"
     validations:
       required: true
 

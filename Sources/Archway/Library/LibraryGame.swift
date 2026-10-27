@@ -59,8 +59,8 @@ struct LibraryGame: Identifiable, Hashable {
     var playtimeMinutes: Int
     var lastPlayedAt: Date?
     var isInstalled: Bool
+    /// Before community reports; `CompatibilityStore.status(for:)` has the full picture.
     var compatibility: Compatibility
-    var backend: String
     /// Set for games added from a local .exe; nil for Steam games.
     var executablePath: String? = nil
 

@@ -3,7 +3,10 @@ import Foundation
 public struct AppPaths: Sendable {
     public let dataDirectory: URL
     public var config: URL { dataDirectory.appendingPathComponent("config.json") }
-    public var bottle: URL { dataDirectory.appendingPathComponent("bottles/steam-5228920") }
+    /// The Windows environment with Steam and its games.
+    public var bottle: URL { dataDirectory.appendingPathComponent("bottles/steam") }
+    /// Where Windows Steam keeps its app manifests and games.
+    public var steamApps: URL { bottle.appendingPathComponent("drive_c/Program Files (x86)/Steam/steamapps") }
     public var logs: URL { dataDirectory.appendingPathComponent("logs") }
 
     /// Without a directory, the default under Application Support. Run `DataMigration` first for that one.

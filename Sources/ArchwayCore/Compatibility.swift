@@ -3,7 +3,7 @@ import Foundation
 /// Saved per-game launch arguments. Each entry is one literal argv value, never shell-evaluated.
 public struct GameRuntimeProfile: Codable, Hashable, Sendable {
     public var launchArguments: [String]
-    /// Only Brick by Brick currently has a verified graphics API switch.
+    /// Unity's Direct3D switch; other engines ignore it.
     public var graphicsAPI: GameGraphicsAPIChoice
 
     public init(launchArguments: [String] = [], graphicsAPI: GameGraphicsAPIChoice = .gameDefault) {
@@ -11,11 +11,10 @@ public struct GameRuntimeProfile: Codable, Hashable, Sendable {
         self.graphicsAPI = graphicsAPI
     }
 
-    public func arguments(for gameID: Int) throws -> [String] {
+    public func arguments() throws -> [String] {
         guard launchArguments.count <= 12,
-              launchArguments.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 100 && !$0.contains(where: \.isNewline) && !$0.contains("\0") }),
-              (gameID == Orchestrator.firstAppID || graphicsAPI == .gameDefault) else {
-            throw ArchwayError.invalidPath("Invalid game launch arguments or unsupported graphics API override.")
+              launchArguments.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 100 && !$0.contains(where: \.isNewline) && !$0.contains("\0") }) else {
+            throw ArchwayError.invalidPath("Invalid game launch arguments.")
         }
         return launchArguments + graphicsAPI.arguments
     }
@@ -253,9 +252,9 @@ public struct CompatibilityHTTPClient: Sendable {
                   aggregate.context.macOSVersion.count <= 100 &&
                   aggregate.context.chip.count <= 100 && aggregate.context.gameVersion.count <= 100 &&
                   aggregate.context.graphicsBackend.count <= 100 &&
-                  (try? aggregate.context.profile.arguments(for: aggregate.gameID)) != nil &&
+                  (try? aggregate.context.profile.arguments()) != nil &&
                   (aggregate.suggestedProfile == nil ||
-                   (try? aggregate.suggestedProfile?.arguments(for: aggregate.gameID)) != nil)
+                   (try? aggregate.suggestedProfile?.arguments()) != nil)
               }) else { throw CompatibilityTransportError.invalidResponse }
         return catalog
     }

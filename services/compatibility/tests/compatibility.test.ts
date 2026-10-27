@@ -38,7 +38,9 @@ test('strict report validation matches Swift wire format', () => {
   expect(parseReport({ ...valid, context: { ...valid.context, extra: 'bad' } })).toBeNull();
   expect(parseReport({ ...valid, createdAt: Date.now() / 1000 })).toBeNull();
   expect(parseReport({ ...valid, context: { ...valid.context,
-    profile: { launchArguments: [], graphicsAPI: 'd3d12' } } })).toBeNull();
+    profile: { launchArguments: [], graphicsAPI: 'd3d12' } } })).not.toBeNull();
+  expect(parseReport({ ...valid, context: { ...valid.context,
+    profile: { launchArguments: [], graphicsAPI: 'vulkan' } } })).toBeNull();
   expect(parseReport({ ...valid, features: { unknown: 'works' } })).toBeNull();
   expect(parseReport({ ...valid, note: 'x'.repeat(501) })).toBeNull();
 });

@@ -654,6 +654,16 @@
         }
       }
     },
+    "Only games made with Unity follow this setting.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Spiele, die mit Unity entwickelt wurden, folgen dieser Einstellung."
+          }
+        }
+      }
+    },
     "Open in Steam Store": {
       "localizations": {
         "de": {

@@ -2,7 +2,7 @@ import Foundation
 import ArchwayCore
 
 private let help = """
-Archway technical proof of concept (Brick by Brick, Steam app 5228920)
+Archway: Windows Steam games on macOS
 
 Usage: archway [--data-dir ABSOLUTE_PATH] COMMAND [OPTIONS]
 
@@ -19,8 +19,8 @@ Commands:
   install-steam --installer PATH [--silent] Send local Windows Steam installer to Wine
   open-steam [--disable-cef-gpu] [--cef-debugging [--cef-debug-port PORT]] [--wine-renderer gl] [--without-webhelper-shim]  Send Windows Steam launch request
   close-steam                               Ask owned Windows Steam to exit; wait for its Wine server
-  install-game [--app-id ID]                Request install through a Steam URI
-  launch-game [--app-id ID] [--graphics-api d3d11|d3d12] Request launch through Windows Steam
+  install-game --app-id ID                  Request install through a Steam URI
+  launch-game --app-id ID [--graphics-api d3d11|d3d12] Request launch through Windows Steam (Unity games honor --graphics-api)
 
 GUI commands only confirm that a request was sent. Check Steam, the game, and logs for results.
 open-steam, install-game, and launch-game install the steamwebhelper shim that keeps Steam's
@@ -295,12 +295,11 @@ private func run() throws {
             throw ArchwayError.invalidPath("--graphics-api is available only for launch-game.")
         }
         try requireNoExtras(arguments)
-        let appID = try rawID.map(Orchestrator.appID) ?? Orchestrator.firstAppID
+        guard let rawID else { throw ArchwayError.invalidPath("\(command) requires --app-id with the game's Steam app ID.") }
+        let appID = try Orchestrator.appID(rawID)
         let orchestrator = Orchestrator(paths: paths, configuration: try requiredConfiguration(store))
-        if command == "launch-game", appID == Orchestrator.firstAppID,
-           orchestrator.configuration.selectedGraphicsBackend == .d3dmetal {
-            print("Preparing Brick by Brick for D3DMetal (game-only builtin Direct3D overrides).")
-            try orchestrator.prepareD3DMetalGame()
+        if command == "launch-game", orchestrator.configuration.selectedGraphicsBackend == .d3dmetal {
+            try orchestrator.prepareD3DMetalGame(appID: Int(appID))
         }
         let shimActive = try applyWebHelperShim(orchestrator)
         let request = try command == "install-game"

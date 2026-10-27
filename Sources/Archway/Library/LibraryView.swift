@@ -362,6 +362,7 @@ private struct ShelfTile: View {
     @State private var tilt: CGSize = .zero
     @State private var coverSize: CGSize = .zero
     @Environment(GameRunner.self) private var runner
+    @Environment(CompatibilityStore.self) private var compatibility
 
     var body: some View {
         Button(action: onOpen) {
@@ -388,7 +389,7 @@ private struct ShelfTile: View {
                     .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.7), value: tilt)
                 Text(game.title).font(.callout.weight(.medium)).lineLimit(1)
                 HStack(spacing: 10) {
-                    CompatibilityBadge(compatibility: game.compatibility)
+                    CompatibilityBadge(compatibility: compatibility.status(for: game))
                     if game.isInstalled { Label("Installed", systemImage: "internaldrive").font(.caption) }
                 }
                 .foregroundStyle(.secondary)

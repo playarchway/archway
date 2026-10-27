@@ -41,7 +41,7 @@ Compatibility depends on the game, its engine and graphics API, and the versions
 
 ## Roadmap
 
-**Now:** the Steam library with installed and tested states, background setup, silent Steam installs, launching, and per-game graphics settings, validated end to end with Brick by Brick: Tidy Up the Small Town!
+**Now:** the Steam library with installed and tested states, background setup, silent Steam installs, launching, and per-game graphics settings, validated end to end with a first Steam game.
 
 **Next:**
 

@@ -30,13 +30,13 @@ struct AdvancedSettingsSheet: View {
                     .font(.caption).foregroundStyle(.secondary)
                 TextField("Game launch arguments (one per line)", text: $launchArguments, axis: .vertical)
                     .lineLimit(3...7)
-                if game.id == 5_228_920 {
-                    Picker("Graphics API", selection: $graphicsAPI) {
-                        Text("Game Default").tag(GameGraphicsAPIChoice.gameDefault)
-                        Text("Direct3D 11").tag(GameGraphicsAPIChoice.d3d11)
-                        Text("Direct3D 12").tag(GameGraphicsAPIChoice.d3d12)
-                    }
+                Picker("Graphics API", selection: $graphicsAPI) {
+                    Text("Game Default").tag(GameGraphicsAPIChoice.gameDefault)
+                    Text("Direct3D 11").tag(GameGraphicsAPIChoice.d3d11)
+                    Text("Direct3D 12").tag(GameGraphicsAPIChoice.d3d12)
                 }
+                Text("Only games made with Unity follow this setting.")
+                    .font(.caption).foregroundStyle(.secondary)
                 LabeledContent("Last Launch") {
                     Button("Export Log…", action: exportLog).disabled(logURL == nil)
                 }

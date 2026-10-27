@@ -1,12 +1,12 @@
 import Foundation
 
 public struct LaunchRequest: Equatable {
-    public let executable: URL
-    public let arguments: [String]
-    public let environment: [String: String]
-    public let log: URL
-    public let label: String
-    public let workingDirectory: URL?
+    public var executable: URL
+    public var arguments: [String]
+    public var environment: [String: String]
+    public var log: URL
+    public var label: String
+    public var workingDirectory: URL?
 
     public init(executable: URL, arguments: [String], environment: [String: String], log: URL, label: String,
                 workingDirectory: URL? = nil) {
@@ -31,7 +31,6 @@ public enum SteamWineRenderer: String {
 }
 
 public struct Orchestrator {
-    public static let firstAppID: UInt32 = 5_228_920
     public let paths: AppPaths
     public let configuration: Configuration
 
@@ -117,10 +116,11 @@ public struct Orchestrator {
     }
 
     public func steamExecutable() -> URL? {
-        let candidates = ["drive_c/Program Files (x86)/Steam/steam.exe", "drive_c/Program Files/Steam/steam.exe"]
+        let candidates = [paths.steamApps.deletingLastPathComponent(),
+                          paths.bottle.appendingPathComponent("drive_c/Program Files/Steam")]
         let bottleRoot = paths.bottle.resolvingSymlinksInPath().path + "/"
         for candidate in candidates {
-            let file = paths.bottle.appendingPathComponent(candidate)
+            let file = candidate.appendingPathComponent("steam.exe")
             let resolved = file.resolvingSymlinksInPath()
             if resolved.path.hasPrefix(bottleRoot), FileManager.default.isReadableFile(atPath: file.path),
                (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true {
@@ -139,10 +139,9 @@ public struct Orchestrator {
 
     func windowsRequest(_ windowsExecutable: URL, arguments: [String], label: String,
                                 environment: [String: String]) throws -> LaunchRequest {
-        let base = try request(arguments: [windowsExecutable.path] + arguments, label: label, environment: environment)
-        return LaunchRequest(executable: base.executable, arguments: base.arguments,
-                             environment: base.environment, log: base.log, label: base.label,
-                             workingDirectory: windowsExecutable.deletingLastPathComponent())
+        var request = try request(arguments: [windowsExecutable.path] + arguments, label: label, environment: environment)
+        request.workingDirectory = windowsExecutable.deletingLastPathComponent()
+        return request
     }
 
     private func runtimeEnvironment(_ source: [String: String]) throws -> [String: String] {
@@ -206,14 +205,9 @@ public struct Orchestrator {
         if disableCEFGPU { flags.append("-cef-disable-gpu") }
         if enableCEFDebugging { flags.append("-cef-enable-debugging") }
         if let cefDebugPort { flags += ["-devtools-port", String(cefDebugPort)] }
-        let base = try windowsRequest(steam, arguments: flags,
-                                      label: "steam-open", environment: environment)
-        guard let wineRenderer else { return base }
-        var scopedEnvironment = base.environment
-        scopedEnvironment["WINE_D3D_CONFIG"] = "renderer=\(wineRenderer.rawValue)"
-        return LaunchRequest(executable: base.executable, arguments: base.arguments,
-                             environment: scopedEnvironment, log: base.log, label: base.label,
-                             workingDirectory: base.workingDirectory)
+        var request = try windowsRequest(steam, arguments: flags, label: "steam-open", environment: environment)
+        if let wineRenderer { request.environment["WINE_D3D_CONFIG"] = "renderer=\(wineRenderer.rawValue)" }
+        return request
     }
 
     public func steamShutdown(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
@@ -229,7 +223,7 @@ public struct Orchestrator {
                              log: paths.logs.appendingPathComponent("steam-shutdown-wait.log"), label: "steam-shutdown-wait")
     }
 
-    public func gameInstall(appID: UInt32 = firstAppID, webHelperShim: Bool = true,
+    public func gameInstall(appID: UInt32, webHelperShim: Bool = true,
                             environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         let steam = try requiredSteam()
         // Steam may not be running yet, so these requests can start it like open-steam.
@@ -238,26 +232,27 @@ public struct Orchestrator {
                                   label: "game-install-\(appID)", environment: environment)
     }
 
-    /// Wine builtin overrides that route only Brick by Brick's Direct3D to the staged D3DMetal runtime.
-    public func d3dMetalGameOverrides(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> [LaunchRequest] {
-        try ["d3d10", "d3d11", "d3d12", "d3d12core", "dxgi"].map { name in
-            try request(arguments: ["reg", "add", #"HKCU\Software\Wine\AppDefaults\BrickByBrick.exe\DllOverrides"#,
-                                    "/v", name, "/d", "builtin", "/f"],
-                        label: "d3dmetal-game-overrides", environment: environment)
+    /// Wine builtin overrides that route only these executables' Direct3D to the staged D3DMetal runtime.
+    public func d3dMetalGameOverrides(executables: [String],
+                                      environment: [String: String] = ProcessInfo.processInfo.environment) throws -> [LaunchRequest] {
+        try executables.flatMap { executable in
+            try GameGraphicsSidecars.builtinLibraries.map { name in
+                try request(arguments: ["reg", "add", #"HKCU\Software\Wine\AppDefaults\"# + executable + #"\DllOverrides"#,
+                                        "/v", name, "/d", "builtin", "/f"],
+                            label: "d3dmetal-game-overrides", environment: environment)
+            }
         }
     }
 
-    /// `silent` keeps Steam's own window closed when Steam starts for the game.
-    public func gameLaunch(appID: UInt32 = firstAppID, graphicsAPI: GameGraphicsAPI? = nil, webHelperShim: Bool = true,
+    /// `silent` keeps Steam's own window closed when Steam starts for the game. `graphicsAPI` uses Unity's
+    /// switches, so other engines ignore it.
+    public func gameLaunch(appID: UInt32, graphicsAPI: GameGraphicsAPI? = nil, webHelperShim: Bool = true,
                            silent: Bool = false, gameArguments additionalGameArguments: [String] = [],
                            environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
-        guard graphicsAPI == nil || appID == Self.firstAppID else {
-            throw ArchwayError.invalidPath("--graphics-api is currently supported only for Brick by Brick (5228920).")
-        }
-        // Brick by Brick ships its own DXVK DLLs, so only its game profile must be prepared; other games
-        // use the runtime's staged D3DMetal builtins directly.
-        if configuration.selectedGraphicsBackend == .d3dmetal, appID == Self.firstAppID {
-            try GameGraphicsSidecars(paths: paths).requireD3DMetalReady()
+        // Games that ship their own Direct3D DLLs need them moved aside first (`prepareD3DMetalGame`);
+        // all others use the runtime's staged D3DMetal builtins directly.
+        if configuration.selectedGraphicsBackend == .d3dmetal {
+            try graphicsSidecars(appID: Int(appID))?.requireD3DMetalReady()
         }
         let steam = try requiredSteam()
         let shimArguments = webHelperShim ? SteamWebHelperShim.launchArguments : []

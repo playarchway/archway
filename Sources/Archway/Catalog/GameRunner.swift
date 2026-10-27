@@ -382,7 +382,7 @@ final class GameRunner {
 
     /// Starts the game and returns the image names that identify its processes.
     nonisolated private func launch(_ game: LibraryGame, profile: GameRuntimeProfile) throws -> Set<String> {
-        let arguments = try profile.arguments(for: game.id)
+        let arguments = try profile.arguments()
         if let path = game.executablePath {
             let executable = URL(fileURLWithPath: path)
             try ProcessRunner.startGUIProcess(orchestrator().localGameLaunch(executable: executable, label: Self.logLabel(for: game),
@@ -391,7 +391,7 @@ final class GameRunner {
         }
         let orchestrator = try orchestrator()
         let folder = orchestrator.steamInstallDirectory(appID: game.id)
-        if game.id == Orchestrator.firstAppID { try orchestrator.prepareD3DMetalGame() }
+        try orchestrator.prepareD3DMetalGame(appID: game.id)
         let shimActive = try orchestrator.prepareSteam()
         try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive,
                                                                  silent: true, gameArguments: arguments))

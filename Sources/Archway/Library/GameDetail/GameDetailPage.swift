@@ -169,7 +169,7 @@ struct GameDetailPage: View {
                         .font(.system(size: 36, weight: .bold))
                         .lineLimit(2)
                     if let byline { Text(byline).font(.title3).foregroundStyle(.secondary) }
-                    StatusPill(compatibility: game.compatibility)
+                    StatusPill(compatibility: compatibility.status(for: game))
                     actions.padding(.top, 6)
                 }
                 .opacity(hasAppeared ? 1 : 0)

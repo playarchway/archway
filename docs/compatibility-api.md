@@ -8,7 +8,7 @@ Archway reads two HTTPS URLs from Settings: a catalog URL for `GET` and a submis
 
 Dates are numeric seconds since 2001-01-01 UTC, the default Swift `JSONEncoder` format. No Steam account identifier, executable path, logs, or playtime is included. The optional note is limited to 500 characters. Report payloads are limited to 16 KB.
 
-The context object has `runtimeVersion`, `appVersion`, `macOSVersion`, `chip`, `gameVersion`, `graphicsBackend`, and `profile`. Unknown values are the literal string `Unknown`. Profile has `launchArguments` (each a literal argv token, no shell expansion) and `graphicsAPI` (`gameDefault`, `d3d11`, or `d3d12`). The graphics API choices other than default are currently accepted only for Steam app 5228920. The graphics backend is shared by the Steam bottle; it is reported but cannot be selected per game. Catalog counts appear as a current configuration match only when all context fields match; other configurations are shown separately.
+The context object has `runtimeVersion`, `appVersion`, `macOSVersion`, `chip`, `gameVersion`, `graphicsBackend`, and `profile`. Unknown values are the literal string `Unknown`. Profile has `launchArguments` (each a literal argv token, no shell expansion) and `graphicsAPI` (`gameDefault`, `d3d11`, or `d3d12`). `d3d11` and `d3d12` pass Unity's `-force-d3d11` and `-force-d3d12`; games built with other engines ignore them. The graphics backend is shared by the Steam bottle; it is reported but cannot be selected per game. Catalog counts appear as a current configuration match only when all context fields match; other configurations are shown separately.
 
 Illustrative catalog (these are not actual test results):
 

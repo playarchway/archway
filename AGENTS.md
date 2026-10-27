@@ -13,7 +13,7 @@ Tell sessions apart by prefix instead:
 
 | Prefix (under the current default data directory) | Owner and purpose |
 |---|---|
-| `bottles/steam-5228920` | The default bottle of the Archway app and CLI: the developer's Windows Steam and games, on Archway's own Wine runtime package (`runtime-overlays/archway-wine-<version>`) with D3DMetal staged. Start and stop it only through `archway` or the app. |
+| `bottles/steam` | The default bottle of the Archway app and CLI: the developer's Windows Steam and games, on Archway's own Wine runtime package (`runtime-overlays/archway-wine-<version>`) with D3DMetal staged. Start and stop it only through `archway` or the app. |
 
 ## Commits
 

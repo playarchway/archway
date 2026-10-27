@@ -14,13 +14,12 @@ import Testing
     }
 }
 
-@Test func gameProfileArgumentsAreLiteralAndScoped() throws {
+@Test func gameProfileArgumentsAreLiteral() throws {
     let profile = GameRuntimeProfile(launchArguments: ["-dx12", "a b"], graphicsAPI: .gameDefault)
-    #expect(try profile.arguments(for: 1144200) == ["-dx12", "a b"])
-    let special = GameRuntimeProfile(launchArguments: ["-windowed"], graphicsAPI: .d3d11)
-    #expect(try special.arguments(for: Int(Orchestrator.firstAppID)) == ["-windowed", "-force-d3d11"])
-    #expect(throws: ArchwayError.self) { try special.arguments(for: 1144200) }
-    #expect(throws: ArchwayError.self) { try GameRuntimeProfile(launchArguments: ["bad\nvalue"]).arguments(for: 1144200) }
+    #expect(try profile.arguments() == ["-dx12", "a b"])
+    let forced = GameRuntimeProfile(launchArguments: ["-windowed"], graphicsAPI: .d3d11)
+    #expect(try forced.arguments() == ["-windowed", "-force-d3d11"])
+    #expect(throws: ArchwayError.self) { try GameRuntimeProfile(launchArguments: ["bad\nvalue"]).arguments() }
 }
 
 @Test func compatibilityDiskAndWireRoundTrip() throws {

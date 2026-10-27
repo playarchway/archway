@@ -141,7 +141,7 @@ struct CompatibilityFeedbackSheet: View {
     private var sentFields: [(String, String)] {
         let context = session.context
         let arguments = context.profile.launchArguments.joined(separator: " ")
-        var fields = [
+        return [
             (String(localized: "Game ID"), String(session.game.id)),
             (String(localized: "Archway version"), context.appVersion),
             (String(localized: "Wine runtime"), context.runtimeVersion),
@@ -150,11 +150,8 @@ struct CompatibilityFeedbackSheet: View {
             (String(localized: "Game build"), context.gameVersion),
             (String(localized: "Graphics backend"), context.graphicsBackend),
             (String(localized: "Launch arguments"), arguments.isEmpty ? String(localized: "None") : arguments),
+            (String(localized: "Graphics API"), context.profile.graphicsAPI.label),
         ]
-        if session.game.id == Orchestrator.firstAppID {
-            fields.append((String(localized: "Graphics API"), context.profile.graphicsAPI.label))
-        }
-        return fields
     }
 
     private func submit() {

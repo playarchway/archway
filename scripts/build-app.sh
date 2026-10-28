@@ -57,6 +57,8 @@ rm -rf "$app/Contents/Frameworks/Sparkle.framework/XPCServices" "$app/Contents/F
 # Sparkle's MIT license asks for its notice in every copy.
 mkdir -p "$app/Contents/Resources/Licenses"
 cp .build/artifacts/sparkle/Sparkle/LICENSE "$app/Contents/Resources/Licenses/Sparkle-LICENSE.txt"
+# Settings → Licenses shows Archway's own license too.
+cp LICENSE "$app/Contents/Resources/Licenses/Archway-LICENSE.txt"
 cp -R "$bin"/Archway_*.bundle "$app/Contents/Resources/"
 # SwiftUI looks up its strings in the main bundle. Not every SwiftPM toolchain compiles string catalogs,
 # so compile it here.

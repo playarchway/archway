@@ -2567,16 +2567,6 @@
         }
       }
     },
-    "[Sparkle](https://sparkle-project.org) installs updates. MIT License:": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "[Sparkle](https://sparkle-project.org) installiert Updates. MIT-Lizenz:"
-          }
-        }
-      }
-    },
     "Downloaded with the Wine runtime": {
       "localizations": {
         "de": {
@@ -2587,52 +2577,62 @@
         }
       }
     },
-    "[Wine](https://www.winehq.org) with Archway's changes from [archway-wine](https://github.com/playarchway/archway-wine): GNU Lesser General Public License, version 2.1 or later.": {
+    "General": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "[Wine](https://www.winehq.org) mit Archways Änderungen aus [archway-wine](https://github.com/playarchway/archway-wine): GNU Lesser General Public License, Version 2.1 oder neuer."
+            "value": "Allgemein"
           }
         }
       }
     },
-    "[FreeType](https://freetype.org): FreeType License.": {
+    "Licenses": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "[FreeType](https://freetype.org): FreeType-Lizenz."
+            "value": "Lizenzen"
           }
         }
       }
     },
-    "[Wine Mono](https://github.com/wine-mono/wine-mono): MIT License, with parts under other open source licenses.": {
+    "The licenses of the open source software in Archway and its Windows runtime are in Settings, under Licenses.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "[Wine Mono](https://github.com/wine-mono/wine-mono): MIT-Lizenz, mit Teilen unter anderen Open-Source-Lizenzen."
+            "value": "Die Lizenzen der Open-Source-Software in Archway und seiner Windows-Laufzeit findest du in den Einstellungen unter „Lizenzen“."
           }
         }
       }
     },
-    "D3DMetal from Apple's Game Porting Toolkit: © Apple Inc., passed on unmodified and for non-commercial use under Apple's license.": {
+    "The license texts come from the installed Windows runtime. [archway-runtime](https://github.com/playarchway/archway-runtime) describes how it is built.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "D3DMetal aus Apples Game Porting Toolkit: © Apple Inc., unverändert und nicht-kommerziell unter Apples Lizenz weitergegeben."
+            "value": "Die Lizenztexte stammen aus der installierten Windows-Laufzeit. [archway-runtime](https://github.com/playarchway/archway-runtime) beschreibt, wie sie gebaut wird."
           }
         }
       }
     },
-    "The license files are in the runtime package; [archway-runtime](https://github.com/playarchway/archway-runtime) describes how it is built.": {
+    "The license is on the project page.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Lizenzdateien liegen im Paket der Windows-Laufzeit; [archway-runtime](https://github.com/playarchway/archway-runtime) beschreibt, wie es gebaut wird."
+            "value": "Die Lizenz steht auf der Projektseite."
+          }
+        }
+      }
+    },
+    "Open Project Page": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Projektseite öffnen"
           }
         }
       }

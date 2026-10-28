@@ -10,6 +10,7 @@ struct ArchwayApp: App {
     @State private var compatibility: CompatibilityStore?
     @State private var setup: SetupModel?
     @State private var storage: StorageModel?
+    @State private var paths: AppPaths?
     private let startupError: String?
     /// Sparkle checks the appcast from Info.plist; the bare SwiftPM binary has none and doesn't update itself.
     private let updater = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") == nil ? nil
@@ -25,6 +26,7 @@ struct ArchwayApp: App {
             _runner = State(initialValue: GameRunner(paths: paths, store: store, compatibility: compatibility))
             _setup = State(initialValue: SetupModel(paths: paths))
             _storage = State(initialValue: StorageModel(paths: paths))
+            _paths = State(initialValue: paths)
             startupError = nil
         } catch {
             _store = State(initialValue: nil)
@@ -32,6 +34,7 @@ struct ArchwayApp: App {
             _compatibility = State(initialValue: nil)
             _setup = State(initialValue: nil)
             _storage = State(initialValue: nil)
+            _paths = State(initialValue: nil)
             startupError = String(localized: "Archway couldn't open its data folder in Application Support.")
         }
         // Started through SwiftPM without an app bundle; make it a regular foreground app.
@@ -75,8 +78,13 @@ struct ArchwayApp: App {
         }
 
         Settings {
-            AppSettingsView(runner: runner, setup: setup, storage: storage, compatibility: compatibility)
-                .preferredColorScheme(.dark)
+            TabView {
+                AppSettingsView(runner: runner, setup: setup, storage: storage, compatibility: compatibility)
+                    .tabItem { Label("General", systemImage: "gearshape") }
+                LicensesView(paths: paths)
+                    .tabItem { Label("Licenses", systemImage: "doc.text") }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }

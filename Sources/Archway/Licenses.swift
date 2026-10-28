@@ -8,7 +8,7 @@ struct OpenSourceNotice: Identifiable {
     let version: String?
     let license: String
     let url: URL
-    /// Nil until the Windows runtime that carries it is installed; runtimes before 11.20-e51c772 lack Wine Mono's.
+    /// Nil until the Windows runtime that carries it is installed; runtimes built before October 29, 2026 lack Wine Mono's.
     let text: String?
 
     var id: String { name }

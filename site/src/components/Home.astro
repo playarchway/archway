@@ -1,0 +1,204 @@
+---
+import { getImage } from "astro:assets";
+import Layout from "../layouts/Layout.astro";
+import Header from "./Header.astro";
+import Footer from "./Footer.astro";
+import { DOWNLOAD_URL } from "../lib/releases";
+import type { Lang } from "../i18n";
+import heroArt from "../assets/hero.jpg";
+
+interface Props {
+  lang: Lang;
+}
+
+const copy = {
+  en: {
+    title: "Archway: Windows games on your Mac",
+    description: "Archway is a free, open-source Mac app for the Windows games you already own on Steam.",
+    heroAlt: "A glowing glass arch in a dark room, a sunset village inside",
+    tagline: "Your Windows games, on your Mac.",
+    intro: "A free Mac app for the games you already own on Steam. Pick one and play.",
+    download: "Download for Mac",
+    requirements: "Apple silicon · macOS 15 or later",
+    facts: [
+      ["Play what you own", "Your Steam library, and your own .exe files."],
+      ["A real Mac app", "Covers, one button, Steam out of sight."],
+      ["Free and open source", "Removing it takes everything it added."],
+    ],
+  },
+  de: {
+    title: "Archway: Windows-Spiele auf deinem Mac",
+    description: "Archway ist eine kostenlose Open-Source-App für den Mac, mit der du die Windows-Spiele spielst, die du schon auf Steam hast.",
+    heroAlt: "Ein leuchtender Glasbogen in einem dunklen Raum, darin ein Dorf im Abendlicht",
+    tagline: "Deine Windows-Spiele, auf deinem Mac.",
+    intro: "Eine kostenlose Mac-App für die Spiele, die du schon auf Steam hast. Spiel aussuchen und loslegen.",
+    download: "Für Mac laden",
+    requirements: "Apple silicon · ab macOS 15",
+    facts: [
+      ["Spiel, was du hast", "Deine Steam-Bibliothek und deine eigenen .exe-Dateien."],
+      ["Eine echte Mac-App", "Cover, ein Knopf, Steam bleibt aus dem Blick."],
+      ["Kostenlos und Open Source", "Beim Entfernen verschwindet alles, was es mitgebracht hat."],
+    ],
+  },
+} as const;
+
+const { lang } = Astro.props;
+const text = copy[lang];
+const hero = await getImage({ src: heroArt, width: 1536, format: "webp" });
+---
+
+<Layout title={text.title} description={text.description} lang={lang} page="home">
+  <Header lang={lang} page="home" />
+
+  <main>
+    <section class="hero">
+      <div class="scene">
+        <img src={hero.src} width="1536" height="1024" alt={text.heroAlt} />
+      </div>
+
+      <div class="copy">
+        <h1>Archway</h1>
+        <p class="tagline">{text.tagline}</p>
+        <p>{text.intro}</p>
+        <a class="download" href={DOWNLOAD_URL}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14" />
+          </svg>
+          {text.download}
+        </a>
+        <span class="meta">{text.requirements}</span>
+      </div>
+    </section>
+
+    <ul class="facts">
+      {text.facts.map(([title, body]) => <li><strong>{title}</strong>{body}</li>)}
+    </ul>
+  </main>
+
+  <Footer lang={lang} />
+</Layout>
+
+<style>
+  /* Hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 1.5rem 8rem;
+    overflow: hidden;
+  }
+  .scene {
+    position: relative;
+    width: 100vw;
+    height: clamp(22rem, 62svh, 44rem);
+    mask-image: linear-gradient(#000 70%, transparent);
+  }
+  .scene img {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: 100%;
+    width: auto;
+    translate: -50% 0;
+    mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  }
+  .copy {
+    position: relative;
+    max-width: 44rem;
+    margin-top: -6rem;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(3.5rem, 9vw, 6.5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    background: linear-gradient(var(--bone) 40%, var(--glow));
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 28px rgba(240, 130, 18, 0.45));
+  }
+  .copy .tagline {
+    margin: 1rem auto 0.75rem;
+    max-width: none;
+    color: var(--bone);
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+  .copy p {
+    margin: 0 auto 2rem;
+    max-width: 30rem;
+    color: var(--ash);
+    font-size: 1.125rem;
+    text-wrap: balance;
+  }
+  .download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.9rem 1.6rem;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #1d1000;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 50px rgba(255, 181, 71, 0.35);
+    transition:
+      background 0.2s,
+      translate 0.3s var(--ease);
+  }
+  .download:hover {
+    background: var(--glow);
+    translate: 0 -2px;
+  }
+  .download svg {
+    width: 18px;
+    height: 18px;
+  }
+  .meta {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--ash);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Facts */
+  .facts {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 6rem;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    color: var(--ash);
+    font-size: 0.975rem;
+  }
+  .facts li {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+  .facts strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--bone);
+    font-weight: 600;
+  }
+
+  @media (max-width: 760px) {
+    .scene {
+      height: 26rem;
+    }
+    .copy {
+      margin-top: -4rem;
+    }
+    .facts {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+</style>

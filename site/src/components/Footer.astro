@@ -1,0 +1,44 @@
+---
+import { GITHUB_URL, t, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const text = t(lang);
+---
+
+<footer>
+  <p>{text.footer}</p>
+  <nav>
+    <a href={GITHUB_URL}>{text.source}</a>
+  </nav>
+</footer>
+
+<style>
+  footer {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    color: #786d5e;
+    font-size: 0.85rem;
+  }
+  p {
+    margin: 0;
+    max-width: 40rem;
+  }
+  nav {
+    display: flex;
+    gap: 1.25rem;
+    white-space: nowrap;
+  }
+  @media (max-width: 760px) {
+    footer {
+      flex-direction: column;
+    }
+  }
+</style>

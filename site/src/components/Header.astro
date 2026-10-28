@@ -1,0 +1,58 @@
+---
+import { getImage } from "astro:assets";
+import { GITHUB_URL, paths, other, t, type Lang, type Page } from "../i18n";
+import icon from "../../../Sources/Archway/Resources/AppIcon.png";
+
+interface Props {
+  lang: Lang;
+  page: Page;
+}
+
+const { lang, page } = Astro.props;
+const brand = await getImage({ src: icon, width: 64, format: "webp" });
+---
+
+<header class="bar">
+  <a class="brand" href={paths.home[lang]}><img src={brand.src} width="28" height="28" alt="" />Archway</a>
+  <nav>
+    <a href={paths[page][other(lang)]} hreflang={other(lang)} lang={other(lang)}>{t(lang).switchLanguage}</a>
+    <a href={GITHUB_URL}>GitHub</a>
+  </nav>
+</header>
+
+<style>
+  .bar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    font-size: 0.95rem;
+    color: var(--ash);
+  }
+  .bar a {
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .bar a:hover {
+    color: var(--bone);
+  }
+  nav {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    color: var(--bone);
+  }
+  @media (max-width: 760px) {
+    .bar {
+      padding: 1rem 1.25rem;
+    }
+  }
+</style>

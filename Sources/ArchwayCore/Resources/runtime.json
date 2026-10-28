@@ -1,6 +1,6 @@
 {
-  "version": "11.20-cacd686",
-  "url": "https://github.com/playarchway/archway/releases/download/runtime-11.20-cacd686/archway-wine-11.20-cacd686.tar.xz",
-  "sha256": "eebb3693658d31c2971fb19e0b710f28004fccdd5bca6469004734e387d84ed8",
-  "size": 151664660
+  "version": "11.20-e51c772",
+  "url": "https://github.com/playarchway/archway-runtime/releases/download/11.20-e51c772/archway-wine-11.20-e51c772.tar.xz",
+  "sha256": "7e48aab6ac2a036423ceaf9a3f98f62a4ae6b79c1cfbe010bebbf4a9564b0d09",
+  "size": 151655076
 }

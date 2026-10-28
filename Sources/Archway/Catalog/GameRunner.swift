@@ -390,9 +390,8 @@ final class GameRunner {
         let orchestrator = try orchestrator()
         let folder = orchestrator.steamInstallDirectory(appID: game.id)
         try orchestrator.prepareD3DMetalGame(appID: game.id)
-        let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), webHelperShim: shimActive,
-                                                                 silent: true, gameArguments: arguments))
+        try ProcessRunner.sendGUIRequest(orchestrator.gameLaunch(appID: UInt32(game.id), silent: true,
+                                                                 gameArguments: arguments))
         return folder.map(GameProcesses.executableNames) ?? []
     }
 
@@ -435,10 +434,8 @@ final class GameRunner {
     }
 
     nonisolated private func restartSteamSilently() throws {
-        let orchestrator = try orchestrator()
         try closeSteam()
-        let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive, silent: true))
+        try ProcessRunner.sendGUIRequest(orchestrator().steamOpen(silent: true))
     }
 
     nonisolated private func installState(appID: Int) -> (Orchestrator.SteamInstallPhase?, Double?) {
@@ -447,9 +444,7 @@ final class GameRunner {
     }
 
     nonisolated private func openSteamWindow() throws {
-        let orchestrator = try orchestrator()
-        let shimActive = try orchestrator.prepareSteam()
-        try ProcessRunner.sendGUIRequest(orchestrator.steamOpen(webHelperShim: shimActive))
+        try ProcessRunner.sendGUIRequest(orchestrator().steamOpen())
     }
 
     nonisolated private static func message(for error: Error) -> String {

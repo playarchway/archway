@@ -15,7 +15,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "ArchwayCore", resources: [
-            .copy("Resources/steamwebhelper-shim.exe"),
             .copy("Resources/runtime.json"),
         ]),
         .executableTarget(name: "ArchwayCLI", dependencies: ["ArchwayCore"]),

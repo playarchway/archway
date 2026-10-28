@@ -16,7 +16,6 @@ swift run archway init-bottle
 swift run archway install-steam --installer '/absolute/path/to/SteamSetup.exe'
 swift run archway doctor
 swift run archway open-steam
-swift run archway open-steam --without-webhelper-shim
 swift run archway close-steam
 swift run archway open-steam --disable-cef-gpu
 swift run archway open-steam --wine-renderer gl
@@ -35,9 +34,7 @@ As an alternative to the interactive installer command above, add `--silent` to 
 
 ## Steam's black window
 
-Under Wine's macOS driver, Windows Steam's client window stays black: Chromium's GPU process draws into a window owned by Steam's browser process, and `winemac.drv` cannot present drawing from another process ([Wine bug 35456](https://bugs.winehq.org/show_bug.cgi?id=35456), [60263](https://bugs.winehq.org/show_bug.cgi?id=60263)). `open-steam`, `install-game`, and `launch-game` therefore install a small shim: Valve's `bin/cef/cef.win64/steamwebhelper.exe` moves to `steamwebhelper.real.exe`, and the shim takes its place and starts it with `--in-process-gpu`. Steam then starts with `-noverifyfiles -norepairfiles`, because its bootstrapper would otherwise restore the original file. A Steam update can still replace the shim during a running session; the next `open-steam` reinstalls it with the updated helper. `doctor` shows the shim state, and `open-steam --without-webhelper-shim` restores Valve's helper for comparison. Directly after `install-steam`, Steam has not downloaded its webhelper yet; let the first start finish updating, then run `close-steam` and `open-steam`.
-
-The shim's source is `Shims/steamwebhelper/steamwebhelper_shim.c`. `Shims/steamwebhelper/build.sh` rebuilds the bundled `Sources/ArchwayCore/Resources/steamwebhelper-shim.exe` with [Zig](https://ziglang.org) (`ZIG=/path/to/zig` if it is not on `PATH`); the build is reproducible. This is a workaround until Wine can present cross-process drawing on macOS.
+Under upstream Wine's macOS driver, Windows Steam's client window stays black: Chromium's GPU process draws into a window owned by Steam's browser process, and `winemac.drv` cannot present drawing from another process ([Wine bug 35456](https://bugs.winehq.org/show_bug.cgi?id=35456), [60263](https://bugs.winehq.org/show_bug.cgi?id=60263)). archway-wine fixes this, so Steam renders on Archway's runtime package. A hand-configured stock Wine still shows the black window.
 
 `open-steam --disable-cef-gpu` passes the single Steam argument `-cef-disable-gpu`. `open-steam --wine-renderer gl` sets `WINE_D3D_CONFIG=renderer=gl` only for that Steam launch. The two options can be combined, but test them separately first to isolate the cause of a black Steam window. These are Steam UI diagnostics, not validated game profiles. Restart Steam first so a previously running instance cannot ignore startup options. `close-steam` sends Steam's cooperative `-shutdown` request within the owned bottle and waits up to 30 seconds for that bottle's Wine server. It does not force-stop Wine clients; a timeout can also mean another Wine service kept the server active.
 

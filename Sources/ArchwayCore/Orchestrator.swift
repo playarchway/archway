@@ -182,16 +182,8 @@ public struct Orchestrator {
                                   label: "steam-installer", environment: environment)
     }
 
-    public func steamWebHelperShim(shim: Data) throws -> SteamWebHelperShim {
-        let directory = try requiredSteam().deletingLastPathComponent().appendingPathComponent("bin/cef/cef.win64")
-        guard directory.resolvingSymlinksInPath().path.hasPrefix(paths.bottle.resolvingSymlinksInPath().path + "/") else {
-            throw ArchwayError.invalidPath("Steam's webhelper directory must stay inside the owned bottle: \(directory.path)")
-        }
-        return SteamWebHelperShim(directory: directory, shim: shim)
-    }
-
     public func steamOpen(disableCEFGPU: Bool = false, enableCEFDebugging: Bool = false, cefDebugPort: UInt16? = nil,
-                          wineRenderer: SteamWineRenderer? = nil, webHelperShim: Bool = true, silent: Bool = false,
+                          wineRenderer: SteamWineRenderer? = nil, silent: Bool = false,
                           environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         guard cefDebugPort == nil || enableCEFDebugging else {
             throw ArchwayError.invalidPath("--cef-debug-port requires --cef-debugging.")
@@ -200,7 +192,7 @@ public struct Orchestrator {
             throw ArchwayError.invalidPath("CEF debug port must be 1024 through 65535.")
         }
         let steam = try requiredSteam()
-        var flags: [String] = webHelperShim ? SteamWebHelperShim.launchArguments : []
+        var flags: [String] = []
         if silent { flags.append("-silent") }
         if disableCEFGPU { flags.append("-cef-disable-gpu") }
         if enableCEFDebugging { flags.append("-cef-enable-debugging") }
@@ -223,12 +215,11 @@ public struct Orchestrator {
                              log: paths.logs.appendingPathComponent("steam-shutdown-wait.log"), label: "steam-shutdown-wait")
     }
 
-    public func gameInstall(appID: UInt32, webHelperShim: Bool = true,
+    public func gameInstall(appID: UInt32,
                             environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         let steam = try requiredSteam()
         // Steam may not be running yet, so these requests can start it like open-steam.
-        let shimArguments = webHelperShim ? SteamWebHelperShim.launchArguments : []
-        return try windowsRequest(steam, arguments: shimArguments + ["steam://install/\(appID)"],
+        return try windowsRequest(steam, arguments: ["steam://install/\(appID)"],
                                   label: "game-install-\(appID)", environment: environment)
     }
 
@@ -246,8 +237,7 @@ public struct Orchestrator {
 
     /// `silent` keeps Steam's own window closed when Steam starts for the game. `graphicsAPI` uses Unity's
     /// switches, so other engines ignore it.
-    public func gameLaunch(appID: UInt32, graphicsAPI: GameGraphicsAPI? = nil, webHelperShim: Bool = true,
-                           silent: Bool = false, gameArguments additionalGameArguments: [String] = [],
+    public func gameLaunch(appID: UInt32, graphicsAPI: GameGraphicsAPI? = nil, silent: Bool = false, gameArguments additionalGameArguments: [String] = [],
                            environment: [String: String] = ProcessInfo.processInfo.environment) throws -> LaunchRequest {
         // Games that ship their own Direct3D DLLs need them moved aside first (`prepareD3DMetalGame`);
         // all others use the runtime's staged D3DMetal builtins directly.
@@ -255,9 +245,8 @@ public struct Orchestrator {
             try graphicsSidecars(appID: Int(appID))?.requireD3DMetalReady()
         }
         let steam = try requiredSteam()
-        let shimArguments = webHelperShim ? SteamWebHelperShim.launchArguments : []
         let gameArguments = (graphicsAPI.map { [$0.unityArgument] } ?? []) + additionalGameArguments
-        return try windowsRequest(steam, arguments: shimArguments + (silent ? ["-silent"] : [])
+        return try windowsRequest(steam, arguments: (silent ? ["-silent"] : [])
                                       + ["-applaunch", String(appID)] + gameArguments,
                                   label: "game-launch-\(appID)", environment: environment)
     }

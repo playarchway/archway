@@ -364,25 +364,22 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(silentInstaller.environment["WINEPREFIX"] == paths.bottle.path)
     #expect(silentInstaller.environment["WINEARCH"] == nil)
     let steamFile = try steam(paths)
-    #expect(try orchestrator.gameInstall(appID: 123, environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "steam://install/123"])
-    #expect(try orchestrator.gameInstall(appID: 123, webHelperShim: false, environment: source).arguments == [steamFile.path, "steam://install/123"])
-    #expect(try orchestrator.gameLaunch(appID: 123, environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123"])
+    #expect(try orchestrator.gameInstall(appID: 123, environment: source).arguments == [steamFile.path, "steam://install/123"])
+    #expect(try orchestrator.gameLaunch(appID: 123, environment: source).arguments == [steamFile.path, "-applaunch", "123"])
     #expect(try orchestrator.gameLaunch(appID: 123, graphicsAPI: .d3d11, environment: source).arguments
-            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123", "-force-d3d11"])
+            == [steamFile.path, "-applaunch", "123", "-force-d3d11"])
     #expect(try orchestrator.gameLaunch(appID: 123, graphicsAPI: .d3d12, environment: source).arguments
-            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-applaunch", "123", "-force-d3d12"])
+            == [steamFile.path, "-applaunch", "123", "-force-d3d12"])
     #expect(throws: Error.self) { try GameGraphicsAPI.parse("vulkan") }
-    #expect(try orchestrator.gameLaunch(appID: 123, webHelperShim: false, environment: source).arguments == [steamFile.path, "-applaunch", "123"])
     let defaultOpen = try orchestrator.steamOpen(environment: source)
-    #expect(defaultOpen.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles"])
-    #expect(try orchestrator.steamOpen(webHelperShim: false, environment: source).arguments == [steamFile.path])
+    #expect(defaultOpen.arguments == [steamFile.path])
     #expect(defaultOpen.environment["WINE_D3D_CONFIG"] == nil)
     let debugOpen = try orchestrator.steamOpen(enableCEFDebugging: true, environment: source)
-    #expect(debugOpen.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-cef-enable-debugging"])
+    #expect(debugOpen.arguments == [steamFile.path, "-cef-enable-debugging"])
     #expect(debugOpen.environment == defaultOpen.environment)
     #expect(debugOpen.workingDirectory == steamFile.deletingLastPathComponent())
     let alternateDebug = try orchestrator.steamOpen(enableCEFDebugging: true, cefDebugPort: 15873, environment: source)
-    #expect(alternateDebug.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-cef-enable-debugging", "-devtools-port", "15873"])
+    #expect(alternateDebug.arguments == [steamFile.path, "-cef-enable-debugging", "-devtools-port", "15873"])
     #expect(alternateDebug.environment == defaultOpen.environment)
     #expect(try Orchestrator.cefDebugPort("15873") == 15873)
     #expect(try Orchestrator.cefDebugPort("65535") == 65535)
@@ -391,17 +388,17 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     }
     #expect(throws: Error.self) { try orchestrator.steamOpen(cefDebugPort: 15873, environment: source) }
     #expect(throws: Error.self) { try orchestrator.steamOpen(enableCEFDebugging: true, cefDebugPort: 1, environment: source) }
-    #expect(try orchestrator.steamOpen(disableCEFGPU: true, environment: source).arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-cef-disable-gpu"])
+    #expect(try orchestrator.steamOpen(disableCEFGPU: true, environment: source).arguments == [steamFile.path, "-cef-disable-gpu"])
     let glOpen = try orchestrator.steamOpen(wineRenderer: .gl, environment: source)
-    #expect(glOpen.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles"])
+    #expect(glOpen.arguments == [steamFile.path])
     #expect(glOpen.environment["WINE_D3D_CONFIG"] == "renderer=gl")
     #expect(glOpen.environment["WINEPREFIX"] == paths.bottle.path)
     let combined = try orchestrator.steamOpen(disableCEFGPU: true, wineRenderer: .gl, environment: source)
-    #expect(combined.arguments == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-cef-disable-gpu"])
+    #expect(combined.arguments == [steamFile.path, "-cef-disable-gpu"])
     #expect(combined.environment["WINE_D3D_CONFIG"] == "renderer=gl")
     #expect(combined.workingDirectory == steamFile.deletingLastPathComponent())
     #expect(try orchestrator.steamOpen(disableCEFGPU: true, enableCEFDebugging: true, environment: source).arguments
-            == [steamFile.path, "-noverifyfiles", "-norepairfiles", "-cef-disable-gpu", "-cef-enable-debugging"])
+            == [steamFile.path, "-cef-disable-gpu", "-cef-enable-debugging"])
     #expect(throws: Error.self) { try SteamWineRenderer.parse("vulkan") }
     #expect(throws: Error.self) { try SteamWineRenderer.parse("") }
     #expect(try orchestrator.steamShutdown(environment: source).arguments == [steamFile.path, "-shutdown"])
@@ -492,61 +489,6 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
                     try orchestrator.gameLaunch(appID: 123, environment: source)] {
         #expect(request.workingDirectory == steamFile.deletingLastPathComponent())
     }
-}
-
-@Test func steamWebHelperShimInstallsUpdatesAndRestores() throws {
-    let directory = try temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let wine = try executable("wine", in: directory)
-    let paths = try AppPaths(dataDirectory: directory.appendingPathComponent("data"))
-    try initializedBottle(paths)
-    try FileManager.default.createDirectory(at: paths.bottle, withIntermediateDirectories: true)
-    try Data(#"{"version":1,"state":"ready"}"#.utf8).write(to: paths.bottle.appendingPathComponent(".archway-bottle.json"))
-    let orchestrator = Orchestrator(paths: paths, configuration: Configuration(wine: wine.path))
-    _ = try steam(paths)
-    let shim = try orchestrator.steamWebHelperShim(shim: Data("archway shim".utf8))
-    let fm = FileManager.default
-
-    #expect(try shim.state() == .missing)
-    #expect(try shim.install() == false)
-    try fm.createDirectory(at: shim.directory, withIntermediateDirectories: true)
-    try Data("valve v1".utf8).write(to: shim.helper)
-    #expect(try shim.state() == .original)
-
-    #expect(try shim.install())
-    #expect(try shim.state() == .installed)
-    #expect(try Data(contentsOf: shim.helper) == shim.shim)
-    #expect(try Data(contentsOf: shim.realHelper) == Data("valve v1".utf8))
-    #expect(fm.isExecutableFile(atPath: shim.helper.path))
-    #expect(try shim.install())
-    #expect(try Data(contentsOf: shim.realHelper) == Data("valve v1".utf8))
-
-    // A Steam update writes Valve's new helper over the shim.
-    try Data("valve v2".utf8).write(to: shim.helper)
-    #expect(try shim.state() == .original)
-    #expect(try shim.install())
-    #expect(try Data(contentsOf: shim.realHelper) == Data("valve v2".utf8))
-    #expect(try fm.contentsOfDirectory(atPath: shim.directory.path).sorted() == ["steamwebhelper.exe", "steamwebhelper.real.exe"])
-
-    try shim.remove()
-    #expect(try shim.state() == .original)
-    #expect(try Data(contentsOf: shim.helper) == Data("valve v2".utf8))
-    #expect(!fm.fileExists(atPath: shim.realHelper.path))
-
-    try shim.install()
-    try fm.removeItem(at: shim.realHelper)
-    #expect(try shim.state() == .incomplete)
-    #expect(throws: Error.self) { try shim.install() }
-    try shim.remove()
-    #expect(try shim.state() == .missing)
-
-    try fm.createSymbolicLink(at: shim.helper, withDestinationURL: directory)
-    #expect(throws: Error.self) { try shim.state() }
-}
-
-@Test func bundledSteamWebHelperShimIsWindowsExecutable() throws {
-    let shim = try SteamWebHelperShim.bundledShim()
-    #expect(shim.prefix(2) == Data("MZ".utf8))
 }
 
 @Test func guiRequestUsesExplicitWorkingDirectory() throws {
@@ -838,9 +780,9 @@ private func steamOrchestrator(in root: URL) throws -> (Orchestrator, URL) {
     try JSONEncoder().encode(BottleMarker(state: .ready)).write(to: orchestrator.paths.bottle.appendingPathComponent(".archway-bottle.json"))
     try Data("registry".utf8).write(to: orchestrator.paths.bottle.appendingPathComponent("system.reg"))
 
-    #expect(try orchestrator.steamOpen(webHelperShim: false, silent: true, environment: [:]).arguments.contains("-silent"))
-    #expect(try !orchestrator.steamOpen(webHelperShim: false, environment: [:]).arguments.contains("-silent"))
-    let launch = try orchestrator.gameLaunch(appID: 48000, webHelperShim: false, silent: true, environment: [:]).arguments
+    #expect(try orchestrator.steamOpen(silent: true, environment: [:]).arguments.contains("-silent"))
+    #expect(try !orchestrator.steamOpen(environment: [:]).arguments.contains("-silent"))
+    let launch = try orchestrator.gameLaunch(appID: 48000, silent: true, environment: [:]).arguments
     #expect(Array(launch.suffix(3)) == ["-silent", "-applaunch", "48000"])
 }
 

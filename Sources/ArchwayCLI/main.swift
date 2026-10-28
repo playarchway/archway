@@ -16,30 +16,13 @@ Commands:
   restore-d3dmetal --redist-lib PATH --runtime-root PATH  Restore the owned Wine clone
   init-bottle                               Initialize the owned Wine bottle
   install-steam --installer PATH [--silent] Send local Windows Steam installer to Wine
-  open-steam [--disable-cef-gpu] [--cef-debugging [--cef-debug-port PORT]] [--wine-renderer gl] [--without-webhelper-shim]  Send Windows Steam launch request
+  open-steam [--disable-cef-gpu] [--cef-debugging [--cef-debug-port PORT]] [--wine-renderer gl]  Send Windows Steam launch request
   close-steam                               Ask owned Windows Steam to exit; wait for its Wine server
   install-game --app-id ID                  Request install through a Steam URI
   launch-game --app-id ID [--graphics-api d3d11|d3d12] Request launch through Windows Steam (Unity games honor --graphics-api)
 
 GUI commands only confirm that a request was sent. Check Steam, the game, and logs for results.
-open-steam, install-game, and launch-game install the steamwebhelper shim that keeps Steam's
-window from rendering black; --without-webhelper-shim restores Valve's helper for diagnosis.
 """
-
-/// Returns whether Steam must start with the shim's launch arguments.
-private func applyWebHelperShim(_ orchestrator: Orchestrator, enabled: Bool = true) throws -> Bool {
-    guard enabled else {
-        try orchestrator.removeSteamShim()
-        print("Steam webhelper shim: removed; Valve's helper restored. Steam's window is expected to stay black.")
-        return false
-    }
-    guard try orchestrator.prepareSteam() else {
-        print("Steam webhelper shim: Steam has not downloaded its webhelper yet. Let this first start finish updating, then run close-steam and open-steam again.")
-        return false
-    }
-    print("Steam webhelper shim: installed (--in-process-gpu); Steam starts with \(SteamWebHelperShim.launchArguments.joined(separator: " ")).")
-    return true
-}
 
 private func takeOption(_ name: String, from arguments: inout [String]) throws -> String? {
     guard let index = arguments.firstIndex(of: name) else { return nil }
@@ -142,18 +125,6 @@ private func doctor(_ paths: AppPaths, _ store: ConfigStore) {
         print(orchestrator.steamExecutable() == nil
               ? "Windows Steam: not found; run install-steam --installer /absolute/path/to/SteamSetup.exe after bottle initialization"
               : "Windows Steam: executable found in owned bottle")
-        if orchestrator.steamExecutable() != nil {
-            let state = try? orchestrator.steamWebHelperShim(shim: SteamWebHelperShim.bundledShim()).state()
-            let description: String
-            switch state {
-            case .installed: description = "installed"
-            case .original: description = "not installed; open-steam installs it"
-            case .incomplete: description = "incomplete; run open-steam --without-webhelper-shim once so Steam can repair its helper"
-            case .missing: description = "Steam's webhelper not found yet; start Steam once"
-            case nil: description = "unreadable"
-            }
-            print("Steam webhelper shim: \(description)")
-        }
     } catch {
         print("Configuration: unreadable (\(error.localizedDescription)); inspect \(paths.config.path)")
     }
@@ -256,13 +227,10 @@ private func run() throws {
             throw ArchwayError.invalidPath("--cef-debug-port requires --cef-debugging.")
         }
         let renderer = try takeOption("--wine-renderer", from: &arguments).map(SteamWineRenderer.parse)
-        let withoutShim = try takeFlag("--without-webhelper-shim", from: &arguments)
         try requireNoExtras(arguments)
         let orchestrator = Orchestrator(paths: paths, configuration: try requiredConfiguration(store))
-        let shimActive = try applyWebHelperShim(orchestrator, enabled: !withoutShim)
         let request = try orchestrator.steamOpen(disableCEFGPU: disableCEFGPU, enableCEFDebugging: enableCEFDebugging,
-                                                 cefDebugPort: debugPort, wineRenderer: renderer,
-                                                 webHelperShim: shimActive)
+                                                 cefDebugPort: debugPort, wineRenderer: renderer)
         let options = [disableCEFGPU ? "-cef-disable-gpu" : nil,
                        enableCEFDebugging ? "-cef-enable-debugging" : nil,
                        debugPort.map { "-devtools-port \($0)" },
@@ -293,10 +261,9 @@ private func run() throws {
         if command == "launch-game", orchestrator.configuration.selectedGraphicsBackend == .d3dmetal {
             try orchestrator.prepareD3DMetalGame(appID: Int(appID))
         }
-        let shimActive = try applyWebHelperShim(orchestrator)
         let request = try command == "install-game"
-            ? orchestrator.gameInstall(appID: appID, webHelperShim: shimActive)
-            : orchestrator.gameLaunch(appID: appID, graphicsAPI: graphicsAPI, webHelperShim: shimActive)
+            ? orchestrator.gameInstall(appID: appID)
+            : orchestrator.gameLaunch(appID: appID, graphicsAPI: graphicsAPI)
         print("Sending \(command) request for Steam app \(appID); log: \(request.log.path)")
         try ProcessRunner.sendGUIRequest(request)
         print("Request sent. Confirm the result in Windows Steam and the game; success is not yet verified.")

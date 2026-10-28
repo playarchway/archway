@@ -3,17 +3,6 @@ import Foundation
 
 /// Preparing, finding, and stopping games in the owned bottle. Shared by the CLI and the app.
 extension Orchestrator {
-    /// Installs the steamwebhelper shim before Steam starts. Returns whether Steam must start with the
-    /// shim's launch arguments; false while Steam has not downloaded its webhelper yet.
-    public func prepareSteam() throws -> Bool {
-        try steamWebHelperShim(shim: SteamWebHelperShim.bundledShim()).install()
-    }
-
-    /// Restores Valve's webhelper, for comparing against the shim.
-    public func removeSteamShim() throws {
-        try steamWebHelperShim(shim: SteamWebHelperShim.bundledShim()).remove()
-    }
-
     /// Moves an installed game's own Direct3D DLLs aside and sets its builtin Direct3D overrides, so the staged
     /// D3DMetal runtime serves the game. Idempotent; does nothing for other backends or games without such DLLs.
     public func prepareD3DMetalGame(appID: Int) throws {

@@ -4,7 +4,7 @@ The `archway` command line tool shares its core (`ArchwayCore`) with the app. It
 
 ## Commands
 
-Point Archway at a macOS Wine runtime, for example an unpacked [runtime package](RUNTIME.md), and at Valve's official **Windows** Steam installer. Use absolute local paths. Archway never requests your Steam credentials; sign in through the Windows Steam window.
+Point Archway at a macOS Wine runtime, for example an unpacked [runtime package](https://github.com/playarchway/archway-runtime), and at Valve's official **Windows** Steam installer. Use absolute local paths. Archway never requests your Steam credentials; sign in through the Windows Steam window.
 
 ```sh
 # With the installed macOS Command Line Tools (Swift 6.4):

@@ -37,15 +37,15 @@ open --env ARCHWAY_DATA_DIR="$HOME/Library/Application Support/Archway/first-sta
 
 ## How it works
 
-Archway runs games through [Wine](https://www.winehq.org), with [archway-wine](https://github.com/playarchway/archway-wine), a Wine 11.20 build with a few macOS patches that let Apple's D3DMetal translate Direct3D 11 and 12 to Metal. The [runtime package](docs/RUNTIME.md) bundles that Wine with FreeType, Wine Mono, and D3DMetal. Windows Steam runs inside Archway's bottle for sign-in, downloads, and launching games.
+Archway runs games through [Wine](https://www.winehq.org), with [archway-wine](https://github.com/playarchway/archway-wine), a Wine 11.20 build with a few macOS patches that let Apple's D3DMetal translate Direct3D 11 and 12 to Metal. The [runtime package](https://github.com/playarchway/archway-runtime) bundles that Wine with FreeType, Wine Mono, and D3DMetal; it is built and released in its own repository. Windows Steam runs inside Archway's bottle for sign-in, downloads, and launching games.
 
 | Folder | Contents |
 | --- | --- |
 | `Sources/Archway` | The SwiftUI app |
 | `Sources/ArchwayCore` | Bottles, runtimes, Steam, and processes; shared by the app and the CLI |
 | `Sources/ArchwayCLI` | The [`archway` command line tool](docs/CLI.md) for development and diagnosis |
-| `scripts` | Building the app, the Wine runtime, and the runtime package |
-| `docs` | [Vision](docs/VISION.md), [command line tool](docs/CLI.md), [runtime package](docs/RUNTIME.md), and the [runtime probe log](docs/RUNTIME_PROBE.md) |
+| `scripts` | Building the app, and listing running Wine sessions |
+| `docs` | [Vision](docs/VISION.md), [command line tool](docs/CLI.md), and the [runtime probe log](docs/RUNTIME_PROBE.md) |
 
 ## Contributing
 

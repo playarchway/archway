@@ -18,6 +18,6 @@ Keep changes small and focused, and match the style of the code around them.
 
 - **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), for example `feat(app): …` or `fix(steam): …`. Releases and the changelog come from them.
 - **UI text** is written in English in code. Every new string needs a German translation in `Sources/Archway/Resources/Localizable.xcstrings`. Strings that are not literals passed to SwiftUI views use `String(localized:)`.
-- **Wine changes** go to [archway-wine](https://github.com/playarchway/archway-wine); [docs/RUNTIME.md](docs/RUNTIME.md) describes how a runtime package is built from it.
+- **Wine changes** go to [archway-wine](https://github.com/playarchway/archway-wine); [archway-runtime](https://github.com/playarchway/archway-runtime) builds the runtime package from it.
 
 By contributing, you agree that your contributions are licensed under the [GPL-3.0](LICENSE).

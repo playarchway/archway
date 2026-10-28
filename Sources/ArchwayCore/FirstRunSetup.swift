@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-/// The Wine runtime package Archway downloads on first start (see scripts/package-runtime.sh).
+/// The Wine runtime package Archway downloads on first start, built in playarchway/archway-runtime.
 public struct RuntimeRelease: Codable, Equatable, Sendable {
     public let version: String
     public let url: URL

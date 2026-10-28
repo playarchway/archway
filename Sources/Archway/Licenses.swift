@@ -8,7 +8,7 @@ struct OpenSourceNotice: Identifiable {
     let version: String?
     let license: String
     let url: URL
-    /// Nil until the Windows runtime that carries it is installed, or when its package has no license file.
+    /// Nil until the Windows runtime that carries it is installed; runtimes before 11.20-e51c772 lack Wine Mono's.
     let text: String?
 
     var id: String { name }
@@ -48,7 +48,8 @@ struct OpenSourceNotice: Identifiable {
                              url: URL(string: "https://freetype.org")!,
                              text: docs.flatMap { text(at: $0.appendingPathComponent("FreeType-LICENSE.TXT")) }),
             OpenSourceNotice(name: "Wine Mono", version: version(of: "Wine Mono"), license: "MIT, LGPL",
-                             url: URL(string: "https://github.com/wine-mono/wine-mono")!, text: nil),
+                             url: URL(string: "https://github.com/wine-mono/wine-mono")!,
+                             text: docs.flatMap { text(at: $0.appendingPathComponent("WineMono-COPYING")) }),
             OpenSourceNotice(name: "D3DMetal", version: nil, license: "Apple",
                              url: URL(string: "https://developer.apple.com/games/game-porting-toolkit/")!,
                              text: wine.flatMap { rtf(at: $0.appendingPathComponent("lib/external/GPTK-License.rtf")) }),

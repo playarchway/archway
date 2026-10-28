@@ -2,6 +2,8 @@
 
 Thanks for helping Archway. Bug reports, results from testing games, and pull requests are all welcome.
 
+Everyone taking part follows our [code of conduct](https://github.com/playarchway/.github/blob/main/CODE_OF_CONDUCT.md).
+
 ## Reporting a game
 
 Tell us which game you tried (with its Steam app ID), your Mac and macOS version, and how far it got: installs, starts, plays, saves, reloads after a restart. Attach the game's log from *Advanced… → Export Log*. A game counts as tested only after that whole sequence passes.

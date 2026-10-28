@@ -71,6 +71,10 @@ jobs:
           fi
           echo "ARCHWAY_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
       - name: Build Archway.app
+        env:
+          ARCHWAY_API_BASE_URL: ${{ vars.ARCHWAY_API_BASE_URL }}
+          ARCHWAY_UPDATE_FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download/appcast.xml
+          ARCHWAY_SPARKLE_PUBLIC_KEY: ${{ vars.ARCHWAY_SPARKLE_PUBLIC_KEY }}
         run: scripts/build-app.sh release
       - name: Notarize
         if: env.ARCHWAY_SIGN_IDENTITY != ''
@@ -88,7 +92,7 @@ jobs:
           xcrun stapler staple .build/Archway.app
           spctl --assess --type exec -vv .build/Archway.app
       # The app finds updates in the newest release's appcast.xml (Sparkle). Its signature needs the private half
-      # of the key in build-app.sh, from the secret SPARKLE_PRIVATE_KEY; without it, the release has no appcast.
+      # of ARCHWAY_SPARKLE_PUBLIC_KEY, from the secret SPARKLE_PRIVATE_KEY; without it, the release has no appcast.
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -98,7 +102,9 @@ jobs:
         run: |
           archive="Archway-$VERSION.zip"
           ditto -c -k --keepParent .build/Archway.app "$archive"
-          assets=("$archive")
+          # The website's download button points at releases/latest/download/Archway.zip.
+          cp "$archive" Archway.zip
+          assets=("$archive" Archway.zip)
           if [[ -n "$SPARKLE_PRIVATE_KEY" ]]; then
             signature="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | .build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file - "$archive")"
             notes="$(gh release view "$TAG" --json body --jq .body | gh api markdown -F text=@-)"

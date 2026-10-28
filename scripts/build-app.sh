@@ -1,28 +1,45 @@
 #!/bin/bash
 # Builds Archway.app from the SwiftPM product, so macOS picks up the app name, icon, and localizations.
 # Usage: scripts/build-app.sh [debug|release]   Output: .build/Archway.app
+#
+# Addresses and keys come from the environment, or from an ignored .env file in the repository root:
+#   ARCHWAY_API_BASE_URL        HTTPS origin of the compatibility service; without it the app has none
+#   ARCHWAY_UPDATE_FEED_URL     Sparkle appcast (release builds only)
+#   ARCHWAY_SPARKLE_PUBLIC_KEY  Sparkle's public EdDSA key for that appcast (release builds only)
+# Release builds need the last two. The release workflow sets all of them from repository variables.
 set -euo pipefail
 
 configuration="${1:-debug}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
+if [[ -f .env ]]; then
+    set -a
+    source .env
+    set +a
+fi
 # release-please keeps the version in version.txt.
 version="$(tr -d '[:space:]' < version.txt)"
-api_base_url="${ARCHWAY_API_BASE_URL:-https://archway-compatibility.vercel.app}"
-feed_url="https://github.com/playarchway/archway/releases/latest/download/appcast.xml"
-sparkle_public_key="2eE7XdpP8RlIe/yUfYURz71R4koHtotrDZ4fOlAM04Q="
-host_label='[[:alnum:]]([[:alnum:]-]{0,61}[[:alnum:]])?'
-if [[ ! "$api_base_url" =~ ^https://$host_label(\.$host_label)*(:[0-9]{1,5})?/?$ ]]; then
-    echo "ARCHWAY_API_BASE_URL must be an HTTPS origin without a path, credentials, query, or fragment" >&2
+api_base_url="${ARCHWAY_API_BASE_URL:-}"
+feed_url="${ARCHWAY_UPDATE_FEED_URL:-}"
+sparkle_public_key="${ARCHWAY_SPARKLE_PUBLIC_KEY:-}"
+if [[ "$configuration" == release && ( -z "$feed_url" || -z "$sparkle_public_key" ) ]]; then
+    echo "Release builds need ARCHWAY_UPDATE_FEED_URL and ARCHWAY_SPARKLE_PUBLIC_KEY" >&2
     exit 1
 fi
-authority="${api_base_url#https://}"
-if [[ "$authority" == *:* ]]; then
-    port="${authority##*:}"
-    port="${port%/}"
-    if (( 10#$port < 1 || 10#$port > 65535 )); then
-        echo "ARCHWAY_API_BASE_URL port must be between 1 and 65535" >&2
+host_label='[[:alnum:]]([[:alnum:]-]{0,61}[[:alnum:]])?'
+if [[ -n "$api_base_url" ]]; then
+    if [[ ! "$api_base_url" =~ ^https://$host_label(\.$host_label)*(:[0-9]{1,5})?/?$ ]]; then
+        echo "ARCHWAY_API_BASE_URL must be an HTTPS origin without a path, credentials, query, or fragment" >&2
         exit 1
+    fi
+    authority="${api_base_url#https://}"
+    if [[ "$authority" == *:* ]]; then
+        port="${authority##*:}"
+        port="${port%/}"
+        if (( 10#$port < 1 || 10#$port > 65535 )); then
+            echo "ARCHWAY_API_BASE_URL port must be between 1 and 65535" >&2
+            exit 1
+        fi
     fi
 fi
 
@@ -74,9 +91,11 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
-plutil -insert ArchwayAPIBaseURL -string "$api_base_url" "$app/Contents/Info.plist"
+if [[ -n "$api_base_url" ]]; then
+    plutil -insert ArchwayAPIBaseURL -string "$api_base_url" "$app/Contents/Info.plist"
+fi
 # Sparkle reads updates from the newest release's appcast (see .github/workflows/release.yml) and checks them
-# against this public key; release builds only, so local builds never replace themselves.
+# against the public key; release builds only, so local builds never replace themselves.
 if [[ "$configuration" == release ]]; then
     plutil -insert SUFeedURL -string "$feed_url" "$app/Contents/Info.plist"
     plutil -insert SUPublicEDKey -string "$sparkle_public_key" "$app/Contents/Info.plist"

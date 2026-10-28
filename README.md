@@ -23,6 +23,8 @@ open .build/Archway.app
 swift test                      # with only the Command Line Tools, see docs/CLI.md for the extra flag
 ```
 
+Addresses and keys for builds come from environment variables or an ignored `.env` file in the repository root; `scripts/build-app.sh` lists them. Without `ARCHWAY_API_BASE_URL`, a build has no compatibility service and doesn't ask how games ran. The release workflow sets them from repository variables.
+
 On first start Archway downloads its runtime (about 145 MB) and Windows Steam. Everything it sets up lives in `~/Library/Application Support/Archway`; downloads go to the system's temporary folder.
 
 To try a first start without touching your data, launch the bundle with an empty data directory:

@@ -16,14 +16,14 @@ const report = {
   createdAt: foundationNow(), note: 'Synthetic API check; never approve.',
 };
 async function post(body: unknown, expected: number): Promise<void> {
-  const response = await fetch(new URL('/api/reports', baseURL), {
+  const response = await fetch(new URL('/v1/reports', baseURL), {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     signal: AbortSignal.timeout(20000),
   });
   if (response.status !== expected) throw new Error(`Expected ${expected}, received ${response.status}`);
 }
 try {
-  const catalog = await fetch(new URL('/api/catalog', baseURL), { signal: AbortSignal.timeout(20000) });
+  const catalog = await fetch(new URL('/v1/catalog', baseURL), { signal: AbortSignal.timeout(20000) });
   if (catalog.status !== 200) throw new Error(`Catalog returned ${catalog.status}`);
   const payload: unknown = await catalog.json();
   if (typeof payload !== 'object' || payload === null || !('schemaVersion' in payload) || payload.schemaVersion !== 1)

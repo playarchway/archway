@@ -4,13 +4,11 @@ import Testing
 
 @Test func compatibilityAPIBaseURLResolution() {
     let custom = CompatibilityAPI.endpointURLs(baseURLString: "https://compatibility.example.org/")
-    #expect(custom.catalog == "https://compatibility.example.org/api/catalog")
-    #expect(custom.reports == "https://compatibility.example.org/api/reports")
-    for invalid in ["http://compatibility.example.org", "https://user@compatibility.example.org",
+    #expect(custom?.catalog == "https://compatibility.example.org/v1/catalog")
+    #expect(custom?.reports == "https://compatibility.example.org/v1/reports")
+    for invalid in [nil, "", "http://compatibility.example.org", "https://user@compatibility.example.org",
                     "https://compatibility.example.org/prefix", "https://compatibility.example.org?key=value"] {
-        let endpoints = CompatibilityAPI.endpointURLs(baseURLString: invalid)
-        #expect(endpoints.catalog == "\(CompatibilityAPI.publicBaseURL)/api/catalog")
-        #expect(endpoints.reports == "\(CompatibilityAPI.publicBaseURL)/api/reports")
+        #expect(CompatibilityAPI.endpointURLs(baseURLString: invalid) == nil)
     }
 }
 

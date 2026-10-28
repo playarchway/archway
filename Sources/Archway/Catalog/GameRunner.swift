@@ -327,6 +327,7 @@ final class GameRunner {
             // The stray ": " stays; changing the key would ask again for every setup already answered.
             let promptKey = "compatibilityPrompted:\(id):\(context.runtimeVersion):\(context.graphicsBackend):\(context.profile.launchArguments.joined(separator: "|")): \(context.profile.graphicsAPI.rawValue)"
             if session.usesSteam, session.activity != .stopping, !session.stoppedByUser, completedSession == nil,
+               CompatibilityStore.acceptsReports,
                !UserDefaults.standard.bool(forKey: "disableCompatibilityFeedback"),
                !UserDefaults.standard.bool(forKey: promptKey) {
                 completedSession = completed

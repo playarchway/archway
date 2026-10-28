@@ -3,5 +3,9 @@
   "installCommand": "bun install --frozen-lockfile",
   "buildCommand": "",
   "outputDirectory": "public",
-  "regions": ["fra1"]
+  "regions": ["fra1"],
+  "rewrites": [
+    { "source": "/v1/catalog", "destination": "/api/catalog" },
+    { "source": "/v1/reports", "destination": "/api/reports" }
+  ]
 }

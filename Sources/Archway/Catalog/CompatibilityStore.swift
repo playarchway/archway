@@ -8,8 +8,13 @@ import ArchwayCore
 final class CompatibilityStore {
     private static let defaultEndpoints = CompatibilityAPI.endpointURLs(
         baseURLString: Bundle.main.object(forInfoDictionaryKey: "ArchwayAPIBaseURL") as? String)
-    static let defaultCatalogURL = defaultEndpoints.catalog
-    static let defaultReportURL = defaultEndpoints.reports
+    static let defaultCatalogURL = defaultEndpoints?.catalog ?? ""
+    static let defaultReportURL = defaultEndpoints?.reports ?? ""
+
+    /// Whether reports have somewhere to go: a service built in or set in Settings. Without one, Archway doesn't ask.
+    static var acceptsReports: Bool {
+        URL(string: UserDefaults.standard.string(forKey: "compatibilityReportURL") ?? defaultReportURL) != nil
+    }
     private(set) var profiles: [Int: GameRuntimeProfile]
     private(set) var catalog: CompatibilityCatalog? { didSet { updateWorkingGames() } }
     /// Games the community reports working on their own; see `CompatibilityCatalog.workingGameIDs`.

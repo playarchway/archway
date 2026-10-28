@@ -2536,6 +2536,106 @@
           }
         }
       }
+    },
+    "About Archway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über Archway"
+          }
+        }
+      }
+    },
+    "Archway is free software under the [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html), and comes without any warranty. Its source code is on [GitHub](https://github.com/playarchway/archway).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway ist freie Software unter der [GNU General Public License, Version 3](https://www.gnu.org/licenses/gpl-3.0.html) und wird ohne jede Gewährleistung bereitgestellt. Der Quellcode liegt auf [GitHub](https://github.com/playarchway/archway)."
+          }
+        }
+      }
+    },
+    "Included in Archway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Archway enthalten"
+          }
+        }
+      }
+    },
+    "[Sparkle](https://sparkle-project.org) installs updates. MIT License:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[Sparkle](https://sparkle-project.org) installiert Updates. MIT-Lizenz:"
+          }
+        }
+      }
+    },
+    "Downloaded with the Wine runtime": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der Windows-Laufzeit heruntergeladen"
+          }
+        }
+      }
+    },
+    "[Wine](https://www.winehq.org) with Archway's changes from [archway-wine](https://github.com/playarchway/archway-wine): GNU Lesser General Public License, version 2.1 or later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[Wine](https://www.winehq.org) mit Archways Änderungen aus [archway-wine](https://github.com/playarchway/archway-wine): GNU Lesser General Public License, Version 2.1 oder neuer."
+          }
+        }
+      }
+    },
+    "[FreeType](https://freetype.org): FreeType License.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[FreeType](https://freetype.org): FreeType-Lizenz."
+          }
+        }
+      }
+    },
+    "[Wine Mono](https://github.com/wine-mono/wine-mono): MIT License, with parts under other open source licenses.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "[Wine Mono](https://github.com/wine-mono/wine-mono): MIT-Lizenz, mit Teilen unter anderen Open-Source-Lizenzen."
+          }
+        }
+      }
+    },
+    "D3DMetal from Apple's Game Porting Toolkit: © Apple Inc., passed on unmodified and for non-commercial use under Apple's license.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D3DMetal aus Apples Game Porting Toolkit: © Apple Inc., unverändert und nicht-kommerziell unter Apples Lizenz weitergegeben."
+          }
+        }
+      }
+    },
+    "The license files are in the runtime package; [archway-runtime](https://github.com/playarchway/archway-runtime) describes how it is built.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Lizenzdateien liegen im Paket der Windows-Laufzeit; [archway-runtime](https://github.com/playarchway/archway-runtime) beschreibt, wie es gebaut wird."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

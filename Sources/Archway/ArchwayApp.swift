@@ -60,7 +60,8 @@ struct ArchwayApp: App {
         }
         .defaultSize(width: 1320, height: 840)
         .commands {
-            CommandGroup(after: .appInfo) {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Archway") { AboutPanel.show() }
                 Button("Check for Updates…") { updater?.checkForUpdates(nil) }
                     .disabled(updater == nil)
             }

@@ -6,8 +6,8 @@ struct LibraryView: View {
     let store: LibraryStore
 
     @State private var openGame: LibraryGame?
+    @State private var showsScreenshots = false
     @State private var openHeroID: String?
-    @State private var focusedGame: LibraryGame?
     @State private var search = ""
     @State private var showsSteamLogin = false
     @State private var isLinking = false
@@ -55,7 +55,7 @@ struct LibraryView: View {
                     .zIndex(1)
             }
         }
-        .background { AmbientBackground(game: openGame ?? focusedGame) }
+        .background { AmbientBackground(game: openGame) }
         .overlay {
             if showsIntroduction {
                 IntroductionView(hasSteamAccount: store.hasAccount, startPage: introPage ?? .welcome) { linkSteam in
@@ -68,7 +68,8 @@ struct LibraryView: View {
                 .transition(.opacity.combined(with: .scale(scale: 1.02)))
             }
         }
-        .toolbar(showsIntroduction ? .hidden : .automatic, for: .windowToolbar)
+        .toolbar(showsIntroduction || showsScreenshots ? .hidden : .automatic, for: .windowToolbar)
+        .onPreferenceChange(ScreenshotViewerPresentedKey.self) { showsScreenshots = $0 }
         // The game page and the empty start page carry their own large headings.
         .navigationTitle(openGame == nil && !store.games.isEmpty && !showsIntroduction ? String(localized: "Library") : "")
         .navigationSubtitle(subtitle)
@@ -212,7 +213,8 @@ struct LibraryView: View {
                          isOpen: openGame != nil && openHeroID == heroID) {
             open(game, heroID: heroID)
         } onFocus: {
-            focusedGame = game
+            // Fetch the game page's artwork while the game is only hovered, so the page opens with it in place.
+            Task { _ = await ArtworkLoader.shared.backdrop(for: game) }
         }
     }
 

@@ -1,3 +1,4 @@
+import CoreImage
 import SwiftUI
 
 extension Color {
@@ -10,8 +11,9 @@ extension Animation {
     static let archwayHero = Animation.spring(response: 0.48, dampingFraction: 0.86)
 }
 
-/// The library backdrop: the focused game's artwork, heavily blurred. A new game's artwork loads first and
-/// then fades in over the previous one, so the colors blend directly instead of dipping to black.
+/// The backdrop: Archway's amber arch behind the library, the open game's artwork behind its page, heavily blurred.
+/// A new image loads first and then fades in over the previous one, so the colors blend directly instead of dipping
+/// to black. Images are blurred once when they arrive, not on every frame, so scrolling stays smooth.
 struct AmbientBackground: View {
     let game: LibraryGame?
 
@@ -21,9 +23,8 @@ struct AmbientBackground: View {
         var isVisible = false
     }
 
-    /// Until a game is focused, and without games at all, Archway's own amber arch stands in for the artwork.
     private static let defaultBackdrop = Bundle.archway.url(forResource: "DefaultBackdrop", withExtension: "jpg")
-        .flatMap(NSImage.init(contentsOf:))
+        .flatMap(NSImage.init(contentsOf:)).flatMap(blurred)
 
     @State private var layers: [Layer] = defaultBackdrop.map { [Layer(image: $0, isVisible: true)] } ?? []
 
@@ -41,8 +42,6 @@ struct AmbientBackground: View {
                     }
                 }
                 .scaleEffect(1.5)
-                .blur(radius: 80)
-                .saturation(1.3)
                 .opacity(0.55)
             }
             .clipped()
@@ -62,9 +61,7 @@ struct AmbientBackground: View {
     private func show(_ game: LibraryGame?) async {
         let image: NSImage?
         if let game {
-            image = await ArtworkLoader.shared.header(for: game)
-            // Fetch the game page's artwork while the game is only focused, so the page opens with it in place.
-            Task { _ = await ArtworkLoader.shared.backdrop(for: game) }
+            image = await ArtworkLoader.shared.header(for: game).flatMap(Self.blurred)
         } else {
             image = Self.defaultBackdrop
         }
@@ -80,5 +77,21 @@ struct AmbientBackground: View {
         try? await Task.sleep(for: .seconds(0.85))
         guard !Task.isCancelled else { return }
         layers.removeAll { $0.id != layer.id }
+    }
+
+    /// The image shrunk, blurred, and saturated once, as a small bitmap that scales up smoothly. Matches what a live
+    /// 80-point blur at 1.3 saturation drew across a window-wide image.
+    nonisolated private static func blurred(_ image: NSImage) -> NSImage? {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        let width: CGFloat = 320
+        let input = CIImage(cgImage: cgImage)
+        let small = input.transformed(by: CGAffineTransform(scaleX: width / input.extent.width,
+                                                            y: width / input.extent.width))
+        let output = small.clampedToExtent()
+            .applyingGaussianBlur(sigma: 16)
+            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.3])
+            .cropped(to: small.extent)
+        guard let result = CIContext().createCGImage(output, from: output.extent) else { return nil }
+        return NSImage(cgImage: result, size: output.extent.size)
     }
 }

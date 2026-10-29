@@ -22,7 +22,7 @@ struct AmbientBackground: View {
     }
 
     /// Until a game is focused, and without games at all, Archway's own amber arch stands in for the artwork.
-    private static let defaultBackdrop = Bundle.module.url(forResource: "DefaultBackdrop", withExtension: "jpg")
+    private static let defaultBackdrop = Bundle.archway.url(forResource: "DefaultBackdrop", withExtension: "jpg")
         .flatMap(NSImage.init(contentsOf:))
 
     @State private var layers: [Layer] = defaultBackdrop.map { [Layer(image: $0, isVisible: true)] } ?? []

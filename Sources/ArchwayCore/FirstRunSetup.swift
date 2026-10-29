@@ -17,7 +17,7 @@ public struct RuntimeRelease: Codable, Equatable, Sendable {
 
     /// The release this build of Archway ships with.
     public static func bundled() throws -> RuntimeRelease {
-        guard let file = Bundle.module.url(forResource: "runtime", withExtension: "json") else {
+        guard let file = Bundle.archwayCore.url(forResource: "runtime", withExtension: "json") else {
             throw ArchwayError.invalidPath("Archway's runtime description is missing from its resources.")
         }
         return try JSONDecoder().decode(RuntimeRelease.self, from: Data(contentsOf: file))

@@ -241,7 +241,7 @@ private enum IntroArtwork {
 
     @MainActor static func image(_ name: String) -> NSImage? {
         if let cached = cache[name] { return cached }
-        let image = Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Introduction")
+        let image = Bundle.archway.url(forResource: name, withExtension: "jpg", subdirectory: "Introduction")
             .flatMap(NSImage.init(contentsOf:))
         cache[name] = image
         return image

@@ -18,7 +18,7 @@ enum AppIcon: String, CaseIterable, Identifiable {
 
     var image: NSImage? {
         let name = self == .glow ? "AppIcon" : "AppIcon-Gateway"
-        return Bundle.module.url(forResource: name, withExtension: "png").flatMap(NSImage.init(contentsOf:))
+        return Bundle.archway.url(forResource: name, withExtension: "png").flatMap(NSImage.init(contentsOf:))
     }
 
     static var current: AppIcon {

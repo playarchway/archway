@@ -9,6 +9,8 @@ struct LibraryView: View {
     @State private var showsScreenshots = false
     @State private var openHeroID: String?
     @State private var search = ""
+    @AppStorage("libraryFilter") private var filter = LibraryFilter.all
+    @AppStorage("librarySort") private var sort = LibrarySort.title
     @State private var showsSteamLogin = false
     @State private var isLinking = false
     @State private var linkError: String?
@@ -22,8 +24,26 @@ struct LibraryView: View {
     @Environment(CompatibilityStore.self) private var compatibility
     @Namespace private var hero
 
+    /// The games the search and filter let through, by title; the shelves pick from these.
     private var filtered: [LibraryGame] {
-        search.isEmpty ? store.games : store.games.filter { $0.title.localizedCaseInsensitiveContains(search) }
+        store.games.filter { game in
+            guard search.isEmpty || game.title.localizedCaseInsensitiveContains(search) else { return false }
+            switch filter {
+            case .all: return true
+            case .installed: return game.isInstalled
+            case .mac: return game.hasMacVersion
+            case .tested: return compatibility.status(for: game) == .tested
+            }
+        }
+    }
+
+    /// The grid's order; the store already sorts by title.
+    private func sorted(_ games: [LibraryGame]) -> [LibraryGame] {
+        switch sort {
+        case .title: games
+        case .recentlyPlayed: games.sorted { ($0.lastPlayedAt ?? .distantPast) > ($1.lastPlayedAt ?? .distantPast) }
+        case .playtime: games.sorted { $0.playtimeMinutes > $1.playtimeMinutes }
+        }
     }
 
     private func shelves(of filtered: [LibraryGame]) -> [(title: String, games: [LibraryGame], isLarge: Bool)] {
@@ -185,15 +205,17 @@ struct LibraryView: View {
                 }
 
                 // The grid only adds something when the shelves do not already show every game.
-                if !search.isEmpty || Set(shelves.flatMap { $0.games.map(\.id) }).count < filtered.count {
+                if !search.isEmpty || filter != .all || Set(shelves.flatMap { $0.games.map(\.id) }).count < filtered.count {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(search.isEmpty ? "All Games" : "Search Results")
+                        Text(search.isEmpty ? filter.heading : String(localized: "Search Results"))
                             .font(.title3.weight(.semibold))
                         if filtered.isEmpty {
-                            Text("No game matches “\(search)”.").foregroundStyle(.secondary)
+                            Text(search.isEmpty ? String(localized: "No game matches this filter.")
+                                                : String(localized: "No game matches “\(search)”."))
+                                .foregroundStyle(.secondary)
                         }
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 16, alignment: .top)], spacing: 22) {
-                            ForEach(filtered) { game in
+                            ForEach(sorted(filtered)) { game in
                                 tile(game, width: nil, section: "all")
                             }
                         }
@@ -258,6 +280,20 @@ struct LibraryView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             if openGame == nil && !store.games.isEmpty {
                 Menu {
+                    Picker("Show", selection: $filter) {
+                        ForEach(LibraryFilter.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    Picker("Sort By", selection: $sort) {
+                        ForEach(LibrarySort.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label("Filter and Sort", systemImage: filter == .all ? "line.3.horizontal.decrease.circle"
+                                                                         : "line.3.horizontal.decrease.circle.fill")
+                }
+                .help("Filter and Sort")
+                Menu {
                     Button("Add Windows Game…") { showsImporter = true }
                     if !store.hasAccount { Button("Link Steam…") { showsSteamLogin = true } }
                     Divider()
@@ -287,6 +323,41 @@ struct LibraryView: View {
                     Label("Steam Account", systemImage: "person.crop.circle")
                 }
             }
+        }
+    }
+}
+
+enum LibraryFilter: String, CaseIterable {
+    case all, installed, mac, tested
+
+    var label: String {
+        switch self {
+        case .all: String(localized: "All Games")
+        case .installed: String(localized: "Installed")
+        case .mac: String(localized: "With Mac Version")
+        case .tested: String(localized: "Tested")
+        }
+    }
+
+    /// The grid's heading while the filter is on.
+    var heading: String {
+        switch self {
+        case .all: String(localized: "All Games")
+        case .installed: String(localized: "Installed Games")
+        case .mac: String(localized: "Games with a Mac Version")
+        case .tested: String(localized: "Tested Games")
+        }
+    }
+}
+
+enum LibrarySort: String, CaseIterable {
+    case title, recentlyPlayed, playtime
+
+    var label: String {
+        switch self {
+        case .title: String(localized: "Title")
+        case .recentlyPlayed: String(localized: "Recently Played")
+        case .playtime: String(localized: "Playtime")
         }
     }
 }

@@ -2826,6 +2826,16 @@
           }
         }
       }
+    },
+    "%@ is installed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist installiert."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

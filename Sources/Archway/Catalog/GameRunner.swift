@@ -129,6 +129,7 @@ final class GameRunner {
         guard !game.isLocal, sessions[game.id] == nil else { return }
         errors[game.id] = nil
         sessions[game.id] = Session(activity: .installing, usesSteam: true)
+        InstallNotification.requestPermission()
         steamShutdown?.cancel()
         let gameNeedsSteam = steamGameIsActive
         Task {
@@ -277,7 +278,8 @@ final class GameRunner {
     }
 
     private func pollInstall(_ id: Int) async {
-        if store.games.first(where: { $0.id == id })?.isInstalled == true {
+        if let game = store.games.first(where: { $0.id == id }), game.isInstalled {
+            InstallNotification.post(gameID: id, title: game.title)
             finish(id)
             scheduleSteamShutdown()
             return

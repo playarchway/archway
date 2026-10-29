@@ -43,8 +43,12 @@ if [[ -n "$api_base_url" ]]; then
     fi
 fi
 
-swift build --product ArchwayApp -c "$configuration"
-bin="$(swift build --product ArchwayApp -c "$configuration" --show-bin-path)"
+# Swift Build, SwiftPM's default since 6.4, stamps the binary with the deployment target as its SDK version, so
+# macOS treats the app as built for macOS 15 and draws it without Liquid Glass. The native build system stamps the
+# SDK it links against.
+build=(swift build --build-system native --product ArchwayApp -c "$configuration")
+"${build[@]}"
+bin="$("${build[@]}" --show-bin-path)"
 
 app="$root/.build/Archway.app"
 rm -rf "$app"

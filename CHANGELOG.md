@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/playarchway/archway/compare/v0.1.0...v0.1.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **release:** offer Archway as a disk image to drag to Applications ([32bfb03](https://github.com/playarchway/archway/commit/32bfb03188194508e184b9207379f5edfd0e7f52))
+
 ## 0.1.0 (2026-10-28)
 
 

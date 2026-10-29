@@ -97,12 +97,12 @@ struct LibraryGame: Identifiable, Hashable {
     var isUnsupported: Bool { if case .unsupported = compatibility { true } else { false } }
 }
 
-/// Steam header image. Newer games keep it under a hashed path, so a failed load asks the store for the real URL.
+/// Steam header image, from the shared artwork cache, so tiles that scroll back into view draw it at once.
 struct GameCover: View {
     let game: LibraryGame
     var cornerRadius: CGFloat = 8
     var contentMode: ContentMode = .fit
-    @State private var storeURL: URL?
+    @State private var image: NSImage?
 
     var body: some View {
         if game.isLocal {
@@ -115,21 +115,20 @@ struct GameCover: View {
     }
 
     private var steamCover: some View {
-        AsyncImage(url: storeURL ?? game.headerURL) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().scaledToFill()
-            case .failure:
-                placeholder.task {
-                    guard storeURL == nil else { return }
-                    storeURL = try? await SteamStoreClient.shared.details(for: game.id).headerImage
-                }
-            default:
+        Group {
+            if let image = image ?? ArtworkLoader.shared.cachedHeader(for: game) {
+                Image(nsImage: image).resizable().scaledToFill()
+            } else {
                 placeholder
             }
         }
         .aspectRatio(460.0 / 215.0, contentMode: contentMode)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .task(id: game.id) {
+            guard ArtworkLoader.shared.cachedHeader(for: game) == nil else { return }
+            let loaded = await ArtworkLoader.shared.header(for: game)
+            withAnimation(.easeOut(duration: 0.2)) { image = loaded }
+        }
     }
 
     private var placeholder: some View {
@@ -144,7 +143,9 @@ struct MacVersionBadge: View {
         Label { Text(verbatim: "Mac") } icon: { Image(systemName: "apple.logo") }
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 9).padding(.vertical, 5)
-            .background(.ultraThinMaterial, in: Capsule())
+            // A plain fill: a material would blur live behind every badge while the library scrolls.
+            .background(.black.opacity(0.6), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.15)))
             .help("A Mac version of this game is available")
     }
 }

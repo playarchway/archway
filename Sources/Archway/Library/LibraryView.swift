@@ -378,7 +378,8 @@ private struct ShelfTile: View {
                     .rotation3DEffect(.degrees(Double(tilt.height) * -6), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
                     .rotation3DEffect(.degrees(Double(tilt.width) * 8), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
                     .scaleEffect(isHovered ? 1.04 : 1)
-                    .shadow(color: .black.opacity(isHovered ? 0.5 : 0.25), radius: isHovered ? 18 : 6, y: isHovered ? 12 : 4)
+                    // Only the hovered tile casts a shadow: a shadow from the cover's shape costs a render pass per tile.
+                    .shadow(color: .black.opacity(isHovered ? 0.5 : 0), radius: isHovered ? 18 : 0, y: isHovered ? 12 : 0)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { coverSize = $0 }
                     .onContinuousHover { phase in
                         switch phase {

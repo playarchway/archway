@@ -42,6 +42,7 @@ final class ArtworkLoader {
         }
     }
 
+    func cachedHeader(for game: LibraryGame) -> NSImage? { headers.object(forKey: game.id as NSNumber) }
     func cachedBackdrop(for game: LibraryGame) -> NSImage? { backdrops.object(forKey: game.id as NSNumber) }
 
     private func cache(for kind: Kind) -> NSCache<NSNumber, NSImage> { kind == .header ? headers : backdrops }
@@ -57,9 +58,13 @@ final class ArtworkLoader {
         return image
     }
 
+    /// Decodes here, off the main thread; an `NSImage(data:)` would decode on its first draw, in the middle of a scroll.
     nonisolated private static func load(_ url: URL) async -> NSImage? {
         guard let (data, response) = try? await URLSession.shared.data(from: url),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return NSImage(data: data)
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+        else { return nil }
+        return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
     }
 }

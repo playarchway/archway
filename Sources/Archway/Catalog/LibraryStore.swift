@@ -33,9 +33,14 @@ final class LibraryStore {
     private let paths: AppPaths
     private var cacheURL: URL { paths.dataDirectory.appendingPathComponent("steam-library-cache.json") }
     private var localGamesURL: URL { paths.dataDirectory.appendingPathComponent("local-games.json") }
+    private var macVersionsURL: URL { paths.dataDirectory.appendingPathComponent("mac-versions.json") }
+    /// Which games the store lists with a Mac version, kept on disk and asked again after a week.
+    private var macVersions = MacVersions()
 
     init(paths: AppPaths) {
         self.paths = paths
+        if let data = try? Data(contentsOf: macVersionsURL),
+           let cached = try? JSONDecoder().decode(MacVersions.self, from: data) { macVersions = cached }
         loadCache()
         loadLocalGames()
     }
@@ -59,6 +64,7 @@ final class LibraryStore {
             apply(owned, installed: await Task.detached { Self.installedAppIDs(in: steamapps) }.value, fetchedAt: .now)
             saveCache(owned)
             phase = .ready
+            await refreshMacVersions()
         } catch let error as SteamCatalogError {
             phase = .failed(error)
         } catch {
@@ -124,7 +130,8 @@ final class LibraryStore {
                 playtimeMinutes: game.playtimeForever,
                 lastPlayedAt: game.rtimeLastPlayed.flatMap { $0 > 0 ? Date(timeIntervalSince1970: TimeInterval($0)) : nil },
                 isInstalled: installed.contains(game.appid),
-                compatibility: .untested)
+                compatibility: .untested,
+                hasMacVersion: macVersions.mac.contains(game.appid))
             applySessionTotals(to: &entry)
             return entry
         }
@@ -143,6 +150,38 @@ final class LibraryStore {
             if flags & 4 != 0 { ids.insert(id) }
         }
         return ids
+    }
+
+    // MARK: Mac versions
+
+    private struct MacVersions: Codable {
+        var checkedAt = Date.distantPast
+        var checked: Set<Int> = []
+        var mac: Set<Int> = []
+    }
+
+    /// Asks the store about games it hasn't been asked about, or about all of them once the answers are a week old.
+    /// A failure leaves the badges as they were; the next refresh tries again.
+    private func refreshMacVersions() async {
+        let isStale = macVersions.checkedAt < .now.addingTimeInterval(-7 * 24 * 60 * 60)
+        let ids = steamGames.map(\.id).filter { isStale || !macVersions.checked.contains($0) }
+        guard !ids.isEmpty else { return }
+        var updated = isStale ? MacVersions() : macVersions
+        for start in stride(from: 0, to: ids.count, by: 200) {
+            let batch = Array(ids[start..<min(start + 200, ids.count)])
+            guard let mac = try? await SteamWebAPI.macVersions(of: batch) else { return }
+            updated.checked.formUnion(batch)
+            updated.mac.formUnion(mac)
+        }
+        updated.checkedAt = isStale ? .now : macVersions.checkedAt
+        macVersions = updated
+        try? JSONEncoder().encode(updated).write(to: macVersionsURL, options: .atomic)
+        let games = steamGames.map { game in
+            var game = game
+            game.hasMacVersion = updated.mac.contains(game.id)
+            return game
+        }
+        if games != steamGames { steamGames = games }
     }
 
     // MARK: Local games

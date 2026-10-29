@@ -370,6 +370,7 @@ private struct ShelfTile: View {
                 GameCover(game: game, cornerRadius: 10)
                     .saturation(game.isUnsupported ? 0 : 1)
                     .overlay(alignment: .topLeading) { activityBadge }
+                    .overlay(alignment: .topTrailing) { if game.hasMacVersion { MacVersionBadge().padding(8) } }
                     .matchedGeometryEffect(id: heroID, in: hero, isSource: !isOpen)
                     .opacity(isOpen ? 0 : 1)
                     .rotation3DEffect(.degrees(Double(tilt.height) * -6), axis: (x: 1, y: 0, z: 0), perspective: 0.6)

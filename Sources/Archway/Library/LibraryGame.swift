@@ -61,6 +61,8 @@ struct LibraryGame: Identifiable, Hashable {
     var isInstalled: Bool
     /// Before community reports; `CompatibilityStore.status(for:)` has the full picture.
     var compatibility: Compatibility
+    /// The store lists a macOS version, which Steam for macOS installs.
+    var hasMacVersion = false
     /// Set for games added from a local .exe; nil for Steam games.
     var executablePath: String? = nil
 
@@ -133,6 +135,17 @@ struct GameCover: View {
     private var placeholder: some View {
         LinearGradient(colors: [game.tint, game.tint.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
             .overlay(Text(game.title).font(.headline).foregroundStyle(.white.opacity(0.85)).padding(8))
+    }
+}
+
+/// Marks a game with a Mac version on its cover.
+struct MacVersionBadge: View {
+    var body: some View {
+        Label { Text(verbatim: "Mac") } icon: { Image(systemName: "apple.logo") }
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 9).padding(.vertical, 5)
+            .background(.ultraThinMaterial, in: Capsule())
+            .help("A Mac version of this game is available")
     }
 }
 

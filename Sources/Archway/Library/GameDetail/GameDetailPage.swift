@@ -135,7 +135,10 @@ struct GameDetailPage: View {
     }
 
     /// The page is about the Mac version: the store lists one and the player picked it.
-    private var playsMacVersion: Bool { !game.isLocal && details?.hasMacVersion == true && choosesMac }
+    private var playsMacVersion: Bool { !game.isLocal && hasMacVersion && choosesMac }
+
+    /// The library knows from its own store check; the page's store details may say otherwise later.
+    private var hasMacVersion: Bool { details?.hasMacVersion ?? game.hasMacVersion }
 
     /// Anti-cheat that stops the Windows version doesn't matter for the Mac version.
     private var showsUnsupported: Bool { game.isUnsupported && !playsMacVersion }
@@ -208,7 +211,7 @@ struct GameDetailPage: View {
                     } else {
                         StatusPill(title: String(localized: "Doesn’t Run on This Mac"), symbol: "nosign", color: .red)
                     }
-                    if !game.isLocal, details?.hasMacVersion == true { versionPicker }
+                    if !game.isLocal, hasMacVersion { versionPicker }
                     actions.padding(.top, 6)
                 }
                 .opacity(hasAppeared ? 1 : 0)

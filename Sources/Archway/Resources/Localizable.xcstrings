@@ -2736,6 +2736,16 @@
           }
         }
       }
+    },
+    "A Mac version of this game is available": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für dieses Spiel gibt es eine Mac-Version"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

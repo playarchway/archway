@@ -94,6 +94,15 @@ struct LibraryGame: Identifiable, Hashable {
     }
 
     var isPlayable: Bool { isInstalled && !isUnsupported }
+
+    /// Untested and experimental are the normal case for now, so the library and the page say nothing about them;
+    /// only tested games and those that can't run are marked.
+    static func isWorthShowing(_ compatibility: Compatibility) -> Bool {
+        switch compatibility {
+        case .tested, .unsupported: true
+        case .untested, .experimental: false
+        }
+    }
     var isUnsupported: Bool { if case .unsupported = compatibility { true } else { false } }
 }
 

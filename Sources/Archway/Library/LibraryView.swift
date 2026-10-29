@@ -463,11 +463,14 @@ private struct ShelfTile: View {
                     }
                     .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.7), value: tilt)
                 Text(game.title).font(.callout.weight(.medium)).lineLimit(1)
-                HStack(spacing: 10) {
-                    CompatibilityBadge(compatibility: compatibility.status(for: game))
-                    if game.isInstalled { Label("Installed", systemImage: "internaldrive").font(.caption) }
+                let status = compatibility.status(for: game)
+                if LibraryGame.isWorthShowing(status) || game.isInstalled {
+                    HStack(spacing: 10) {
+                        if LibraryGame.isWorthShowing(status) { CompatibilityBadge(compatibility: status) }
+                        if game.isInstalled { Label("Installed", systemImage: "internaldrive").font(.caption) }
+                    }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
             }
             .frame(width: width)
             .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)

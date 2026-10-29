@@ -209,7 +209,8 @@ struct GameDetailPage: View {
                         .lineLimit(2)
                     if let byline { Text(byline).font(.title3).foregroundStyle(.secondary) }
                     if !playsMacVersion {
-                        StatusPill(compatibility: compatibility.status(for: game))
+                        let status = compatibility.status(for: game)
+                        if LibraryGame.isWorthShowing(status) { StatusPill(compatibility: status) }
                     } else if macVersionRuns {
                         StatusPill(title: String(localized: "Mac Version"), symbol: "apple.logo", color: .secondary)
                     } else {

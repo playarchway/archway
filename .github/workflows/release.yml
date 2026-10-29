@@ -91,8 +91,36 @@ jobs:
           rm "$key"
           xcrun stapler staple .build/Archway.app
           spctl --assess --type exec -vv .build/Archway.app
-      # The app finds updates in the newest release's appcast.xml (Sparkle). Its signature needs the private half
-      # of ARCHWAY_SPARKLE_PUBLIC_KEY, from the secret SPARKLE_PRIVATE_KEY; without it, the release has no appcast.
+      - name: Build the disk image
+        env:
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          dmg="archway-$VERSION.dmg"
+          staging="$RUNNER_TEMP/dmg"
+          mkdir "$staging"
+          ditto .build/Archway.app "$staging/Archway.app"
+          ln -s /Applications "$staging/Applications"
+          hdiutil create -volname Archway -srcfolder "$staging" -format ULFO "$dmg"
+          if [[ -n "$ARCHWAY_SIGN_IDENTITY" ]]; then
+            codesign --sign "$ARCHWAY_SIGN_IDENTITY" --timestamp "$dmg"
+          fi
+          echo "DMG=$dmg" >> "$GITHUB_ENV"
+      - name: Notarize the disk image
+        if: env.ARCHWAY_SIGN_IDENTITY != ''
+        env:
+          API_KEY: ${{ secrets.APPLE_API_KEY }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          key="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$API_KEY" > "$key"
+          xcrun notarytool submit "$DMG" --key "$key" --key-id "$API_KEY_ID" --issuer "$API_ISSUER" --wait
+          rm "$key"
+          xcrun stapler staple "$DMG"
+          spctl --assess --type open --context context:primary-signature -vv "$DMG"
+      # The disk image is both the download and the update: the app finds updates in the newest release's
+      # appcast.xml (Sparkle). Its signature needs the private half of ARCHWAY_SPARKLE_PUBLIC_KEY, from the secret
+      # SPARKLE_PRIVATE_KEY; without it, the release has no appcast.
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -100,13 +128,9 @@ jobs:
           VERSION: ${{ needs.release-please.outputs.version }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          archive="Archway-$VERSION.zip"
-          ditto -c -k --keepParent .build/Archway.app "$archive"
-          # The website's download button points at releases/latest/download/Archway.zip.
-          cp "$archive" Archway.zip
-          assets=("$archive" Archway.zip)
+          assets=("$DMG")
           if [[ -n "$SPARKLE_PRIVATE_KEY" ]]; then
-            signature="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | .build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file - "$archive")"
+            signature="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | .build/artifacts/sparkle/Sparkle/bin/sign_update --ed-key-file - "$DMG")"
             notes="$(gh release view "$TAG" --json body --jq .body | gh api markdown -F text=@-)"
             cat > appcast.xml <<XML
           <?xml version="1.0" encoding="utf-8"?>
@@ -120,7 +144,7 @@ jobs:
                 <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
                 <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
                 <description><![CDATA[$notes]]></description>
-                <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/$archive" type="application/octet-stream" $signature/>
+                <enclosure url="https://github.com/${{ github.repository }}/releases/download/$TAG/$DMG" type="application/octet-stream" $signature/>
               </item>
             </channel>
           </rss>

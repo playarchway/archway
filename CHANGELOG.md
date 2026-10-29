@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/playarchway/archway/compare/v0.1.2...v0.2.0) (2026-10-29)
+
+
+### Features
+
+* **library:** mark games with a Mac version in the library ([c057479](https://github.com/playarchway/archway/commit/c057479abb151bf828c9126507e7fd50590767dd))
+* **library:** offer a game's Mac version through Steam for macOS ([2ae0606](https://github.com/playarchway/archway/commit/2ae06067979f757bd69f3261769bc0e3666d053a))
+
+
+### Bug Fixes
+
+* **build:** stamp the app with the SDK it links against ([e482369](https://github.com/playarchway/archway/commit/e4823692a737ca105868928f4fa5e45f1c85c978))
+* **library:** let the toolbar's glass be the search field's background ([9272504](https://github.com/playarchway/archway/commit/9272504bbe764dbe6e9de5b507544941f0a02b87))
+
 ## [0.1.2](https://github.com/playarchway/archway/compare/v0.1.1...v0.1.2) (2026-10-29)
 
 

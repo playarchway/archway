@@ -335,7 +335,7 @@ private func compatibleRuntime(in paths: AppPaths) throws -> URL {
     #expect(initRequest.environment["WINEPREFIX"] == paths.bottle.path)
     #expect(initRequest.environment["WINESERVER"] == server.path)
     #expect(initRequest.environment["WINEARCH"] == nil)
-    #expect(initRequest.environment["WINEDLLOVERRIDES"] == nil)
+    #expect(initRequest.environment["WINEDLLOVERRIDES"] == "winedbg.exe=d")
     #expect(initRequest.environment["WINE_D3D_CONFIG"] == nil)
     #expect(initRequest.environment["DXVK_HUD"] == nil)
     #expect(initRequest.environment["DXVK_CONFIG_FILE"] == nil)

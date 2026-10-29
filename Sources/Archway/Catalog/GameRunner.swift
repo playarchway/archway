@@ -75,6 +75,8 @@ final class GameRunner {
         self.store = store
         self.compatibility = compatibility
         Task { await refreshSteamState() }
+        // A session that ended badly, for example while Archway wasn't running, may have left processes behind.
+        Task.detached { [weak self] in _ = try? self?.orchestrator().endLeftoverProcesses() }
         // Steam keeps running when Archway quits otherwise, and restarts its window when only that is closed.
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { if self.ownsSteam { try? self.requestSteamShutdown() } }
@@ -423,6 +425,7 @@ final class GameRunner {
         let orchestrator = try orchestrator()
         try ProcessRunner.sendGUIRequest(orchestrator.steamShutdown())
         try ProcessRunner.runSetup(orchestrator.wineserverWait(), timeout: 30)
+        orchestrator.endLeftoverProcesses()
     }
 
     /// Writes the game's manifest and starts Steam silently, restarting it first if asked. Returns whether Steam

@@ -152,6 +152,9 @@ public struct Orchestrator {
             return !upper.hasPrefix("WINE") && !upper.hasPrefix("STEAM_") && !upper.hasPrefix("DXVK") && !upper.hasPrefix("VK_") && !upper.hasPrefix("DYLD_")
         }
         environment["WINEPREFIX"] = paths.bottle.path
+        // A crashing Windows process would start Wine's debugger (winedbg --auto, with a conhost), which can outlive
+        // the session; a crash loop once left hundreds of them behind. Steam and its games inherit this.
+        environment["WINEDLLOVERRIDES"] = "winedbg.exe=d"
         if let server = configuration.wineserver {
             environment["WINESERVER"] = try PathValidator.executable(server).path
         }

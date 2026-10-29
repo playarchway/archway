@@ -248,6 +248,8 @@ private func run() throws {
         print("Shutdown request sent; waiting up to 30 seconds for the owned bottle's Wine server to exit.")
         try ProcessRunner.runSetup(wait, timeout: 30)
         print("The owned bottle's Wine server exited. Steam shutdown was requested; no force stop was used.")
+        let leftovers = orchestrator.endLeftoverProcesses()
+        if leftovers > 0 { print("Ended \(leftovers) leftover Wine process(es) of the owned bottle.") }
     case "install-game", "launch-game":
         let rawID = try takeOption("--app-id", from: &arguments)
         let graphicsAPI = try takeOption("--graphics-api", from: &arguments).map(GameGraphicsAPI.parse)

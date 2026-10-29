@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/playarchway/archway/compare/v0.1.1...v0.1.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* **app:** load resources from Contents/Resources so release builds start ([77d1eeb](https://github.com/playarchway/archway/commit/77d1eeb746613631132889faab5a4f23230e4596))
+
 ## [0.1.1](https://github.com/playarchway/archway/compare/v0.1.0...v0.1.1) (2026-10-29)
 
 

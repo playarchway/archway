@@ -412,6 +412,10 @@ private struct LibrarySearchField: View {
     @Binding var text: String
     @FocusState private var isFocused: Bool
 
+    private static var hasToolbarGlass: Bool {
+        if #available(macOS 26, *) { true } else { false }
+    }
+
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass")
@@ -429,9 +433,14 @@ private struct LibrarySearchField: View {
         }
         .padding(.horizontal, 11)
         .frame(width: 260, height: 30)
-        .background(.white.opacity(isFocused ? 0.16 : 0.11), in: Capsule())
-        .overlay {
-            Capsule().strokeBorder(isFocused ? Color.archwayAccent.opacity(0.85) : .white.opacity(0.18), lineWidth: 1)
+        .background {
+            // From macOS 26 the toolbar puts the field on glass of its own; a second capsule would show inside it.
+            if !Self.hasToolbarGlass {
+                Capsule().fill(.white.opacity(isFocused ? 0.16 : 0.11))
+                    .overlay {
+                        Capsule().strokeBorder(isFocused ? Color.archwayAccent.opacity(0.85) : .white.opacity(0.18), lineWidth: 1)
+                    }
+            }
         }
         .animation(.snappy(duration: 0.18), value: isFocused)
         .background {

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/playarchway/archway/compare/v0.2.0...v0.3.0) (2026-10-29)
+
+
+### Features
+
+* **library:** explain why a game didn't start ([059538b](https://github.com/playarchway/archway/commit/059538b7f695497b3f9e9fdcf3c5527f1edfde2b))
+* **library:** filter and sort the library ([5ac3372](https://github.com/playarchway/archway/commit/5ac3372af9cf59880c2602cac4f81e112255e2da))
+* **library:** mark only tested games and those that can't run ([b4258ef](https://github.com/playarchway/archway/commit/b4258efc173df3500b6c0ccd95a5d59681bcd0e0))
+* **library:** notify when a game has finished installing ([02a06d3](https://github.com/playarchway/archway/commit/02a06d35038cd677637046b78a04ddce47190684))
+* **library:** show screenshots in a full-window viewer ([274c6c7](https://github.com/playarchway/archway/commit/274c6c71d174e36b402fd35244fa2929009c58a7))
+* **wine:** install the Microsoft runtimes a game needs before it starts ([5063e16](https://github.com/playarchway/archway/commit/5063e16b5ef00f8684feee893075295c5e8f4203))
+
+
+### Bug Fixes
+
+* **wine:** stop crashes from leaving Wine's debugger behind ([1209302](https://github.com/playarchway/archway/commit/12093029cf6c046e1f2466cc2017ade89a085222))
+
+
+### Performance Improvements
+
+* **library:** keep library scrolling smooth ([7c390a0](https://github.com/playarchway/archway/commit/7c390a04e56f001f59c9a59b9e2d689336c71d2d))
+* **library:** keep one backdrop behind the library and blur it once ([4b5a996](https://github.com/playarchway/archway/commit/4b5a996c5b88351129f5d7ed4b8c19a6b1f7a23b))
+
 ## [0.2.0](https://github.com/playarchway/archway/compare/v0.1.2...v0.2.0) (2026-10-29)
 
 

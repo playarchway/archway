@@ -112,6 +112,17 @@ struct LibraryView: View {
                 runner.dismissCompletedSession()
             }
         }
+        .alert(runner.runtimePrompt.map { prompt in
+                   String(localized: "“\(prompt.game.title)” needs \(prompt.runtimes.map(\.name).formatted(.list(type: .and)))")
+               } ?? "",
+               isPresented: Binding(get: { runner.runtimePrompt != nil },
+                                    set: { if !$0 { runner.answerRuntimePrompt(.cancel) } })) {
+            Button("Install and Play") { runner.answerRuntimePrompt(.install) }
+            Button("Play Without") { runner.answerRuntimePrompt(.startWithout) }
+            Button("Cancel", role: .cancel) { runner.answerRuntimePrompt(.cancel) }
+        } message: {
+            Text("Archway downloads it from Microsoft and installs it in its Windows environment. Without it, the game may not start or may crash.")
+        }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.init(filenameExtension: "exe")!]) { result in
             if case .success(let url) = result { store.addLocalGame(executable: url) }
         }

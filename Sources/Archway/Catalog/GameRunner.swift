@@ -33,6 +33,34 @@ final class GameRunner {
         /// What Steam is doing for the install, once it has picked the game up.
         var installPhase: Orchestrator.SteamInstallPhase?
         var installNote: InstallNote?
+        /// The Microsoft runtime being installed before the game starts.
+        var installingRuntime: String?
+    }
+
+    /// Whether Archway installs the Microsoft runtimes a game needs before starting it, or asks first.
+    enum RuntimeInstallMode: String, CaseIterable {
+        case automatic, ask
+        static let defaultsKey = "runtimeInstallMode"
+        static var current: RuntimeInstallMode {
+            UserDefaults.standard.string(forKey: defaultsKey).flatMap(RuntimeInstallMode.init) ?? .automatic
+        }
+    }
+
+    /// The question before a game starts, in the ask mode.
+    struct RuntimePrompt: Identifiable {
+        enum Answer { case install, startWithout, cancel }
+        let id = UUID()
+        let game: LibraryGame
+        let runtimes: [WindowsRuntime]
+        fileprivate let answer: CheckedContinuation<Answer, Never>
+    }
+
+    private(set) var runtimePrompt: RuntimePrompt?
+
+    func answerRuntimePrompt(_ answer: RuntimePrompt.Answer) {
+        guard let prompt = runtimePrompt else { return }
+        runtimePrompt = nil
+        prompt.answer.resume(returning: answer)
     }
 
     private(set) var sessions: [Int: Session] = [:]
@@ -101,6 +129,7 @@ final class GameRunner {
         if usesSteam { steamShutdown?.cancel() }
         Task {
             do {
+                guard await prepareRuntimes(for: game) else { return finish(game.id) }
                 if usesSteam, await !Task.detached(operation: { self.steamIsRunning() }).value { ownsSteam = true }
                 sessions[game.id]?.imageNames = try await Task.detached { try self.launch(game, profile: profile) }.value
                 watch()
@@ -108,6 +137,34 @@ final class GameRunner {
                 fail(game, error)
             }
         }
+    }
+
+    /// Installs the Microsoft runtimes the game needs and the bottle lacks, asking first in the ask mode. Returns
+    /// false when the player cancels. A failed install doesn't stop the game: it may run on Wine's own DLLs.
+    private func prepareRuntimes(for game: LibraryGame) async -> Bool {
+        let missing = await Task.detached {
+            (try? self.orchestrator())?.missingRuntimes(appID: game.isLocal ? nil : game.id,
+                                                        executable: game.executablePath.map(URL.init(fileURLWithPath:))) ?? []
+        }.value
+        guard !missing.isEmpty else { return true }
+        if RuntimeInstallMode.current == .ask {
+            let answer = await withCheckedContinuation { runtimePrompt = RuntimePrompt(game: game, runtimes: missing, answer: $0) }
+            switch answer {
+            case .install: break
+            case .startWithout: return true
+            case .cancel: return false
+            }
+        }
+        for runtime in missing {
+            sessions[game.id]?.installingRuntime = runtime.name
+            do {
+                try await Task.detached { try await self.orchestrator().install(runtime) }.value
+            } catch {
+                errors[game.id] = String(localized: "\(runtime.name) couldn’t be installed. The game starts without it.")
+            }
+        }
+        sessions[game.id]?.installingRuntime = nil
+        return true
     }
 
     func stop(_ game: LibraryGame) {

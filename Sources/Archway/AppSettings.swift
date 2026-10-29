@@ -38,6 +38,7 @@ struct AppSettingsView: View {
     @AppStorage("compatibilityCatalogURL") private var catalogURL = CompatibilityStore.defaultCatalogURL
     @AppStorage("compatibilityReportURL") private var reportURL = CompatibilityStore.defaultReportURL
     @AppStorage("disableCompatibilityFeedback") private var disableFeedback = false
+    @AppStorage(GameRunner.RuntimeInstallMode.defaultsKey) private var runtimeMode = GameRunner.RuntimeInstallMode.automatic
     @State private var confirmsRemoval = false
 
     var body: some View {
@@ -90,6 +91,18 @@ struct AppSettingsView: View {
                 } message: {
                     Text("This deletes the Windows environment, Windows Steam, and every game installed in Archway. Saves in the Steam Cloud stay; saves kept only on this Mac are lost. Archway then moves itself to the Trash.")
                 }
+            }
+            Section {
+                Picker("Missing Microsoft Runtimes", selection: $runtimeMode) {
+                    Text("Install Automatically").tag(GameRunner.RuntimeInstallMode.automatic)
+                    Text("Ask First").tag(GameRunner.RuntimeInstallMode.ask)
+                }
+            } header: {
+                Text("Game Dependencies")
+            } footer: {
+                Text("Before a game starts, Archway checks which Microsoft Visual C++ runtimes it needs and installs missing ones from Microsoft.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Section("App Icon") {
                 HStack(spacing: 20) {

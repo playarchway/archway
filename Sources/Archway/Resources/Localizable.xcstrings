@@ -2836,6 +2836,116 @@
           }
         }
       }
+    },
+    "“%@” needs %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%1$@“ braucht %2$@"
+          }
+        }
+      }
+    },
+    "Install and Play": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installieren und spielen"
+          }
+        }
+      }
+    },
+    "Play Without": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne spielen"
+          }
+        }
+      }
+    },
+    "Archway downloads it from Microsoft and installs it in its Windows environment. Without it, the game may not start or may crash.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archway lädt es von Microsoft und installiert es in seiner Windows-Umgebung. Ohne kann es sein, dass das Spiel nicht startet oder abstürzt."
+          }
+        }
+      }
+    },
+    "Installing %@…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird installiert …"
+          }
+        }
+      }
+    },
+    "%@ couldn’t be installed. The game starts without it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ konnte nicht installiert werden. Das Spiel startet ohne."
+          }
+        }
+      }
+    },
+    "Missing Microsoft Runtimes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlende Microsoft-Komponenten"
+          }
+        }
+      }
+    },
+    "Install Automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch installieren"
+          }
+        }
+      }
+    },
+    "Ask First": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorher fragen"
+          }
+        }
+      }
+    },
+    "Game Dependencies": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abhängigkeiten von Spielen"
+          }
+        }
+      }
+    },
+    "Before a game starts, Archway checks which Microsoft Visual C++ runtimes it needs and installs missing ones from Microsoft.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vor dem Start eines Spiels prüft Archway, welche Microsoft-Visual-C++-Komponenten es braucht, und installiert fehlende direkt von Microsoft."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

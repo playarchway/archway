@@ -263,6 +263,10 @@ struct GameDetailPage: View {
                 Text(macVersionNote)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            } else if let runtime = runner.session(for: game)?.installingRuntime {
+                Label(String(localized: "Installing \(runtime)…"), systemImage: "shippingbox")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             } else if !setup.isReady && !game.isUnsupported {
                 Text("Available once Archway has finished setting up.")
                     .font(.callout)

@@ -99,9 +99,13 @@ struct GameDetailPage: View {
         } message: {
             Text("Saves in the Steam Cloud stay. You can install the game again at any time.")
         }
-        .sheet(item: $enlargedScreenshot) { shot in
-            ScreenshotViewer(screenshots: details?.screenshots ?? [], current: shot)
+        .overlay {
+            if enlargedScreenshot != nil, let shots = details?.screenshots {
+                ScreenshotViewer(screenshots: shots, current: $enlargedScreenshot)
+                    .transition(.opacity)
+            }
         }
+        .preference(key: ScreenshotViewerPresentedKey.self, value: enlargedScreenshot != nil)
     }
 
     /// Fades the artwork out over its lower half so it melts into the page instead of ending at an edge.
@@ -463,7 +467,7 @@ struct GameDetailPage: View {
                 Text("Screenshots").font(.title3.weight(.semibold))
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                     ForEach(shots.prefix(6)) { shot in
-                        Button { enlargedScreenshot = shot } label: {
+                        Button { withAnimation(.easeOut(duration: 0.25)) { enlargedScreenshot = shot } } label: {
                             AsyncImage(url: shot.pathThumbnail) { phase in
                                 if let image = phase.image { image.resizable().scaledToFill() } else { Color.white.opacity(0.06) }
                             }

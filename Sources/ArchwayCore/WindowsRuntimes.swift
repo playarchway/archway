@@ -39,6 +39,24 @@ public struct WindowsRuntime: Hashable, Sendable, Identifiable {
     }
 
     public var id: String { "\(family.rawValue)-\(architecture.rawValue)" }
+
+    public init?(id: String) {
+        let parts = id.split(separator: "-")
+        guard parts.count == 2, let family = Family(rawValue: String(parts[0])),
+              let architecture = Architecture(rawValue: String(parts[1])) else { return nil }
+        self.init(family: family, architecture: architecture)
+    }
+
+    /// The runtime a DLL belongs to, for a program of the given architecture, if it is one Archway installs.
+    public static func providing(dll: String, architecture: Architecture) -> WindowsRuntime? {
+        let name = dll.lowercased().replacingOccurrences(of: ".dll", with: "")
+        return Family.allCases.first { $0.dlls.contains(name) }.map { WindowsRuntime(family: $0, architecture: architecture) }
+    }
+
+    /// The architecture of a Windows program or DLL, if it is one.
+    public static func architecture(of file: URL) -> Architecture? {
+        (try? PortableExecutable(url: file))?.architecture
+    }
     public var name: String { "\(family.displayName) (\(architecture == .x64 ? "64-bit" : "32-bit"))" }
 
     /// Microsoft's own download; each redirects to a microsoft.com host.

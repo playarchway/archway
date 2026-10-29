@@ -2946,6 +2946,66 @@
           }
         }
       }
+    },
+    "The game is missing %@. Archway installs %@ before the next start.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dem Spiel fehlt %1$@. Archway installiert %2$@ vor dem nächsten Start."
+          }
+        }
+      }
+    },
+    "The game needs %@, which Archway’s Windows environment doesn’t have.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel braucht %@, das in Archways Windows-Umgebung fehlt."
+          }
+        }
+      }
+    },
+    "The game uses %@, which needs a Windows kernel driver and doesn’t run with Archway.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel nutzt %@. Das braucht einen Windows-Kerneltreiber und läuft nicht mit Archway."
+          }
+        }
+      }
+    },
+    "The game needs .NET, but Wine Mono is missing from Archway’s Windows runtime.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel braucht .NET, aber in Archways Windows-Laufzeit fehlt Wine Mono."
+          }
+        }
+      }
+    },
+    "The game couldn’t connect to Steam. Try starting it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel konnte keine Verbindung zu Steam herstellen. Starte es noch einmal."
+          }
+        }
+      }
+    },
+    "The game crashed while starting. You’ll find the log under “Advanced”.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Spiel ist beim Start abgestürzt. Unter „Erweitert“ findest du das Protokoll."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

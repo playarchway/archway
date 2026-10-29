@@ -35,6 +35,8 @@ final class GameRunner {
         var installNote: InstallNote?
         /// The Microsoft runtime being installed before the game starts.
         var installingRuntime: String?
+        /// The logs as they were at the start, to read what the game wrote if it fails.
+        var logs: LogSnapshot?
     }
 
     /// Whether Archway installs the Microsoft runtimes a game needs before starting it, or asks first.
@@ -127,9 +129,11 @@ final class GameRunner {
         sessions[game.id] = Session(activity: .starting, usesSteam: usesSteam,
                                     context: compatibility.context(for: game.id, profile: profile), wantsFocus: true)
         if usesSteam { steamShutdown?.cancel() }
+        let logs = paths.logs
         Task {
             do {
                 guard await prepareRuntimes(for: game) else { return finish(game.id) }
+                sessions[game.id]?.logs = await Task.detached { LogSnapshot(directory: logs) }.value
                 if usesSteam, await !Task.detached(operation: { self.steamIsRunning() }).value { ownsSteam = true }
                 sessions[game.id]?.imageNames = try await Task.detached { try self.launch(game, profile: profile) }.value
                 watch()
@@ -142,9 +146,13 @@ final class GameRunner {
     /// Installs the Microsoft runtimes the game needs and the bottle lacks, asking first in the ask mode. Returns
     /// false when the player cancels. A failed install doesn't stop the game: it may run on Wine's own DLLs.
     private func prepareRuntimes(for game: LibraryGame) async -> Bool {
+        let learned = Self.learnedRuntimes(for: game.id)
         let missing = await Task.detached {
-            (try? self.orchestrator())?.missingRuntimes(appID: game.isLocal ? nil : game.id,
-                                                        executable: game.executablePath.map(URL.init(fileURLWithPath:))) ?? []
+            guard let orchestrator = try? self.orchestrator() else { return [WindowsRuntime]() }
+            let installed = orchestrator.installedRuntimes()
+            let found = orchestrator.missingRuntimes(appID: game.isLocal ? nil : game.id,
+                                                     executable: game.executablePath.map(URL.init(fileURLWithPath:)))
+            return found + learned.filter { runtime in !installed.contains(runtime.id) && !found.contains(runtime) }
         }.value
         guard !missing.isEmpty else { return true }
         if RuntimeInstallMode.current == .ask {
@@ -363,7 +371,8 @@ final class GameRunner {
         case .starting:
             if Date().timeIntervalSince(session.startedAt) > Self.startTimeout {
                 finish(id)
-                errors[id] = String(localized: "The game didn’t start. You’ll find the log under “Advanced”.")
+                errors[id] = await explanation(for: id, session)
+                    ?? String(localized: "The game didn’t start. You’ll find the log under “Advanced”.")
                 return
             }
         case .running, .stopping:
@@ -379,8 +388,55 @@ final class GameRunner {
         sessions[id] = session
     }
 
+    // MARK: Diagnosis
+
+    /// Runtimes a game turned out to need while running, which its programs' imports didn't show.
+    private static func learnedRuntimes(for gameID: Int) -> [WindowsRuntime] {
+        (UserDefaults.standard.stringArray(forKey: "learnedRuntimes:\(gameID)") ?? []).compactMap(WindowsRuntime.init(id:))
+    }
+
+    private static func learn(_ runtime: WindowsRuntime, for gameID: Int) {
+        let key = "learnedRuntimes:\(gameID)"
+        let ids = Set(UserDefaults.standard.stringArray(forKey: key) ?? []).union([runtime.id])
+        UserDefaults.standard.set(ids.sorted(), forKey: key)
+    }
+
+    /// Why the game failed, in words, if the logs since its start show a known reason.
+    private func explanation(for id: Int, _ session: Session) async -> String? {
+        guard let logs = session.logs else { return nil }
+        let bottle = paths.bottle
+        let (diagnosis, architecture) = await Task.detached { () -> (StartDiagnosis?, WindowsRuntime.Architecture?) in
+            let diagnosis = StartDiagnosis.diagnose(logs.newText())
+            guard case .missingDLL(_, let program)? = diagnosis,
+                  let file = StartDiagnosis.file(forWindowsPath: program, bottle: bottle) else { return (diagnosis, nil) }
+            return (diagnosis, WindowsRuntime.architecture(of: file))
+        }.value
+        switch diagnosis {
+        case .missingDLL(let name, _)?:
+            if let architecture, let runtime = WindowsRuntime.providing(dll: name, architecture: architecture) {
+                Self.learn(runtime, for: id)
+                return String(localized: "The game is missing \(name). Archway installs \(runtime.name) before the next start.")
+            }
+            return String(localized: "The game needs \(name), which Archway’s Windows environment doesn’t have.")
+        case .antiCheat(let name)?:
+            return String(localized: "The game uses \(name), which needs a Windows kernel driver and doesn’t run with Archway.")
+        case .missingWineMono?:
+            return String(localized: "The game needs .NET, but Wine Mono is missing from Archway’s Windows runtime.")
+        case .steamUnavailable?:
+            return String(localized: "The game couldn’t connect to Steam. Try starting it again.")
+        case .crashed?:
+            return String(localized: "The game crashed while starting. You’ll find the log under “Advanced”.")
+        case nil:
+            return nil
+        }
+    }
+
     /// Records the playtime and, once per setup, asks how the game ran, unless the player stopped it.
     private func ended(_ id: Int, _ session: Session) {
+        // Closing within half a minute, unasked, is a failed start more often than a short session.
+        if !session.stoppedByUser, Date().timeIntervalSince(session.startedAt) < 30 {
+            Task { if let text = await explanation(for: id, session) { errors[id] = text } }
+        }
         store.recordSession(gameID: id, from: session.startedAt, to: .now)
         if let game = store.games.first(where: { $0.id == id }), let context = session.context {
             let completed = CompletedGameSession(game: game, context: context)

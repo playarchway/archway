@@ -5,6 +5,7 @@ struct SteamStoreDetails: Decodable {
     struct ReleaseDate: Decodable { let date: String }
     struct Item: Decodable { let description: String }
     struct Achievements: Decodable { let total: Int }
+    struct Platforms: Decodable { let mac: Bool }
     struct Screenshot: Decodable, Identifiable {
         let id: Int
         let pathThumbnail: URL
@@ -22,6 +23,7 @@ struct SteamStoreDetails: Decodable {
     let headerImage: URL?
     let achievements: Achievements?
     let controllerSupport: String?
+    let platforms: Platforms?
 
     var summary: String {
         shortDescription
@@ -33,6 +35,8 @@ struct SteamStoreDetails: Decodable {
     /// Steam sometimes sends an untranslated key such as `#category_…` instead of a label.
     var features: [String] { categories?.map(\.description).filter { !$0.hasPrefix("#") } ?? [] }
     var hasCloudSaves: Bool { features.contains("Steam Cloud") }
+    /// The store lists a macOS version. Whether it still runs on this Mac shows only once it is installed.
+    var hasMacVersion: Bool { platforms?.mac == true }
 }
 
 /// Loads and caches store details for the session.

@@ -24,6 +24,10 @@ struct GameDetailPage: View {
     @State private var showsAdvanced = false
     @State private var confirmsUninstall = false
     @State private var enlargedScreenshot: SteamStoreDetails.Screenshot?
+    /// The Mac version, for games the store lists one for: whether the player picked it, and its state in Steam for macOS.
+    @State private var choosesMac = false
+    @State private var macState: NativeSteam.GameState = .notInstalled
+    @State private var hasNativeSteam = false
     @Environment(\.openURL) private var openURL
     @Environment(GameRunner.self) private var runner
     @Environment(CompatibilityStore.self) private var compatibility
@@ -71,6 +75,20 @@ struct GameDetailPage: View {
         }
         .task(id: game.id) { if !game.isLocal { await load() } }
         .task(id: game.id) {
+            choosesMac = MacVersion.isChosen(for: game)
+            refreshMacVersion()
+        }
+        // Steam for macOS installs in its own window; look again when the player comes back, and while it downloads.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshMacVersion()
+        }
+        .task(id: macState == .installing) {
+            while macState == .installing, !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                refreshMacVersion()
+            }
+        }
+        .task(id: game.id) {
             if let cached = ArtworkLoader.shared.cachedBackdrop(for: game) { backdrop = cached; return }
             let image = await ArtworkLoader.shared.backdrop(for: game)
             withAnimation(.easeOut(duration: 0.7)) { backdrop = image }
@@ -110,6 +128,20 @@ struct GameDetailPage: View {
         }
     }
 
+    private func refreshMacVersion() {
+        guard !game.isLocal else { return }
+        hasNativeSteam = MacVersion.steamApp != nil
+        macState = NativeSteam().state(of: game.id)
+    }
+
+    /// The page is about the Mac version: the store lists one and the player picked it.
+    private var playsMacVersion: Bool { !game.isLocal && details?.hasMacVersion == true && choosesMac }
+
+    /// Anti-cheat that stops the Windows version doesn't matter for the Mac version.
+    private var showsUnsupported: Bool { game.isUnsupported && !playsMacVersion }
+
+    private var macVersionRuns: Bool { macState != .installed(runsOnThisMac: false) }
+
     private func load() async {
         loadFailed = false
         do { details = try await SteamStoreClient.shared.details(for: game.id) } catch { loadFailed = true }
@@ -145,7 +177,7 @@ struct GameDetailPage: View {
             .frame(maxWidth: .infinity)
             .clipped()
             .blur(radius: isRevealed ? 0 : 24)
-            .saturation(game.isUnsupported ? 0 : 1)
+            .saturation(showsUnsupported ? 0 : 1)
             .overlay {
                 LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.35)], startPoint: .top, endPoint: .bottom)
             }
@@ -160,7 +192,7 @@ struct GameDetailPage: View {
 
             HStack(alignment: .bottom, spacing: 28) {
                 GameCover(game: game, cornerRadius: 12)
-                    .saturation(game.isUnsupported ? 0 : 1)
+                    .saturation(showsUnsupported ? 0 : 1)
                     .frame(width: 300)
                     .matchedGeometryEffect(id: heroID, in: heroNamespace)
                     .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
@@ -169,7 +201,14 @@ struct GameDetailPage: View {
                         .font(.system(size: 36, weight: .bold))
                         .lineLimit(2)
                     if let byline { Text(byline).font(.title3).foregroundStyle(.secondary) }
-                    StatusPill(compatibility: compatibility.status(for: game))
+                    if !playsMacVersion {
+                        StatusPill(compatibility: compatibility.status(for: game))
+                    } else if macVersionRuns {
+                        StatusPill(title: String(localized: "Mac Version"), symbol: "apple.logo", color: .secondary)
+                    } else {
+                        StatusPill(title: String(localized: "Doesn’t Run on This Mac"), symbol: "nosign", color: .red)
+                    }
+                    if !game.isLocal, details?.hasMacVersion == true { versionPicker }
                     actions.padding(.top, 6)
                 }
                 .opacity(hasAppeared ? 1 : 0)
@@ -212,7 +251,11 @@ struct GameDetailPage: View {
     @ViewBuilder private var actions: some View {
         VStack(alignment: .leading, spacing: 10) {
             actionButtons
-            if !setup.isReady && !game.isUnsupported {
+            if playsMacVersion {
+                Text(macVersionNote)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else if !setup.isReady && !game.isUnsupported {
                 Text("Available once Archway has finished setting up.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -236,7 +279,9 @@ struct GameDetailPage: View {
     @ViewBuilder private var actionButtons: some View {
         HStack(spacing: 10) {
             let activity = runner.activity(for: game)
-            if game.isUnsupported {
+            if playsMacVersion {
+                macVersionButton
+            } else if game.isUnsupported {
                 EmptyView()
             } else if !game.isInstalled {
                 Button { runner.install(game) } label: {
@@ -293,6 +338,10 @@ struct GameDetailPage: View {
                     if game.isInstalled { Button("Show Game Folder in Finder") { runner.showFolder(game) } }
                 }
                 Divider()
+                if playsMacVersion, case .installed = macState {
+                    Button("Uninstall in Steam…") { MacVersion.open("steam://uninstall/\(game.id)") }
+                    Divider()
+                }
                 if !game.isLocal && game.isInstalled && runner.activity(for: game) == nil {
                     Button("Uninstall…", role: .destructive) { confirmsUninstall = true }
                         .disabled(!runner.canUninstall || runner.uninstalling.contains(game.id))
@@ -302,7 +351,7 @@ struct GameDetailPage: View {
                     Button("Quit Game") { runner.stop(game) }
                     Divider()
                 }
-                Button("Advanced…") { showsAdvanced = true }.disabled(game.isUnsupported)
+                Button("Advanced…") { showsAdvanced = true }.disabled(game.isUnsupported || playsMacVersion)
                 if !game.isLocal, runner.lastObservedSessions[game.id] != nil {
                     Button("Report Last Session…") { runner.showFeedback(for: game.id) }
                 }
@@ -317,6 +366,66 @@ struct GameDetailPage: View {
             .menuIndicator(.hidden)
             .fixedSize()
             .help("More Actions")
+        }
+    }
+
+    private var versionPicker: some View {
+        Picker("Version", selection: Binding(get: { choosesMac }, set: { mac in
+            withAnimation(.snappy) { choosesMac = mac }
+            MacVersion.choose(mac, for: game)
+        })) {
+            Text(verbatim: "Mac").tag(true)
+            Text(verbatim: "Windows").tag(false)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Which version of the game to play")
+    }
+
+    /// Steam for macOS does the work; the button hands the game to it.
+    @ViewBuilder private var macVersionButton: some View {
+        if !hasNativeSteam {
+            Button { openURL(MacVersion.steamDownload) } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.down.circle.fill")
+                    Text("Get Steam for Mac")
+                }
+            }
+            .buttonStyle(HeroActionButtonStyle())
+        } else {
+            switch macState {
+            case .notInstalled:
+                Button { MacVersion.open("steam://install/\(game.id)") } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Install")
+                    }
+                }
+                .buttonStyle(HeroActionButtonStyle())
+            case .installing:
+                Button { MacVersion.open("steam://open/downloads") } label: {
+                    HStack(spacing: 10) {
+                        ProgressView().controlSize(.small)
+                        Text("Installing in Steam…")
+                    }
+                }
+                .buttonStyle(HeroActionButtonStyle(isBusy: true))
+            case .installed(runsOnThisMac: true):
+                PlayButton(activity: nil) { MacVersion.open("steam://run/\(game.id)") }
+            case .installed(runsOnThisMac: false):
+                EmptyView()
+            }
+        }
+    }
+
+    private var macVersionNote: String {
+        if !hasNativeSteam {
+            String(localized: "The Mac version installs and starts through Steam for macOS.")
+        } else if !macVersionRuns {
+            String(localized: "This Mac version is too old for current macOS. Try the Windows version.")
+        } else {
+            String(localized: "Steam for macOS installs and starts the Mac version.")
         }
     }
 
@@ -370,7 +479,7 @@ struct GameDetailPage: View {
     private var yourGame: some View {
         InfoCard(title: "Your Game") {
             // The status pill already says whether it runs; only the reason why not adds something.
-            if game.isUnsupported {
+            if showsUnsupported {
                 Text(game.compatibility.explanation).font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Divider()
@@ -381,7 +490,8 @@ struct GameDetailPage: View {
                 InfoRow("File", URL(fileURLWithPath: path).lastPathComponent)
                 if !game.isInstalled { InfoRow("Status", String(localized: "File Not Found")) }
             } else {
-                InfoRow("Installed", game.isInstalled ? String(localized: "Yes") : String(localized: "No"))
+                let installed = playsMacVersion ? macState != .notInstalled && macState != .installing : game.isInstalled
+                InfoRow("Installed", installed ? String(localized: "Yes") : String(localized: "No"))
             }
             if let details {
                 InfoRow("Saves", details.hasCloudSaves ? String(localized: "In Steam Cloud") : String(localized: "On This Mac"))

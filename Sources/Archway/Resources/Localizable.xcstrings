@@ -2636,6 +2636,106 @@
           }
         }
       }
+    },
+    "Mac Version": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac-Version"
+          }
+        }
+      }
+    },
+    "Doesn’t Run on This Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft nicht auf diesem Mac"
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "Which version of the game to play": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Version des Spiels du spielst"
+          }
+        }
+      }
+    },
+    "Get Steam for Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam für Mac laden"
+          }
+        }
+      }
+    },
+    "Installing in Steam…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in Steam installiert …"
+          }
+        }
+      }
+    },
+    "Uninstall in Steam…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Steam deinstallieren …"
+          }
+        }
+      }
+    },
+    "The Mac version installs and starts through Steam for macOS.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mac-Version wird über Steam für macOS installiert und gestartet."
+          }
+        }
+      }
+    },
+    "This Mac version is too old for current macOS. Try the Windows version.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Mac-Version ist zu alt für aktuelle macOS-Versionen. Probier die Windows-Version."
+          }
+        }
+      }
+    },
+    "Steam for macOS installs and starts the Mac version.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steam für macOS installiert und startet die Mac-Version."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

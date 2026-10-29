@@ -119,14 +119,26 @@ struct RunningIndicator: View {
 }
 
 struct StatusPill: View {
-    let compatibility: LibraryGame.Compatibility
+    let title: String
+    let symbol: String
+    let color: Color
+
+    init(compatibility: LibraryGame.Compatibility) {
+        self.init(title: compatibility.headline, symbol: compatibility.symbol, color: compatibility.color)
+    }
+
+    init(title: String, symbol: String, color: Color) {
+        self.title = title
+        self.symbol = symbol
+        self.color = color
+    }
 
     var body: some View {
-        Label(compatibility.headline, systemImage: compatibility.symbol)
+        Label(title, systemImage: symbol)
             .font(.callout.weight(.semibold))
-            .foregroundStyle(compatibility.color == .secondary ? .primary : compatibility.color)
+            .foregroundStyle(color == .secondary ? .primary : color)
             .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(compatibility.color.opacity(0.18), in: Capsule())
+            .background(color.opacity(0.18), in: Capsule())
     }
 }
 

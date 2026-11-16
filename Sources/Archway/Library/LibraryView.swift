@@ -112,11 +112,7 @@ struct LibraryView: View {
                 runner.dismissCompletedSession()
             }
         }
-        .alert(runner.runtimePrompt.map { prompt in
-                   String(localized: "“\(prompt.game.title)” needs \(prompt.runtimes.map(\.name).formatted(.list(type: .and)))")
-               } ?? "",
-               isPresented: Binding(get: { runner.runtimePrompt != nil },
-                                    set: { if !$0 { runner.answerRuntimePrompt(.cancel) } })) {
+        .alert(runtimePromptTitle, isPresented: showsRuntimePrompt) {
             Button("Install and Play") { runner.answerRuntimePrompt(.install) }
             Button("Play Without") { runner.answerRuntimePrompt(.startWithout) }
             Button("Cancel", role: .cancel) { runner.answerRuntimePrompt(.cancel) }
@@ -135,6 +131,17 @@ struct LibraryView: View {
         .toolbarBackground(.hidden, for: .windowToolbar)
         .tint(.archwayAccent)
         .preferredColorScheme(.dark)
+    }
+
+    // Kept out of `body`: inline, the alert's arguments take the compiler too long to type-check.
+    private var runtimePromptTitle: String {
+        guard let prompt = runner.runtimePrompt else { return "" }
+        let runtimes = prompt.runtimes.map(\.name).formatted(.list(type: .and))
+        return String(localized: "“\(prompt.game.title)” needs \(runtimes)")
+    }
+
+    private var showsRuntimePrompt: Binding<Bool> {
+        Binding(get: { runner.runtimePrompt != nil }, set: { if !$0 { runner.answerRuntimePrompt(.cancel) } })
     }
 
     private func openPreviews() {
